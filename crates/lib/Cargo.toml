@@ -1,0 +1,14 @@
+[package]
+name = "lib"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.2.7", features = ["derive", "cargo"] }
+anyhow = { version = "1.0.71", default-fetures = true }
+simplelog = { version = "0.12.1", features = ["paris"] }
+log = "0.4.17"
+dirs = "5.0.1"
+
+[target.'cfg(not(target_os = "windows"))'.dependencies]
+systemd-journal-logger = "1.0.0"

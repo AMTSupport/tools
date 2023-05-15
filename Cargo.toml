@@ -1,0 +1,35 @@
+[package]
+name = "tools"
+version = "0.1.0"
+edition = "2021"
+readme = "README.md"
+license = "MIT"
+authors = ["Racci <me@racci.dev>"]
+
+[workspace]
+members = [
+    "crates/cleaner",
+    "crates/lib"
+]
+
+[dependencies]
+tokio = { version = "1.28.1", features = ["full"] }
+
+[profile.release]
+opt-level = "s" # Optimize for size
+strip = "debuginfo"
+lto = "thin"
+
+# build with `cargo build --profile profiling`
+# to analyze performance with tooling like linux perf
+[profile.profiling]
+inherits = "release"
+strip = false
+debug = true
+
+# build with `cargo build --profile ci`
+# to analyze performance with tooling like linux perf
+[profile.ci]
+inherits = "dev"
+strip = false
+debug = false

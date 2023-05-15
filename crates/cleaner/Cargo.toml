@@ -1,0 +1,11 @@
+[package]
+name = "cleaner"
+version = "0.1.0"
+edition = "2021"
+categories = ["command-line-utilities", "system", "utilities", "cli"]
+keywords = ["cleaner", "clean", "cleaning", "cleaning-tool", "cleaning-utility"]
+description = "A cleaning tool written in Rust"
+
+[dependencies]
+anyhow = { version = "1.0.71", default-fetures = true }
+lib = { path = "../lib" }
