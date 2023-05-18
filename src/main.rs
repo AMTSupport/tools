@@ -7,7 +7,7 @@ use std::env::temp_dir;
 use std::fs::File;
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> anyhow::Result<()> {
     // TODO :: Command Parser
 
     // TODO :: Config Parser

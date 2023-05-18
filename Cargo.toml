@@ -12,9 +12,6 @@ members = [
     "crates/lib"
 ]
 
-[dependencies]
-tokio = { version = "1.28.1", features = ["full"] }
-
 [profile.release]
 opt-level = "s" # Optimize for size
 strip = "debuginfo"

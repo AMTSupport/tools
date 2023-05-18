@@ -1,371 +1,302 @@
-#![feature(thin_box)]
-
+#[cfg(windows)]
+use crate::builder::CleanableBuilderTrait;
+use crate::builder::{AgeType, CleanableBuilder};
 use anyhow::Context;
-use std::boxed::ThinBox;
-use std::fs::{metadata, File, Metadata};
-use std::os::fd::AsFd;
-use std::path::{Path, PathBuf};
-use std::rt::panic_fmt;
-use std::slice::Iter;
-use std::time::Duration;
+use async_trait::async_trait;
+use chrono::Duration;
+use lib::cli::Cli;
+use log::{error, info, trace, warn};
+use once_cell::sync::Lazy;
+use std::collections::HashSet;
+use std::fs;
+use std::ops::Not;
+use std::path::PathBuf;
 
-mod file;
+pub mod builder;
+
+#[derive(Debug, Clone)]
+pub enum PathCollections {
+    Drive,
+    User,
+}
 
 #[cfg(windows)]
-pub const ROOT_LOCATIONS: Vec<&str> = vec![];
-#[cfg(unix)]
-pub const ROOT_LOCATIONS: Vec<&str> = vec![];
+const ENV_PROGRAMDATA: &str = "ProgramData";
+#[cfg(windows)]
+const ENV_WINDIR: &str = "windir";
 
 #[cfg(windows)]
-pub const USER_LOCATIONS: Vec<&str> = vec![];
+pub static LOCATIONS: Lazy<Vec<CleanableBuilder>> = Lazy::new(|| {
+    vec![
+        CleanableBuilder::collection(PathCollections::Drive)
+            .path(r"$Recycle.Bin")
+            .auto()
+            .minimum_age(Duration::weeks(1))
+            .duration_from(AgeType::FromModification),
+        CleanableBuilder::env(ENV_PROGRAMDATA).path("NVIDIA").auto(),
+        CleanableBuilder::env(ENV_PROGRAMDATA)
+            .path(r"Nvidia Corporation\Downloader")
+            .auto(),
+        CleanableBuilder::env(ENV_PROGRAMDATA)
+            .path(r"Microsoft\Windows\WER\ReportArchive")
+            .auto(),
+        CleanableBuilder::env(ENV_PROGRAMDATA)
+            .path(r"NinitePro\NiniteDownloads\Files")
+            .auto(),
+        CleanableBuilder::env(ENV_WINDIR)
+            .path("Downloaded Program Files")
+            .auto(),
+        CleanableBuilder::env(ENV_WINDIR).path(r"SoftwareDistribution\Download"),
+        CleanableBuilder::env(ENV_WINDIR).path("Prefetch").auto(),
+        CleanableBuilder::env(ENV_WINDIR).path("Temp").auto(),
+        CleanableBuilder::env(ENV_WINDIR)
+            .minimum_age(Duration::weeks(2))
+            .path("Panther")
+            .auto(),
+        CleanableBuilder::env(ENV_WINDIR)
+            .minimum_age(Duration::weeks(2))
+            .path("Minidump")
+            .auto(),
+        CleanableBuilder::collection(PathCollections::User)
+            .path(r"AppData\Local\Temp")
+            .auto(),
+        CleanableBuilder::collection(PathCollections::User)
+            .path(r"AppData\Local\Microsoft\Windows\INetCache\IE")
+            .auto(),
+        CleanableBuilder::collection(PathCollections::User)
+            .path(r"AppData\Local\Microsoft\Edge\User Data\Default\Cache")
+            .auto(),
+        CleanableBuilder::collection(PathCollections::User)
+            .path(r"AppData\Local\Microsoft\Edge\User Data\Default\Code Cache")
+            .auto(),
+        CleanableBuilder::collection(PathCollections::User)
+            .path(r"AppData\Local\Microsoft\Edge\User Data\Default\GPUCache")
+            .auto(),
+        CleanableBuilder::collection(PathCollections::User)
+            .path(r"AppData\Local\Google\Chrome\User Data\Default\Cache")
+            .auto(),
+        CleanableBuilder::collection(PathCollections::User)
+            .path(r"AppData\Local\Google\Chrome\User Data\Default\Code Cache")
+            .auto(),
+        CleanableBuilder::collection(PathCollections::User)
+            .path(r"AppData\Local\Google\Chrome\User Data\Default\GPUCache")
+            .auto(),
+        CleanableBuilder::collection(PathCollections::User)
+            .path(r"AppData\Local\Mozilla\Firefox\Profiles\*\*.default-release\cache2")
+            .auto(),
+        CleanableBuilder::collection(PathCollections::User)
+            .path(r"AppData\Local\D3DSCache")
+            .auto(),
+        CleanableBuilder::collection(PathCollections::User)
+            .path(r"AppData\Local\Nvidia\DXCache")
+            .auto(),
+        CleanableBuilder::collection(PathCollections::User)
+            .path(r"AppData\Local\Microsoft\Windows\Exploerer\thumbcache_*")
+            .auto(),
+        CleanableBuilder::collection(PathCollections::User)
+            .path(r"AppData\Local\Microsoft\Windows\Exploerer\iconcache_*")
+            .auto(),
+    ]
+});
+
 #[cfg(unix)]
-pub const USER_LOCATIONS: Vec<&str> = vec![];
+pub static LOCATIONS: Lazy<Vec<CleanableBuilder>> = Lazy::new(|| vec![]);
 
-// TODO :: Maybe change for windows since it reports sizes differently.
-const KILOBYTE: u64 = 1024;
-const MEGABYTE: u64 = 1024 * KILOBYTE;
-const GIGABYTE: u64 = 1024 * MEGABYTE;
-
-enum AgeType {
-    FromCreation,
-    FromModification,
-    FromAccess,
+pub struct CleanablePath {
+    pub paths: Vec<PathBuf>,
+    pub auto: bool,
+    pub minimum_age: Duration,
+    pub duration_from: AgeType,
 }
 
-pub struct SubPath {
-    buf: PathBuf,
-    auto: bool,
-    minimum_age: Duration,
-    duration_from: AgeType,
+#[async_trait]
+pub trait Indexed {
+    async fn clean(&self, cli: &Cli) -> (usize, f64, usize, f64);
+    async fn size(&self) -> u64;
 }
 
-impl SubPath {
-    fn new(buf: PathBuf, auto: bool, minimum_age: Duration, duration_from: AgeType) -> Self {
-        Self {
-            buf,
-            auto,
-            minimum_age,
-            duration_from,
-        }
-    }
+#[async_trait]
+impl Indexed for CleanablePath {
+    async fn clean(&self, cli: &Cli) -> (usize, f64, usize, f64) {
+        let mut auto_size = 0u64;
+        let mut auto_files = 0usize;
+        let mut manual_size = 0u64;
+        let mut manual_files = 0usize;
 
-    fn new_auto(buf: PathBuf) -> Self {
-        Self::new(buf, true, Duration::ZERO, AgeType::FromCreation)
-    }
+        let mut collection: Vec<_> = self.paths.iter().map(|p| p.collect()).flatten().collect();
+        while let Some(buf) = collection.pop() {
+            // TODO :: If all files in directory are removable call remove_dir, else call remove_file on each.
+            if self.minimum_age.is_zero().not() {
+                let metadata = match buf.metadata().context("Retrieve metadata for age check") {
+                    Ok(m) => m,
+                    Err(_) => {
+                        error!("Failed to retrieve metadata for file: {}", buf.display());
+                        continue;
+                    }
+                };
 
-    fn new_manual(buf: PathBuf) -> Self {
-        Self::new(buf, false, Duration::ZERO, AgeType::FromCreation)
-    }
+                let now = std::time::SystemTime::now();
+                let from_time = match self.duration_from {
+                    AgeType::FromAccess => metadata.accessed().unwrap(), // TODO :: Could error on some filesystems
+                    AgeType::FromCreation => metadata.created().unwrap(),
+                    AgeType::FromModification => metadata.modified().unwrap(),
+                };
 
-    fn new_aged(buf: PathBuf, minimum_age: Duration, duration_from: AgeType) -> Self {
-        assert!(
-            minimum_age > Duration::ZERO,
-            "minimum_age must be greater than zero"
-        );
+                let duration = now.duration_since(from_time).unwrap();
+                if duration.as_millis() < self.minimum_age.num_milliseconds() as u128 {
+                    trace!("File is not old enough to be removed: {}", buf.display());
+                    continue;
+                }
 
-        // TODO :: Assert that FS/OS supports the duration_from type
+                trace!("File is old enough to be removed: {}", buf.display());
+            }
 
-        Self::new(buf, true, minimum_age, duration_from)
-    }
-}
+            if self.auto.not() {
+                trace!(
+                    "File is not able to be automatically removed: {}",
+                    buf.display()
+                );
 
-trait Collectable {
-    fn collect(&self) -> (Vec<PathBuf>, Vec<PathBuf>, Vec<PathBuf>);
-}
+                manual_files += 1;
+                manual_size += buf.metadata().unwrap().len();
 
-impl Collectable for Path {
-    fn collect(&self) -> (Vec<PathBuf>, Vec<PathBuf>, Vec<PathBuf>) {
-        let mut inner_files = Vec::<PathBuf>::new();
-        let mut inner_directories = Vec::<PathBuf>::new();
-        let mut issues = Vec::<PathBuf>::new();
-
-        for entry in self.read_dir().context("Read directory")? {
-            let entry = entry.unwrap();
-            let path = entry.path();
-            let meta = path.metadata().unwrap();
-
-            if meta.is_symlink() {
-                trace!("Skipping symlink: {:?}", inner);
                 continue;
             }
 
+            if cli.dry_run {
+                info!("Would remove file: {:?}", buf);
+                auto_size += buf.metadata().unwrap().len();
+                auto_files += 1;
+                continue;
+            }
+
+            match fs::remove_file(&buf) {
+                Ok(_) => {
+                    trace!("Removed file: {}", buf.display());
+                    auto_size += buf.metadata().unwrap().len();
+                    auto_files += 1;
+                }
+                Err(_) => error!("Failed to remove file: {}", buf.display()),
+            }
+        }
+
+        // let size_after = self.size().await;
+        // let size_cleaned = size - size_after;
+        // let percent_cleaned = size_cleaned as f64 / size as f64 * 100.0;
+        // percent_cleaned
+        (auto_files, auto_size as f64, manual_files, manual_size as f64)
+    }
+
+    async fn size(&self) -> u64 {
+        let mut size = 0u64;
+        for path in &self.paths {
+            if let Ok(metadata) = fs::metadata(path) {
+                size += metadata.len();
+            }
+        }
+
+        size
+    }
+}
+
+#[async_trait]
+pub trait Collectable {
+    fn collect(&self) -> Vec<PathBuf>;
+}
+
+#[async_trait]
+impl Collectable for CleanablePath {
+    fn collect(&self) -> Vec<PathBuf> {
+        let mut inner_files = Vec::<PathBuf>::new();
+
+        for path in &self.paths {
+            inner_files.extend(path.collect());
+        }
+
+        inner_files
+    }
+}
+
+#[async_trait]
+impl Collectable for PathBuf {
+    fn collect(&self) -> Vec<PathBuf> {
+        let mut inner_files = Vec::<PathBuf>::new();
+        let mut seen: HashSet<PathBuf> = HashSet::new();
+        let mut issues = Vec::<(PathBuf, &str)>::new();
+        let mut iter: Vec<PathBuf> = vec![];
+
+        trace!("Collecting: {0}", self.display());
+
+        let append = move |iter: &mut Vec<PathBuf>, parent: &PathBuf| {
+            glob::glob(&format!("{0}/*", parent.display()))
+                .unwrap()
+                .for_each(|x| match x {
+                    Ok(x) => iter.push(x),
+                    Err(e) => error!("Failed to glob: {0}", e),
+                });
+        };
+
+        append(&mut iter, &self);
+
+        while let Some(path) = iter.pop() {
+            if let None = seen.get(&path) {
+                seen.insert(path.clone());
+            } else {
+                continue;
+            }
+
+            let meta = path.metadata().unwrap();
+
+            if meta.is_symlink() {
+                trace!("Skipping symlink: {0}", &path.display());
+                issues.push((path.clone(), "Symlink"));
+                continue;
+            }
+
+            #[cfg(unix)]
+            if permissions::is_removable(&path).is_ok_and(|x| !x) {
+                trace!("Skipping non-removable: {0}", &path.display());
+                issues.push((path.clone(), "Non-removable"));
+            }
+
+            #[cfg(windows)] // TODO :: Implement this for windows
+            if false {
+                trace!("Skipping non-removable: {0}", &path.display());
+                issues.push((path.clone(), "Non-removable"));
+            }
+
             if meta.is_dir() {
-                trace!("Found directory: {:?}", inner);
-                inner_directories.push(*meta);
+                trace!("Found directory: {0}", &path.display());
+                append(&mut iter, &path);
                 continue;
             }
 
             if meta.is_file() {
-                trace!("Found file: {:?}", inner);
-                inner_files.push(*meta);
+                trace!("Found file: {0}", &path.display());
+                inner_files.push(path.clone());
                 continue;
             }
 
-            trace!("Issue with: {:?}", inner);
-            issues.push(entry.path());
+            trace!("Issue with: {0}", &path.display());
+            issues.push((path.clone(), "Unknown issue"));
         }
-
-        return (inner_files, inner_directories, issues);
-    }
-}
-
-trait Composable {
-    fn compose_all(&self, mut root_bufs: Iter<PathBuf>) -> Vec<ThinBox<dyn Composed>> {
-        root_bufs
-            .filter_map(|root_buf| self.compose(root_buf).ok())
-            .collect()
-    }
-
-    fn compose(&self, root_buf: &PathBuf) -> Some(ThinBox<dyn Composed>);
-}
-
-impl Composable for SubPath {
-    fn compose(&self, root_buf: &PathBuf) -> Some(ThinBox<dyn Composed>) {
-        if self.is_absolute() {
-            error!("PathBuf is not relative: {:?}", self);
-            return None;
-        }
-
-        let path = root_buf.join(self);
-        if !path.exists() {
-            error!("Composed path `{0}` doesn't exist.", path);
-            return None;
-        }
-
-        if !path.is_dir() {
-            error!("Composed path `{0}` is not a directory.", path);
-            return None;
-        }
-
-        return Some(ThinBox::new(Composed::new(&self, path.into_boxed_path())));
-    }
-}
-
-trait Composed {
-    fn new(path_base: &SubPath, path: Box<Path>) -> Self;
-    fn clean(&self) -> bool;
-    fn size(&self) -> u64;
-}
-
-struct ComposedStruct<'a> {
-    path_base: &'a SubPath,
-    path: Box<Path>,
-
-    pub files: Vec<PathBuf>,
-    pub directories: Vec<PathBuf>,
-}
-
-impl Composed for ComposedStruct {
-    fn new(path_base: &SubPath, path: Box<Path>) -> Self {
-        let (files, directories, issues) = path.collect();
 
         if !issues.is_empty() {
             let mapped_issues = issues
                 .iter()
                 .map(|issue| {
                     format!(
-                        "\t{}",
-                        issue
-                            .into_path_buf()
-                            .to_str()?
-                            .strip_prefix(path.to_str().unwrap())
-                            .unwrap()
+                        "\t{1}: {0}",
+                        issue.1,
+                        issue.0.to_path_buf().to_str().unwrap()
                     )
                 })
                 .collect::<Vec<String>>()
                 .join("\n");
 
-            error!(
-                "{0} contains {1} issues.\n{2}",
-                path,
-                issues.len(),
-                mapped_issues
-            );
+            warn!("Issues with {0}:\n{1}", self.display(), mapped_issues);
         }
 
-        Self {
-            path_base,
-            path,
-            files,
-            directories,
-        }
+        return inner_files;
     }
-
-    fn clean(&self) -> bool {
-        let size = self.size();
-        let size_str = if size >= GIGABYTE {
-            format!("{:.2} GB", size as f64 / GIGABYTE)
-        } else if size >= MEGABYTE {
-            format!("{:.2} MB", size as f64 / MEGABYTE)
-        } else if size >= KILOBYTE {
-            format!("{:.2} KB", size as f64 / KILOBYTE)
-        } else {
-            format!("{:.2} B", size)
-        };
-
-        info!(
-            "Cleaning {} files from {}, cleaning up {}",
-            self.files.len(),
-            self.path,
-            size_str
-        );
-
-        let mut paired: Vec<(PathBuf, Metadata)> = self
-            .files
-            .iter()
-            .map(|buf| (buf, buf.metadata().unwrap()))
-            .collect();
-        while let Some((buf, meta)) = paired.pop() {
-            // TODO :: Permission checks
-            // TODO :: Lock checks
-            // TODO :: File open checks
-
-            if
-        }
-
-        while let Some(meta) = metas.pop() {
-            if meta.is_symlink() {
-                trace!("Skipping symlink: {:?}", inner);
-                continue;
-            }
-
-            if meta.is_dir() {
-                directories.push(meta);
-                continue;
-            }
-
-            if meta.is_file() {
-                if let Err(e) = std::fs::remove_file(meta.path()) {
-                    error!("Failed to remove file: {:?}", e);
-                    continue;
-                }
-            }
-        }
-
-        while let Some(meta) = directories.pop() {
-            if let Err(e) = std::fs::remove_dir(meta.path()) {
-                error!("Failed to remove directory: {:?}", e);
-                continue;
-            }
-        }
-
-        return true;
-    }
-
-    fn size(&self) -> u64 {
-        todo!()
-    }
-}
-
-// impl Cleanable for ManualComposed {
-//     fn clean(&self) -> bool {
-//         let mut metas = self.collect();
-//         let mut directories = Vec::new();
-//
-//         while let Some(meta) = metas.pop() {
-//             if meta.is_symlink() {
-//                 trace!("Skipping symlink: {:?}", inner);
-//                 continue;
-//             }
-//
-//             if meta.is_dir() {
-//                 directories.push(meta);
-//                 continue;
-//             }
-//
-//             if meta.is_file() {
-//                 if let Err(e) = std::fs::remove_file(meta.path()) {
-//                     error!("Failed to remove file: {:?}", e);
-//                     continue;
-//                 }
-//             }
-//         }
-//
-//         while let Some(meta) = directories.pop() {
-//             if let Err(e) = std::fs::remove_dir(meta.path()) {
-//                 error!("Failed to remove directory: {:?}", e);
-//                 continue;
-//             }
-//         }
-//
-//         return true;
-//     }
-// }
-
-// trait AutoComposed {}
-
-/// A type of Composed that will be scanned but will require user input to be cleaned.
-// trait ManualComposed where Self: AutoComposed {}
-
-impl Composable for PathBuf {
-    fn compose(&self, root_buf: &PathBuf) -> Some<ThinBox<dyn Composed>> {
-        let connected = root_buf.join(self);
-        if connected.exists() {
-            return Ok(ThinBox::<dyn Composed>::new(Composed::new(connected)));
-        }
-
-        trace!("Skipping non-existent composable path `{:?}`", connected);
-        return None;
-    }
-}
-
-impl RecursiveSize for PathBuf {
-    fn size(&self) -> u128 {
-        let mut total_size: u128 = 0;
-
-        #[cfg(target_family = "unix")]
-        use std::os::unix::fs::MetadataExt;
-        #[cfg(target_os = "windows")]
-        use std::os::windows::fs::MetadataExt;
-
-        for file in files {
-            total_size += file.size();
-        }
-
-        return total_size;
-    }
-}
-
-impl Cleanable for ComposedPath {
-    fn clean(&self) -> bool {
-        let mut metas = self.collect();
-        let mut directories = Vec::new();
-
-        while let Some(meta) = metas.pop() {
-            if meta.is_symlink() {
-                trace!("Skipping symlink: {:?}", inner);
-                continue;
-            }
-
-            if meta.is_dir() {
-                trace!("Found directory: {:?}", inner);
-                directories.extend(inner);
-                continue;
-            }
-
-            if meta.is_file() {
-                trace!("Found file: {:?}", inner);
-            }
-        }
-
-        return false;
-    }
-}
-
-pub struct AutoCleanable
-where
-    Self: Path,
-    Self: Cleanable,
-    Self: RecursiveSize,
-{
-    path: dyn Path,
-}
-
-pub struct ManualCleanable
-where
-    Self: Path,
-    Self: Cleanable,
-    Self: RecursiveSize,
-{
-    path: dyn Path,
 }
