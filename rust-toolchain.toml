@@ -1,4 +1,0 @@
-[toolchain]
-profile = "minimal"
-toolchain = "nightly"
-components = ["clippy", "rustfmt"]
