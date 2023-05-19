@@ -42,7 +42,7 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: target/${{ matrix.target }}/release/tools${{ matrix.extra }}
           file_glob: true
-          asset_name: tools-${{ matrix-os }}${{ matrix.extra }}
+          asset_name: tools-${{ matrix.os }}${{ matrix.extra }}
           tag: ${{ github.ref }}
 
   changelog:
