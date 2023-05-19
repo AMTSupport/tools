@@ -1,8 +1,8 @@
 use crate::builder::CleanableBuilderTrait;
 use crate::{Indexed, LOCATIONS};
+use lib::cli::Flags;
 use log::info;
 use tokio_stream::{self as stream, StreamExt};
-use lib::cli::Flags;
 
 // TODO :: Maybe change for windows since it reports sizes differently.
 const KILOBYTE: f64 = 1024f64;
@@ -40,15 +40,15 @@ pub async fn application(cli: Flags) -> anyhow::Result<()> {
     }
 
     let size_str = |size| {
-        return if size >= GIGABYTE {
-            format!("{:.2} GB", size as f64 / GIGABYTE)
+        if size >= GIGABYTE {
+            format!("{:.2} GB", size / GIGABYTE)
         } else if size >= MEGABYTE {
-            format!("{:.2} MB", size as f64 / MEGABYTE)
+            format!("{:.2} MB", size / MEGABYTE)
         } else if size >= KILOBYTE {
-            format!("{:.2} KB", size as f64 / KILOBYTE)
+            format!("{:.2} KB", size / KILOBYTE)
         } else {
             format!("{:.2} B", size)
-        };
+        }
     };
 
     info!(

@@ -91,7 +91,7 @@ impl CleanableBuilderTrait for CleanableBuilder {
 
         Ok(CleanablePath {
             paths: composed,
-            auto: self.auto.clone(),
+            auto: self.auto,
             minimum_age: self.minimum_age,
             duration_from: self.duration_from.clone(),
         })
@@ -117,7 +117,7 @@ fn composing(buf: &PathBuf, roots: Iter<'_, PathBuf>) -> anyhow::Result<Vec<Path
         return Err(anyhow!("No paths found for {}", buf.display()));
     }
 
-    return Ok(buffers);
+    Ok(buffers)
 }
 
 fn env(variable: &str, buf: &PathBuf) -> anyhow::Result<Vec<PathBuf>> {

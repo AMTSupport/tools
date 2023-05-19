@@ -12,8 +12,8 @@ use std::fs;
 use std::ops::Not;
 use std::path::PathBuf;
 
-pub mod builder;
 pub mod application;
+pub mod builder;
 
 #[derive(Debug, Clone)]
 pub enum PathCollections {
@@ -101,7 +101,7 @@ pub static LOCATIONS: Lazy<Vec<CleanableBuilder>> = Lazy::new(|| {
 });
 
 #[cfg(unix)]
-pub static LOCATIONS: Lazy<Vec<CleanableBuilder>> = Lazy::new(|| vec![]);
+pub static LOCATIONS: Lazy<Vec<CleanableBuilder>> = Lazy::new(Vec::new);
 
 pub struct CleanablePath {
     pub paths: Vec<PathBuf>,
@@ -124,7 +124,7 @@ impl Indexed for CleanablePath {
         let mut manual_size = 0u64;
         let mut manual_files = 0usize;
 
-        let mut collection: Vec<_> = self.paths.iter().map(|p| p.collect()).flatten().collect();
+        let mut collection: Vec<_> = self.paths.iter().flat_map(|p| p.collect()).collect();
         while let Some(buf) = collection.pop() {
             // TODO :: If all files in directory are removable call remove_dir, else call remove_file on each.
             if self.minimum_age.is_zero().not() {
@@ -185,7 +185,12 @@ impl Indexed for CleanablePath {
         // let size_cleaned = size - size_after;
         // let percent_cleaned = size_cleaned as f64 / size as f64 * 100.0;
         // percent_cleaned
-        (auto_files, auto_size as f64, manual_files, manual_size as f64)
+        (
+            auto_files,
+            auto_size as f64,
+            manual_files,
+            manual_size as f64,
+        )
     }
 
     async fn size(&self) -> u64 {
@@ -237,10 +242,10 @@ impl Collectable for PathBuf {
                 });
         };
 
-        append(&mut iter, &self);
+        append(&mut iter, self);
 
         while let Some(path) = iter.pop() {
-            if let None = seen.get(&path) {
+            if seen.get(&path).is_none() {
                 seen.insert(path.clone());
             } else {
                 continue;
@@ -298,6 +303,6 @@ impl Collectable for PathBuf {
             warn!("Issues with {0}:\n{1}", self.display(), mapped_issues);
         }
 
-        return inner_files;
+        inner_files
     }
 }
