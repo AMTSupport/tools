@@ -14,26 +14,24 @@ jobs:
         - x86_64-pc-windows-gnu
         - x86_64-unknown-linux-gnu
         - aarch64-unknown-linux-gnu
-        suffix: ['', '.exe']
+        extra: [.exe']
         include:
         - target: x86_64-pc-windows-gnu
           os: windows-latest
-          suffix: .exe
+          suffix: '.exe'
         - target: x86_64-unknown-linux-gnu
           os: ubuntu-latest
-          suffix: ''
         - target: aarch64-unknown-linux-gnu
           os: ubuntu-latest
-          suffix: ''
 
-    runs-on: '${{matrix.os}}'
+    runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v3
 
       - name: Update Rust Toolchain Target
         run: |
-          echo "targets = [\"${{ matrix.target }}\"]" > rust-toolchain.toml
+          echo "targets = ['${{ matrix.target }}']" > rust-toolchain.toml
 
       - name: Setup Rust Toolchain and Cache
         uses: actions-rust-lang/setup-rust-toolchain@v1.4.4
