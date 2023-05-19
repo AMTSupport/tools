@@ -15,6 +15,7 @@ jobs:
         with:
           toolchain: nightly
           target: ${{ matrix.target }}
+          components: rustfmt, clippy
 
       - name: Cargo fmt
         run: |
