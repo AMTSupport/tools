@@ -8,7 +8,7 @@ use simplelog::{
 use std::env::temp_dir;
 use std::fs::File;
 
-pub fn init(named: &str, cli: &cli::Cli) -> anyhow::Result<()> {
+pub fn init(named: &str, cli: &cli::Flags) -> anyhow::Result<()> {
     let log_level = match cli.verbose {
         0 => LevelFilter::Info,
         1 => LevelFilter::Debug,

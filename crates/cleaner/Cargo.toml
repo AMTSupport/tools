@@ -7,6 +7,7 @@ keywords = ["cleaner", "clean", "cleaning", "cleaning-tool", "cleaning-utility"]
 description = "A cleaning tool written in Rust"
 
 [dependencies]
+clap = { version = "4.2.7", features = ["derive"] }
 tokio = { version = "1.28.1", features = ["fs", "macros", "rt-multi-thread"] }
 anyhow = { version = "1.0.71", default-features = false }
 lib = { path = "../lib" }
@@ -19,22 +20,3 @@ glob = "0.3.1"
 
 [target.'cfg(unix)'.dependencies]
 permissions = "0.4.1"
-
-[profile.release]
-opt-level = "s" # Optimize for size
-strip = "debuginfo"
-lto = "thin"
-
-# build with `cargo build --profile profiling`
-# to analyze performance with tooling like linux perf
-[profile.profiling]
-inherits = "release"
-strip = false
-debug = true
-
-# build with `cargo build --profile ci`
-# to analyze performance with tooling like linux perf
-[profile.ci]
-inherits = "dev"
-strip = false
-debug = false

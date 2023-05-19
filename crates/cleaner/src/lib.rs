@@ -4,7 +4,7 @@ use crate::builder::{AgeType, CleanableBuilder};
 use anyhow::Context;
 use async_trait::async_trait;
 use chrono::Duration;
-use lib::cli::Cli;
+use lib::cli::Flags;
 use log::{error, info, trace, warn};
 use once_cell::sync::Lazy;
 use std::collections::HashSet;
@@ -13,6 +13,7 @@ use std::ops::Not;
 use std::path::PathBuf;
 
 pub mod builder;
+pub mod application;
 
 #[derive(Debug, Clone)]
 pub enum PathCollections {
@@ -111,13 +112,13 @@ pub struct CleanablePath {
 
 #[async_trait]
 pub trait Indexed {
-    async fn clean(&self, cli: &Cli) -> (usize, f64, usize, f64);
+    async fn clean(&self, cli: &Flags) -> (usize, f64, usize, f64);
     async fn size(&self) -> u64;
 }
 
 #[async_trait]
 impl Indexed for CleanablePath {
-    async fn clean(&self, cli: &Cli) -> (usize, f64, usize, f64) {
+    async fn clean(&self, cli: &Flags) -> (usize, f64, usize, f64) {
         let mut auto_size = 0u64;
         let mut auto_files = 0usize;
         let mut manual_size = 0u64;

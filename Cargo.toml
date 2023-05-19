@@ -12,6 +12,14 @@ members = [
     "crates/lib"
 ]
 
+[dependencies]
+lib = { path = "crates/lib" }
+cleaner = { path = "crates/cleaner" }
+clap = { version = "4.2.7", features = ["derive", "std"] }
+tokio = { version = "1.28.1", features = ["rt-multi-thread"] }
+anyhow = { version = "1.0.71", default-features = false }
+
+
 [profile.release]
 opt-level = "s" # Optimize for size
 strip = "debuginfo"

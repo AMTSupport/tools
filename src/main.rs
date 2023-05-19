@@ -1,20 +1,35 @@
-use anyhow::{Context, Result};
-use cleaner::log::init_loggers;
-use dirs::template_dir;
-use simplelog::info;
-use std::borrow::ToOwned;
-use std::env::temp_dir;
-use std::fs::File;
+use anyhow::Context;
+use clap::{Parser, Subcommand};
+use lib::cli::{Flags};
+use lib::log;
+
+#[derive(Parser, Debug)]
+#[command(author, version, about)]
+struct ParentCli {
+    // Which internal crate application to run.
+    #[command(subcommand)]
+    commands: Commands,
+}
+
+#[derive(Subcommand, Debug)]
+enum Commands {
+    #[command(arg_required_else_help = true)]
+    Cleaner {
+        #[command(flatten)]
+        flags: Flags
+    }
+}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // TODO :: Command Parser
+    let cli = ParentCli::try_parse().context("Parse CLI")?;
 
-    // TODO :: Config Parser
-
-    init_loggers()?;
-
-    info!("Starting cleaner");
+    match cli.commands {
+        Commands::Cleaner { flags } => {
+            log::init("cleaner", &flags)?;
+            cleaner::application::application(flags).await?
+        },
+    }
 
     Ok(())
 }
