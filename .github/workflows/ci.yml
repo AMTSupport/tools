@@ -1,0 +1,66 @@
+name: Continuous Integration
+
+on: [push, pull_request]
+
+jobs:
+  fmt-clippy:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Rust Toolchain and Cache
+        uses: actions-rust-lang/setup-rust-toolchain@v1.4.4
+
+      - name: Cargo fmt
+        run: |
+          cargo fmt --all -- --check
+
+      - name: Cargo clippy
+        run: |
+          cargo clippy --workspace -- -D warnings
+
+
+      - uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Rust Toolchain and Cache
+        uses: actions-rust-lang/setup-rust-toolchain@v1.4.4
+
+      - name: Run tests
+        run: |
+          cargo test --workspace --profile ci
+
+  coverage:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Rust Toolchain and Cache
+        uses: actions-rust-lang/setup-rust-toolchain@v1.4.4
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+
+      - name: Run Tests
+        shell: bash
+        run: |
+          source <(cargo llvm-cov show-env --export-prefix)
+          cargo llvm-cov clean
+          cargo build --workspace --profile ci
+          cargo test --workspace --profile ci
+          cargo llvm-cov report --profile ci --lcov --output-path lcov.info
+
+      - name: Upload Coverage Report
+        uses: codecov/codecov-action@v3
+        with:
+          files: lcov.info
