@@ -6,8 +6,7 @@ on:
     tags: ["v[0-9]+.[0-9]+.[0-9]+"]
 
 jobs:
-  all:
-
+  run:
     # TODO :: Add apple targets
     strategy:
       matrix:
@@ -15,7 +14,7 @@ jobs:
         - x86_64-pc-windows-gnu
         - x86_64-unknown-linux-gnu
         - aarch64-unknown-linux-gnu
-        suffix: ['.exe']
+        suffix: ['', '.exe']
         include:
         - target: x86_64-pc-windows-gnu
           os: windows-latest
@@ -27,7 +26,7 @@ jobs:
           os: ubuntu-latest
           suffix: ''
 
-    runs-on: ${{ matrix.os }}
+    runs-on: '${{matrix.os}}'
 
     steps:
       - uses: actions/checkout@v3
