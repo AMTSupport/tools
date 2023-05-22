@@ -1,0 +1,16 @@
+[package]
+name = "rest"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.2.7", features = ["derive"] }
+reqwest = { version = "0.11.18", features = ["json", "gzip"] }
+tokio = { version = "1.28.1", features = ["full"] }
+anyhow = { version = "1.0.71", default-features = false }
+simplelog = { version = "0.12.1", features = ["paris"] }
+lib = { path = "../lib" }
+async-trait = "0.1.68"
+serde = { version = "1.0.163", features = ["serde_derive", "derive"] }
+chrono = { version = "0.4.24" }
+async-lazy = "0.1.0"

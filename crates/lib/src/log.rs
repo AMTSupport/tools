@@ -1,14 +1,10 @@
-use crate::cli;
+use crate::cli::Flags;
 use anyhow::Context;
-use log::LevelFilter;
-use simplelog::{
-    ColorChoice, CombinedLogger, ConfigBuilder, TermLogger, TerminalMode, ThreadLogMode,
-    WriteLogger,
-};
+use simplelog::{ColorChoice, CombinedLogger, ConfigBuilder, TermLogger, TerminalMode, ThreadLogMode, WriteLogger, LevelFilter, Level};
 use std::env::temp_dir;
 use std::fs::File;
 
-pub fn init(named: &str, cli: &cli::Flags) -> anyhow::Result<()> {
+pub fn init(named: &str, cli: &Flags) -> anyhow::Result<()> {
     let log_level = match cli.verbose {
         0 => LevelFilter::Info,
         1 => LevelFilter::Debug,
@@ -20,8 +16,10 @@ pub fn init(named: &str, cli: &cli::Flags) -> anyhow::Result<()> {
             log_level,
             ConfigBuilder::new()
                 .set_max_level(log_level)
-                .set_thread_mode(ThreadLogMode::Names)
                 .set_time_level(LevelFilter::Off)
+                .set_level_color(Level::Error, Some(simplelog::Color::Red))
+                .set_level_color(Level::Warn, Some(simplelog::Color::Yellow))
+                .set_level_color(Level::Trace, Some(simplelog::Color::Cyan))
                 .build(),
             TerminalMode::Mixed,
             ColorChoice::Auto,

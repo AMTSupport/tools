@@ -8,8 +8,9 @@ authors = ["Racci <me@racci.dev>"]
 
 [workspace]
 members = [
+    "crates/lib",
     "crates/cleaner",
-    "crates/lib"
+    "crates/rest"
 ]
 
 [dependencies]

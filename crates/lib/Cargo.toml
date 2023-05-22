@@ -6,8 +6,7 @@ edition = "2021"
 [dependencies]
 clap = { version = "4.2.7", features = ["derive", "std"], default-features = false }
 anyhow = { version = "1.0.71" }
-simplelog = { version = "0.12.1", default-features = false, features = ["default"] }
-log = "0.4.17"
+simplelog = { version = "0.12.1", features = ["paris"] }
 
 [target.'cfg(unix)'.dependencies]
 systemd-journal-logger = "1.0.0"
