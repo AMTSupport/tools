@@ -10,7 +10,8 @@ authors = ["Racci <me@racci.dev>"]
 members = [
     "crates/lib",
     "crates/cleaner",
-    "crates/rest"
+    "crates/rest",
+    "crates/pgen",
 ]
 
 [dependencies]

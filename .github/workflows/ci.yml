@@ -3,7 +3,7 @@ name: Continuous Integration
 on:
   push:
     branches: [master]
-    paths: [ '*/src/**', '.github/workflows/ci.yml' ]
+    paths: [ "./**/src/**", '.github/workflows/ci.yml' ]
 
 jobs:
   fmt-clippy:
