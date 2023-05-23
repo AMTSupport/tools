@@ -1,13 +1,17 @@
-mod asset;
-mod generator;
-mod rules;
-mod transformation;
-
 use crate::generator::Generator;
 use crate::rules::Rules;
 use crate::transformation::Transformation;
-use clap::{arg, command, Arg, ArgMatches, Command};
-use simplelog::{debug, error, info, ColorChoice, CombinedLogger, ConfigBuilder, LevelFilter, SharedLogger, TermLogger, TerminalMode, WriteLogger};
+use anyhow::{anyhow, Context};
+use clap::{arg, command, Arg, ArgMatches, Command, Parser, Subcommand};
+use rpgen::config::rules::Rules;
+use rpgen::config::transformation::Transformation;
+use rpgen::generation::generator::{Generator, GeneratorFunctions, GeneratorHelper};
+use rpgen::{Commands, ConfigAction};
+use serde_json::Value;
+use simplelog::{
+    debug, error, info, trace, ColorChoice, CombinedLogger, ConfigBuilder, LevelFilter,
+    SharedLogger, TermLogger, TerminalMode, WriteLogger,
+};
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs::{create_dir, File};
@@ -16,258 +20,104 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::{env, fs, process};
 use strum::IntoEnumIterator;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use toml::toml;
 
-fn main() {
-    let matches = get_cli();
-    let mut rules = init(&matches).map_err(|e| handle_error(e.0, e.1)).unwrap();
-    if let Some(supplied_rules) = pass_supplied(&matches).map_err(|(s, e)| handle_error(s, e)).unwrap() {
-        rules = supplied_rules;
-    }
-    pass_args(&mut rules, &matches);
-    rules.sanity_checks().map_err(|e| handle_error(e, None)).unwrap();
-
-    debug!("Final rule set: {:?}", rules);
-
-    let mut generator = Generator::new(rules);
-    let passwords = generator.generate();
-
-    info!("Generated passwords:\n\n{}\n", passwords.join("\n"));
+#[derive(clap::Parser)]
+#[clap(version, author, about, setting = clap::AppSettings::ColoredHelp, LongHelp)]
+pub struct Cli {
+    #[command(subcommand)]
+    pub commands: Commands,
 }
 
-pub fn handle_error(reason: String, err: Option<Box<dyn Error>>) {
-    error!("{}", reason);
-    err.map(|e| debug!("{:?}", e));
-    process::exit(1);
-}
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    match Cli::try_parse().context("Parse CLI Arguments")?.commands {
+        Commands::Generate { flags, file, rules } => {
+            let _ = lib::log::init("PGen", &flags)?;
+            let rules = merge_rules(rules, PathBuf::from(file));
+            let mut generator = Generator::new(*rules)?;
+            let passwords = generator.generate().join("\n");
 
-fn pass_supplied(matches: &ArgMatches) -> Result<Option<Rules>, (String, Option<Box<dyn Error>>)> {
-    let subcommand = matches.subcommand().unwrap().1; // It should be safe i think
-    let path = match subcommand.value_of("CONFIG").map(|p| {
-        let mut temp_path = PathBuf::from(p);
-        if !temp_path.exists() || {
-            (temp_path = Path::new(env::current_dir().unwrap().to_str().unwrap()).join(temp_path));
-            !temp_path.exists()
-        } {
-            Err(format!("File {} does not exist", temp_path.display()))
-        } else {
-            Ok(temp_path)
+            info!("Generated passwords:\n\n{passwords}\n");
         }
-    }) {
-        Some(Ok(path)) => path,
-        Some(Err(reason)) => Err((reason, None))?,
-        _ => return Ok(None),
-    };
+        Commands::Config { action } => match action {
+            ConfigAction::Show { flags, file } => {
+                let _ = lib::log::init("PGen-Config-Show", &flags)?;
+                let rules =
+                    serde_json::from_slice::<Rules>(&fs::read(file).with_context(|| {
+                        format!("Unable to read file {}, does it exist?", file.display())
+                    })?)
+                    .with_context(|| format!("Unable to parse file {}", file.display())?);
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&rules)
+                        .with_context(|| format!("Unable to serialise rules"))?
+                );
+            }
+            ConfigAction::Generate {
+                flags,
+                file,
+                rules,
+                force,
+            } => {
+                let _ = lib::log::init("PGen-Config-Generate", &flags)?;
+                if file.exists() && !force {
+                    anyhow!(
+                        "File {} already exists, use --force to overwrite",
+                        file.display()
+                    )?;
+                }
 
-    debug!("Trying to read file: {}", path.display());
-
-    if !path.exists() || !path.is_file() {
-        return Err((format!("File {} does not exist or isn't a file.", path.display()), None));
-    }
-
-    return match fs::read_to_string(&path) {
-        Ok(string) => match toml::from_str::<Rules>(&string) {
-            Ok(rules) => rules.sanity_checks().map_err(|e| (e, None)).map(|_| Some(rules)),
-            Err(err) => Err((format!("Couldn't parse file {}", path.display()), Some(Box::new(err)))),
+                if !flags.dry_run {
+                    let mut file = File::create(file)
+                        .with_context(|| format!("Unable to create file {}", file.display()))?;
+                    file.write_all(
+                        serde_json::to_string_pretty(&rules)
+                            .with_context(|| format!("Unable to serialise rules"))?
+                            .as_bytes(),
+                    )?;
+                }
+            }
         },
-        Err(err) => Err((format!("Couldn't read {}", path.display()), Some(Box::new(err)))),
+    }
+
+    Ok(())
+}
+
+/// Some sort of tomfuckery to merge the file and cli rules.
+/// Merges in the order of defaults, file, cli.
+fn merge_rules(cli_rules: Rules, buf: PathBuf) -> Rules {
+    let to_value = |rules| {
+        serde_json::from_value::<HashMap<String, Value>>(serde_json::to_value(&rules).unwrap())
+            .unwrap()
     };
-}
 
-fn pass_args(rules: &mut Rules, matches: &ArgMatches) {
-    let mut args = HashMap::new();
-    matches.value_of("WORDS").map(|words| args.insert("words", words));
-    matches.value_of("MIN_LENGTH").map(|min_length| args.insert("min_length", min_length));
-    matches.value_of("MAX_LENGTH").map(|max_length| args.insert("max_length", max_length));
-    matches.value_of("DIGITS_BEFORE").map(|digits_before| args.insert("digits_before", digits_before));
-    matches.value_of("DIGITS_AFTER").map(|digits_after| args.insert("digits_after", digits_after));
-    matches.value_of("AMOUNT").map(|amount| args.insert("amount", amount));
-    matches.value_of("SEPARATOR_CHAR").map(|separator_char| args.insert("separator_char", separator_char));
-    matches.value_of("SEPARATOR_ALPHABET").map(|separator_alphabet| args.insert("separator_alphabet", separator_alphabet));
-    matches.value_of("TRANSFORM").map(|transform| args.insert("transform", transform));
-    if matches.is_present("MATCH_RANDOM_CHAR") {
-        rules.match_random_char = false
-    }
-
-    debug!("Supplied arguments {:?}", args);
-
-    for (arg, value) in args {
-        match arg {
-            "words" => rules.words = unwrap_or_exit(&value),
-            "min_length" => rules.min_length = unwrap_or_exit(&value),
-            "max_length" => rules.max_length = unwrap_or_exit(&value),
-            "digits_before" => rules.digits_before = unwrap_or_exit(&value),
-            "digits_after" => rules.digits_after = unwrap_or_exit(&value),
-            "amount" => rules.amount = unwrap_or_exit(&value),
-            "separator_char" => rules.separator_char = Box::from(value),
-            "separator_alphabet" => rules.separator_alphabet = Box::from(value),
-            "transform" => rules.transform = Box::from(value),
-            "match_random_char" => rules.match_random_char = unwrap_or_exit(&value),
-            _ => {}
-        }
-    }
-}
-
-fn unwrap_or_exit<T>(str: &str) -> T
-where
-    T: FromStr,
-{
-    match str.parse::<T>() {
-        Ok(value) => value,
-        Err(_) => {
-            error!("Couldn't parse {} as {}", str, stringify!(T));
-            process::exit(1);
-        }
-    }
-}
-
-fn get_cli() -> ArgMatches {
-    return command!()
-        .propagate_version(true)
-        .subcommand_required(true)
-        .arg_required_else_help(true)
-        .args([
-            Arg::new("WORDS")
-                .help(format!("The number of words to generate for each password (default: {})", Rules::default().words).as_str())
-                .takes_value(true)
-                .short('w')
-                .long("words"),
-            Arg::new("MIN_LENGTH")
-                .help(format!("The minimum length of each word (default: {}, min: 3)", Rules::default().min_length).as_str())
-                .takes_value(true)
-                .short('m')
-                .long("min-length"),
-            Arg::new("MAX_LENGTH")
-                .help(format!("The maximum length of each word (default: {}, max: 9)", Rules::default().max_length).as_str())
-                .takes_value(true)
-                .short('M')
-                .long("max-length"),
-            Arg::new("DIGITS_BEFORE")
-                .help(format!("The number of digits before the words (default: {})", Rules::default().digits_before).as_str())
-                .takes_value(true)
-                .short('d')
-                .long("digits-before"),
-            Arg::new("DIGITS_AFTER")
-                .help(format!("The number of digits after the words (default: {})", Rules::default().digits_after).as_str())
-                .takes_value(true)
-                .short('D')
-                .long("digits-after"),
-            Arg::new("TRANSFORM")
-                .help(
-                    format!(
-                        "What transformation mode to use, Options are {:?} (default: {})",
-                        Transformation::iter().collect::<Vec<_>>(),
-                        Rules::default().transform
-                    )
-                    .as_str(),
-                )
-                .takes_value(true)
-                .short('t')
-                .long("transform"),
-            Arg::new("SEPARATOR_CHAR")
-                .help(format!("The character to use to separate the words (default: \"{}\")", Rules::default().separator_char).as_str())
-                .takes_value(true)
-                .short('s')
-                .long("separator-char"),
-            Arg::new("SEPARATOR_ALPHABET")
-                .help(format!("The array of characters as separators (default: \"{}\")", Rules::default().separator_alphabet).as_str())
-                .takes_value(true)
-                .short('S')
-                .long("separator-alphabet"),
-            Arg::new("MATCH_RANDOM_CHAR")
-                .help(
-                    format!(
-                        "Do not use the same random character for each separator rather than a new random each time (default: {})",
-                        Rules::default().match_random_char
-                    )
-                    .as_str(),
-                )
-                .short('r')
-                .long("match-random-char"),
-            Arg::new("AMOUNT")
-                .help(format!("The number of passwords to generate (default: {})", Rules::default().amount).as_str())
-                .takes_value(true)
-                .short('a')
-                .long("amount"),
-            Arg::new("DEBUG").help("Enable debug logging").long("debug"),
-            Arg::new("LOG").help("Enable saving output to a log file.").long("log").takes_value(true),
-        ])
-        .subcommand(Command::new("generate").about("Generate some new passwords.").arg(arg!([CONFIG] "The config file to use.")))
-        .get_matches();
-}
-
-fn init(matches: &ArgMatches) -> Result<Rules, (String, Option<Box<dyn Error>>)> {
-    let level = match matches.is_present("DEBUG") {
-        true => LevelFilter::Debug,
-        false => LevelFilter::Info,
-    };
-    let mut vec: Vec<Box<dyn SharedLogger>> = Vec::new();
-    let term_config = ConfigBuilder::new().set_time_level(LevelFilter::Off).build();
-
-    vec.push(TermLogger::new(level, term_config.clone(), TerminalMode::Mixed, ColorChoice::Auto));
-    if matches.is_present("LOG") {
-        let log_file_str = matches.value_of("LOG").unwrap_or("pgen.log");
-        let log_file = if let Ok(log_file) = File::open(log_file_str) {
-            log_file
-        } else {
-            match File::create(log_file_str) {
-                Ok(log_file) => log_file,
-                Err(err) => return Err((format!("Could not create log file: {}", err), Some(Box::new(err)))),
+    let mut rules: HashMap<String, Value> = match &fs::read_to_string(&buf) {
+        Ok(str) => match toml::from_str::<Rules>(str) {
+            Ok(toml) => to_value(toml),
+            Err(e) => {
+                error!("Couldn't parse config file {}", config_file.display());
+                return cli_rules;
             }
-        };
-        vec.push(WriteLogger::new(level, term_config, log_file));
-    }
-
-    CombinedLogger::init(vec).unwrap();
-
-    return match env::consts::OS {
-        "windows" | "linux" | "macos" => {
-            let target_dir = dirs::config_dir().unwrap().join("PGen");
-
-            match target_dir.exists() || create_dir(&target_dir).is_ok() {
-                true => get_config(&target_dir),
-                false => Err((format!("Couldn't create directory {}", target_dir.display()), None)),
-            }
+        },
+        Err(e) => {
+            debug!("Unable to read file {path}: {e:#}", path = buf.display());
+            return cli_rules;
         }
-        _ => Err(("Unsupported OS".to_string(), None)),
-    };
-}
-
-fn get_config(target_dir: &Path) -> Result<Rules, (String, Option<Box<dyn Error>>)> {
-    let config_file = target_dir.join("PGen.conf");
-    if !config_file.exists() {
-        debug!("Created config file {}", config_file.display());
-
-        let string = toml::ser::to_string_pretty(&Rules::default()).unwrap();
-        let mut file = match File::create(&config_file) {
-            Ok(file) => file,
-            Err(err) => return Err((format!("Couldn't create config file {}", config_file.display()), Some(Box::new(err)))),
-        };
-
-        return match file.write_all(string.as_bytes()) {
-            Ok(_) => Ok(Rules::default()),
-            Err(err) => Err((format!("Couldn't write config file {}", config_file.display()), Some(Box::new(err)))),
-        };
-    }
-
-    if !config_file.is_file() {
-        return Err((format!("{} is not a file.", config_file.display()), None));
-    }
-
-    let string = match fs::read_to_string(&config_file) {
-        Ok(string) => string,
-        Err(err) => return Err((format!("Couldn't read config file {}", config_file.display()), Some(Box::new(err)))),
     };
 
-    let toml = match toml::from_str::<Rules>(&string) {
-        Ok(toml) => toml,
-        Err(err) => return Err((format!("Couldn't parse config file {}", config_file.display()), Some(Box::new(err)))),
-    };
+    let defaults: HashMap<String, Value> = to_value(Rules::default());
+    let iterable_cli: HashMap<String, Value> = to_value(cli_rules);
+    for (name, cli) in &iterable_cli {
+        let default = defaults.get(name).unwrap();
+        let file = rules.get(name).unwrap();
 
-    return match toml.sanity_checks() {
-        Ok(_) => {
-            debug!("Loaded config from def path: {:?}", toml);
-            Ok(toml)
+        if (file == default && cli != default) || (file != default && cli != default) {
+            trace!("Overwriting value for {name} with {cli}");
+            rules.insert(name.clone(), value.clone());
         }
-        Err(err) => Err((err, None)),
-    };
+    }
+
+    serde_json::from_value::<Rules>(serde_json::to_value(&rules).unwrap()).unwrap()
 }

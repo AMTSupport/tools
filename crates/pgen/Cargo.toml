@@ -10,14 +10,17 @@ keywords = ["generator", "password"]
 description = "A password generator written in Rust"
 
 [dependencies]
-clap = { version = "3.1.8", features = ["derive", "cargo"] }
-simplelog = { version = "^0.12.0", features = ["paris"] }
-serde = { version = "1.0.136", features = ["derive"] }
-rand = "0.8.5"
-log = "0.4.17"
+tokio = { version = "1.28.1", features = ["rt", "macros", "sync"]}
+lib = { path = "../lib" }
+async-trait = "0.1.68"
+clap = { version = "4.2.7", features = ["derive", "cargo"] }
+simplelog = { version = "0.12.1", features = ["paris"] }
+serde = { version = "1.0.163", features = ["derive"] }
+anyhow = "1.0.71"
 serde_json = "1.0.59"
+rand = "0.8.5"
 rust-embed="6.4.0"
 strum = "0.24.0"
 strum_macros = "0.24"
-dirs = "1.0.5"
-toml = "0.5.9"
+dirs = "5.0.1"
+toml = "0.7.4"
