@@ -1,6 +1,9 @@
 use crate::cli::Flags;
 use anyhow::Context;
-use simplelog::{ColorChoice, CombinedLogger, ConfigBuilder, TermLogger, TerminalMode, ThreadLogMode, WriteLogger, LevelFilter, Level};
+use simplelog::{
+    ColorChoice, CombinedLogger, ConfigBuilder, Level, LevelFilter, TermLogger, TerminalMode,
+    ThreadLogMode, WriteLogger,
+};
 use std::env::temp_dir;
 use std::fs::File;
 
@@ -42,7 +45,4 @@ pub fn init(named: &str, cli: &Flags) -> anyhow::Result<()> {
         .with_syslog_identifier(named.to_string());
 
     Ok(())
-
-    // .install()
-    // .context("Install Journal Logger")
 }

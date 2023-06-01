@@ -1,10 +1,9 @@
-use crate::{CleanablePath, PathCollections};
+use crate::{globbed, CleanablePath, PathCollections};
 use anyhow::{anyhow, Context};
 use chrono::Duration;
-use log::trace;
 use once_cell::sync::Lazy;
-use std::path::PathBuf;
-use std::slice::Iter;
+use simplelog::trace;
+use std::{path::PathBuf, slice::Iter};
 
 #[derive(Debug, Clone)]
 pub enum AgeType {
@@ -90,6 +89,7 @@ impl CleanableBuilderTrait for CleanableBuilder {
         }?;
 
         Ok(CleanablePath {
+            base_buf: buf.display().to_string(),
             paths: composed,
             auto: self.auto,
             minimum_age: self.minimum_age,
@@ -104,13 +104,20 @@ fn composing(buf: &PathBuf, roots: Iter<'_, PathBuf>) -> anyhow::Result<Vec<Path
     for root in roots {
         let mut root = root.clone();
         root.push(buf);
-        match root.exists() {
-            true => buffers.push(root),
-            false => {
-                trace!("Path does not exist: {}", buf.display());
+
+        if root.exists() {
+            buffers.push(root);
+            continue;
+        }
+
+        if let Some(glob) = globbed(&root) {
+            if !glob.is_empty() {
+                buffers.extend(glob);
                 continue;
             }
         }
+
+        trace!("Path does not exist: {}", buf.display());
     }
 
     if buffers.is_empty() {
@@ -141,6 +148,7 @@ fn user(buf: &PathBuf) -> anyhow::Result<Vec<PathBuf>> {
     let users = match users_dir.read_dir() {
         Ok(users) => users
             .map(|user| user.unwrap().path())
+            .filter(|user| user.is_dir())
             .collect::<Vec<PathBuf>>(),
         Err(e) => return Err(anyhow!("Error while collecting users: {}", e)),
     };

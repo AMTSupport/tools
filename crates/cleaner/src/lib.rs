@@ -2,13 +2,13 @@
 use crate::builder::CleanableBuilderTrait;
 use crate::builder::{AgeType, CleanableBuilder};
 use anyhow::Context;
-use async_trait::async_trait;
 use chrono::Duration;
+use indicatif::{ParallelProgressIterator, ProgressBar, ProgressIterator};
 use lib::cli::Flags;
-use log::{error, info, trace, warn};
 use once_cell::sync::Lazy;
+use rayon::prelude::*;
+use simplelog::{debug, error, trace, warn};
 use std::collections::HashSet;
-use std::fs;
 use std::ops::Not;
 use std::path::PathBuf;
 
@@ -30,24 +30,24 @@ const ENV_WINDIR: &str = "windir";
 pub static LOCATIONS: Lazy<Vec<CleanableBuilder>> = Lazy::new(|| {
     vec![
         CleanableBuilder::collection(PathCollections::Drive)
-            .path(r"$Recycle.Bin")
+            .path("$Recycle.Bin")
             .auto()
             .minimum_age(Duration::weeks(1))
             .duration_from(AgeType::FromModification),
         CleanableBuilder::env(ENV_PROGRAMDATA).path("NVIDIA").auto(),
         CleanableBuilder::env(ENV_PROGRAMDATA)
-            .path(r"Nvidia Corporation\Downloader")
+            .path("Nvidia Corporation/Downloader")
             .auto(),
         CleanableBuilder::env(ENV_PROGRAMDATA)
-            .path(r"Microsoft\Windows\WER\ReportArchive")
+            .path("Microsoft/Windows/WER/ReportArchive")
             .auto(),
         CleanableBuilder::env(ENV_PROGRAMDATA)
-            .path(r"NinitePro\NiniteDownloads\Files")
+            .path("NinitePro/NiniteDownloads/Files")
             .auto(),
         CleanableBuilder::env(ENV_WINDIR)
             .path("Downloaded Program Files")
             .auto(),
-        CleanableBuilder::env(ENV_WINDIR).path(r"SoftwareDistribution\Download"),
+        CleanableBuilder::env(ENV_WINDIR).path("SoftwareDistribution/Download"),
         CleanableBuilder::env(ENV_WINDIR).path("Prefetch").auto(),
         CleanableBuilder::env(ENV_WINDIR).path("Temp").auto(),
         CleanableBuilder::env(ENV_WINDIR)
@@ -59,43 +59,43 @@ pub static LOCATIONS: Lazy<Vec<CleanableBuilder>> = Lazy::new(|| {
             .path("Minidump")
             .auto(),
         CleanableBuilder::collection(PathCollections::User)
-            .path(r"AppData\Local\Temp")
+            .path("AppData/Local/Temp")
             .auto(),
         CleanableBuilder::collection(PathCollections::User)
-            .path(r"AppData\Local\Microsoft\Windows\INetCache\IE")
+            .path("AppData/Local/Microsoft/Windows/INetCache/IE")
             .auto(),
         CleanableBuilder::collection(PathCollections::User)
-            .path(r"AppData\Local\Microsoft\Edge\User Data\Default\Cache")
+            .path("AppData/Local/Microsoft/Edge/User Data/Default/Cache")
             .auto(),
         CleanableBuilder::collection(PathCollections::User)
-            .path(r"AppData\Local\Microsoft\Edge\User Data\Default\Code Cache")
+            .path("AppData/Local/Microsoft/Edge/User Data/Default/Code Cache")
             .auto(),
         CleanableBuilder::collection(PathCollections::User)
-            .path(r"AppData\Local\Microsoft\Edge\User Data\Default\GPUCache")
+            .path("AppData/Local/Microsoft/Edge/User Data/Default/GPUCache")
             .auto(),
         CleanableBuilder::collection(PathCollections::User)
-            .path(r"AppData\Local\Google\Chrome\User Data\Default\Cache")
+            .path("AppData/Local/Google/Chrome/User Data/Default/Cache")
             .auto(),
         CleanableBuilder::collection(PathCollections::User)
-            .path(r"AppData\Local\Google\Chrome\User Data\Default\Code Cache")
+            .path("AppData/Local/Google/Chrome/User Data/Default/Code Cache")
             .auto(),
         CleanableBuilder::collection(PathCollections::User)
-            .path(r"AppData\Local\Google\Chrome\User Data\Default\GPUCache")
+            .path("AppData/Local/Google/Chrome/User Data/Default/GPUCache")
             .auto(),
         CleanableBuilder::collection(PathCollections::User)
-            .path(r"AppData\Local\Mozilla\Firefox\Profiles\*\*.default-release\cache2")
+            .path("AppData/Local/Mozilla/Firefox/Profiles/*.default-release/cache2")
             .auto(),
         CleanableBuilder::collection(PathCollections::User)
-            .path(r"AppData\Local\D3DSCache")
+            .path("AppData/Local/D3DSCache")
             .auto(),
         CleanableBuilder::collection(PathCollections::User)
-            .path(r"AppData\Local\Nvidia\DXCache")
+            .path("AppData/Local/Nvidia/DXCache")
             .auto(),
         CleanableBuilder::collection(PathCollections::User)
-            .path(r"AppData\Local\Microsoft\Windows\Exploerer\thumbcache_*")
+            .path("AppData/Local/Microsoft/Windows/Explorer/thumbcache_*")
             .auto(),
         CleanableBuilder::collection(PathCollections::User)
-            .path(r"AppData\Local\Microsoft\Windows\Exploerer\iconcache_*")
+            .path("AppData/Local/Microsoft/Windows/Explorer/iconcache_*")
             .auto(),
     ]
 });
@@ -104,113 +104,111 @@ pub static LOCATIONS: Lazy<Vec<CleanableBuilder>> = Lazy::new(|| {
 pub static LOCATIONS: Lazy<Vec<CleanableBuilder>> = Lazy::new(Vec::new);
 
 pub struct CleanablePath {
+    pub base_buf: String,
     pub paths: Vec<PathBuf>,
     pub auto: bool,
     pub minimum_age: Duration,
     pub duration_from: AgeType,
 }
 
-#[async_trait]
 pub trait Indexed {
-    async fn clean(&self, cli: &Flags) -> (usize, f64, usize, f64);
-    async fn size(&self) -> u64;
+    fn prepare(
+        &self,
+        cli: &Flags,
+        bar: ProgressBar,
+    ) -> anyhow::Result<(PreparedPaths, PreparedPaths)>;
 }
 
-#[async_trait]
+#[derive(Default, Clone, Debug)]
+pub struct PreparedPaths {
+    paths: Vec<PathBuf>,
+    disk_size: u64,
+}
+
+impl PreparedPaths {
+    fn merge_with(&mut self, other: PreparedPaths) {
+        self.paths.extend(other.paths);
+        self.disk_size += other.disk_size;
+    }
+}
+
 impl Indexed for CleanablePath {
-    async fn clean(&self, cli: &Flags) -> (usize, f64, usize, f64) {
-        let mut auto_size = 0u64;
-        let mut auto_files = 0usize;
-        let mut manual_size = 0u64;
-        let mut manual_files = 0usize;
+    fn prepare(
+        &self,
+        _cli: &Flags,
+        bar: ProgressBar,
+    ) -> anyhow::Result<(PreparedPaths, PreparedPaths)> {
+        let mut prepared_auto = PreparedPaths {
+            paths: Vec::new(),
+            disk_size: 0,
+        };
+        let mut prepared_manual = PreparedPaths {
+            paths: Vec::new(),
+            disk_size: 0,
+        };
 
-        let mut collection: Vec<_> = self.paths.iter().flat_map(|p| p.collect()).collect();
-        while let Some(buf) = collection.pop() {
-            // TODO :: If all files in directory are removable call remove_dir, else call remove_file on each.
-            if self.minimum_age.is_zero().not() {
-                let metadata = match buf.metadata().context("Retrieve metadata for age check") {
-                    Ok(m) => m,
-                    Err(_) => {
-                        error!("Failed to retrieve metadata for file: {}", buf.display());
-                        continue;
-                    }
-                };
+        let bar = bar.with_message(format!("Collecting files from {}", self.base_buf));
+        let iter = (&self.paths)
+            .into_iter()
+            .flat_map(|path| path.collect())
+            .progress_with(bar);
 
-                let now = std::time::SystemTime::now();
-                let from_time = match self.duration_from {
-                    AgeType::FromAccess => metadata.accessed().unwrap(), // TODO :: Could error on some filesystems
-                    AgeType::FromCreation => metadata.created().unwrap(),
-                    AgeType::FromModification => metadata.modified().unwrap(),
-                };
-
-                let duration = now.duration_since(from_time).unwrap();
-                if duration.as_millis() < self.minimum_age.num_milliseconds() as u128 {
-                    trace!("File is not old enough to be removed: {}", buf.display());
-                    continue;
-                }
-
-                trace!("File is old enough to be removed: {}", buf.display());
+        for buf in iter {
+            if self.newer_than_allowed(&buf)? {
+                trace!("File is newer than allowed: {}", buf.display());
+                continue;
             }
 
             if self.auto.not() {
-                trace!(
-                    "File is not able to be automatically removed: {}",
-                    buf.display()
-                );
-
-                manual_files += 1;
-                manual_size += buf.metadata().unwrap().len();
-
+                trace!("File is not auto cleanable: {}", buf.display());
+                prepared_manual.disk_size += buf.metadata()?.len();
+                prepared_manual.paths.push(buf);
                 continue;
             }
 
-            if cli.dry_run {
-                info!("Would remove file: {:?}", buf);
-                auto_size += buf.metadata().unwrap().len();
-                auto_files += 1;
-                continue;
-            }
-
-            match fs::remove_file(&buf) {
-                Ok(_) => {
-                    trace!("Removed file: {}", buf.display());
-                    auto_size += buf.metadata().unwrap().len();
-                    auto_files += 1;
-                }
-                Err(_) => error!("Failed to remove file: {}", buf.display()),
-            }
+            prepared_auto.disk_size += buf.metadata()?.len();
+            prepared_auto.paths.push(buf);
         }
 
-        // let size_after = self.size().await;
-        // let size_cleaned = size - size_after;
-        // let percent_cleaned = size_cleaned as f64 / size as f64 * 100.0;
-        // percent_cleaned
-        (
-            auto_files,
-            auto_size as f64,
-            manual_files,
-            manual_size as f64,
-        )
-    }
-
-    async fn size(&self) -> u64 {
-        let mut size = 0u64;
-        for path in &self.paths {
-            if let Ok(metadata) = fs::metadata(path) {
-                size += metadata.len();
-            }
-        }
-
-        size
+        Ok((prepared_auto, prepared_manual))
     }
 }
 
-#[async_trait]
+impl CleanablePath {
+    fn newer_than_allowed(&self, buf: &PathBuf) -> anyhow::Result<bool> {
+        // There is no minimum age set, so it's allowed to be removed.
+        if self.minimum_age.is_zero() {
+            return Ok(false);
+        }
+
+        let metadata = buf
+            .metadata()
+            .with_context(|| format!("Retrieve metadata for age check: {}", buf.display()))?;
+        let now = std::time::SystemTime::now();
+        let from_time = match self.duration_from {
+            AgeType::FromAccess => metadata
+                .accessed()
+                .with_context(|| format!("Get last accessed age for {}", buf.display()))?, // TODO :: Could error on some filesystems
+            AgeType::FromCreation => metadata
+                .created()
+                .with_context(|| format!("Get creation age for {}", buf.display()))?,
+            AgeType::FromModification => metadata
+                .modified()
+                .with_context(|| format!("Get last modified age for {}", buf.display()))?,
+        };
+
+        let duration = now
+            .duration_since(from_time)
+            .with_context(|| format!("Calculate duration for {}", buf.display(),))?;
+
+        Ok(duration.as_millis() < self.minimum_age.num_milliseconds() as u128)
+    }
+}
+
 pub trait Collectable {
     fn collect(&self) -> Vec<PathBuf>;
 }
 
-#[async_trait]
 impl Collectable for CleanablePath {
     fn collect(&self) -> Vec<PathBuf> {
         let mut inner_files = Vec::<PathBuf>::new();
@@ -223,7 +221,6 @@ impl Collectable for CleanablePath {
     }
 }
 
-#[async_trait]
 impl Collectable for PathBuf {
     fn collect(&self) -> Vec<PathBuf> {
         let mut inner_files = Vec::<PathBuf>::new();
@@ -233,13 +230,20 @@ impl Collectable for PathBuf {
 
         trace!("Collecting: {0}", self.display());
 
-        let append = move |iter: &mut Vec<PathBuf>, parent: &PathBuf| {
-            glob::glob(&format!("{0}/*", parent.display()))
-                .unwrap()
-                .for_each(|x| match x {
-                    Ok(x) => iter.push(x),
-                    Err(e) => error!("Failed to glob: {0}", e),
-                });
+        let append = move |iter: &mut Vec<PathBuf>, parent: &PathBuf| match globbed(parent) {
+            None => {
+                trace!("No globbed files found: {0}", parent.display());
+                iter.push(parent.clone());
+            }
+            Some(glob) => {
+                trace!(
+                    "Found {num} globbed files for {parent}",
+                    num = glob.len(),
+                    parent = parent.display()
+                );
+
+                iter.extend(glob);
+            }
         };
 
         append(&mut iter, self);
@@ -305,4 +309,43 @@ impl Collectable for PathBuf {
 
         inner_files
     }
+}
+
+pub(crate) fn globbed(buf: &PathBuf) -> Option<Vec<PathBuf>> {
+    let glob_str = match buf {
+        buf if buf.exists() && buf.is_dir() => format!("{0}/*", buf.to_str().unwrap()),
+        buf if buf.exists() && buf.is_file() => return Some(vec![buf.clone()]),
+        buf => format!("{buf}/*", buf = buf.to_str().unwrap()),
+    };
+
+    debug!("Globbing: {0}", &glob_str);
+
+    match glob::glob(&glob_str) {
+        Err(e) => {
+            error!("Failed to glob: {0}", e);
+            None
+        }
+        Ok(paths) => Some(paths.filter_map(|x| x.ok()).collect::<Vec<PathBuf>>()),
+    }
+}
+
+pub(crate) fn clean(prepared: &PreparedPaths) -> anyhow::Result<u64> {
+    // TODO :: If all files in directory are removable call remove_dir, else call remove_file on each.
+    Ok(prepared
+        .paths
+        .par_iter()
+        .progress_count(prepared.paths.len() as u64)
+        .map(|buf| {
+            match std::fs::remove_file(buf).with_context(|| format!("Delete {}", buf.display())) {
+                Ok(_) => {
+                    trace!("Deleted: {0}", buf.display());
+                    0
+                }
+                Err(e) => {
+                    trace!("Failed to delete: {0} ({1})", buf.display(), e);
+                    buf.metadata().unwrap().len() as u64
+                }
+            }
+        })
+        .sum())
 }

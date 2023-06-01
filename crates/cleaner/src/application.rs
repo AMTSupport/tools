@@ -1,66 +1,158 @@
 use crate::builder::CleanableBuilderTrait;
-use crate::{Indexed, LOCATIONS};
+use crate::{clean, Indexed, PreparedPaths, LOCATIONS};
+use clap::Parser;
+use indicatif::ParallelProgressIterator;
 use lib::cli::Flags;
-use log::info;
-use tokio_stream::{self as stream, StreamExt};
+use rayon::prelude::*;
+use simplelog::info;
+use std::sync::{Arc, Mutex};
 
-// TODO :: Maybe change for windows since it reports sizes differently.
-const KILOBYTE: f64 = 1024f64;
-const MEGABYTE: f64 = 1024f64 * KILOBYTE;
-const GIGABYTE: f64 = 1024f64 * MEGABYTE;
+#[derive(Parser, Debug)]
+#[command(name = env!["CARGO_PKG_NAME"], version, author, about)]
+pub struct Cli {
+    // Allows a user to interact with the application.
+    #[arg(short, long)]
+    pub interactive: bool,
 
-pub async fn application(cli: Flags) -> anyhow::Result<()> {
+    #[command(flatten)]
+    pub flags: Flags,
+}
+
+pub async fn application(cli: Cli) -> anyhow::Result<()> {
     info!("Starting cleaner");
 
-    let mut cleanable = Vec::with_capacity(LOCATIONS.len());
-    let mut stream = stream::iter(LOCATIONS.iter());
-    while let Some(builder) = stream.next().await {
-        let built = builder.clone().build();
-        match built {
-            Ok(cleaner) => {
-                cleanable.push(cleaner);
-                info!("Built cleaner for {:?}", builder.composing);
-            }
-            Err(e) => info!("Failed to build cleaner: {}", e),
-        }
-    }
+    // TODO :: Progress bar
+    info!("Collecting cleanable items...");
+    let cleanable = LOCATIONS
+        .clone()
+        .into_par_iter()
+        .progress_count(LOCATIONS.len() as u64)
+        .with_message("Collecting cleanable items...")
+        .with_style(
+            indicatif::ProgressStyle::default_spinner()
+                .progress_chars("#>-")
+                .template("{spinner:.green} [{bar:40.cyan/blue}] {pos:>7}/{len:7} {msg}")?,
+        )
+        .filter_map(|builder| builder.build().ok())
+        .collect::<Vec<_>>();
 
-    let mut auto_size = 0f64;
-    let mut auto_files = 0usize;
-    let mut manual_size = 0f64;
-    let mut manual_files = 0usize;
-    for cleaner in cleanable {
-        let (inner_auto_files, inner_auto_size, inner_manual_files, inner_manual_size) =
-            cleaner.clean(&cli).await;
+    info!("Preparing for clean-up...");
+    let auto = Arc::new(Mutex::new(PreparedPaths::default()));
+    let manual = Arc::new(Mutex::new(PreparedPaths::default()));
 
-        auto_files += inner_auto_files;
-        auto_size += inner_auto_size;
-        manual_files += inner_manual_files;
-        manual_size += inner_manual_size;
-    }
-
-    let size_str = |size| {
-        if size >= GIGABYTE {
-            format!("{:.2} GB", size / GIGABYTE)
-        } else if size >= MEGABYTE {
-            format!("{:.2} MB", size / MEGABYTE)
-        } else if size >= KILOBYTE {
-            format!("{:.2} KB", size / KILOBYTE)
-        } else {
-            format!("{:.2} B", size)
-        }
+    let multi_progress = indicatif::MultiProgress::new();
+    let spinner = || {
+        indicatif::ProgressBar::new_spinner().with_style(
+            indicatif::ProgressStyle::default_spinner()
+                .progress_chars("#>-")
+                .template("{spinner:.green} [{bar:40.cyan/blue}] {pos:>7}/{len:7} {msg}")
+                .unwrap(),
+        )
     };
 
+    fn proc(prep: Arc<Mutex<PreparedPaths>>, inner_prep: PreparedPaths) {
+        let mut prep = prep.lock().unwrap();
+        prep.merge_with(inner_prep);
+    }
+
+    cleanable
+        .par_iter()
+        .map(|cleanable| {
+            let spinner = multi_progress.add(spinner());
+            cleanable.prepare(&cli.flags, spinner).unwrap()
+        })
+        .collect::<Vec<_>>()
+        .into_iter()
+        .for_each(|(inner_auto, inner_manual)| {
+            proc(auto.clone(), inner_auto);
+            proc(manual.clone(), inner_manual);
+        });
+
+    let mut auto = auto.lock().unwrap();
+    let mut manual = manual.lock().unwrap();
+    let mut missed_size = 0u64;
+
+    if !cli.flags.dry_run {
+        info!("Cleaning up...");
+        let uncleaned_size = clean(&auto)?;
+        auto.disk_size -= uncleaned_size.clone();
+        missed_size += uncleaned_size;
+    } else {
+        info!("Dry run, no files have been <red>deleted</> or <yellow>modified</>.");
+    }
+
     info!(
-        "Cleaned up {} files, freeing up {}",
-        auto_files,
-        size_str(auto_size)
+        "Automatic cleanup removed {removed_files} files, freeing up a total of {removed_size}.",
+        removed_files = indicatif::HumanCount(auto.paths.len() as u64),
+        removed_size = indicatif::HumanBytes(auto.disk_size)
     );
-    info!(
-        "Additional {} files, able to clean up {}",
-        manual_files,
-        size_str(manual_size)
-    );
+
+    if missed_size > 0 {
+        info!(
+            "Automatic cleanup was unable to remove some files, which would have freed up an additional total of {missed_size}.",
+            missed_size = indicatif::HumanBytes(missed_size)
+        )
+    }
+
+    if !manual.paths.is_empty() {
+        info!(
+            "There are <blue>{additional_files}</> files which require manual cleanup approval,\
+            These files would clean up a total of <blue>{additional_size}</> if <red>removed</>.",
+            additional_files = indicatif::HumanCount(manual.paths.len() as u64),
+            additional_size = indicatif::HumanBytes(manual.disk_size),
+        );
+    }
+
+    // Only prompt for manual marked files if we are in interactive mode.
+    if !cli.interactive || manual.paths.is_empty() {
+        return Ok(());
+    }
+
+    match inquire::Confirm::new("Do you want to clean up the additional files?")
+        .with_default(false)
+        .prompt()
+    {
+        Ok(true) => {
+            // Display the additional files and prompt for confirmation.
+            // Maybe allow selecting which files to clean up?
+            let fmt_paths = manual
+                .paths
+                .iter()
+                .map(|path| path.display())
+                .collect::<Vec<_>>();
+            let select =
+                inquire::MultiSelect::new("Select additional files to clean up.", fmt_paths)
+                    .with_page_size(15);
+            match select.prompt() {
+                Ok(selection) => {
+                    let selection = selection
+                        .iter()
+                        .map(|display| {
+                            manual
+                                .paths
+                                .iter()
+                                .find(|item| item.display().to_string() == display.to_string())
+                                .unwrap()
+                                .clone()
+                        })
+                        .collect::<Vec<_>>();
+                    manual.paths = selection;
+
+                    info!("Cleaning up additional files...");
+                    let uncleaned_size = clean(&manual)?;
+                    manual.disk_size -= uncleaned_size;
+
+                    info!(
+                        "Managed to free up an additional {}.",
+                        indicatif::HumanBytes(manual.disk_size)
+                    );
+                }
+                Err(e) => info!("Failed to prompt for additional files: {}", e),
+            }
+        }
+        Ok(false) => return Ok(()),
+        Err(e) => info!("Failed to prompt for additional files: {}", e),
+    }
 
     Ok(())
 }
