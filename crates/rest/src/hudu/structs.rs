@@ -3,7 +3,7 @@ pub mod company {
 
     pub type Companies = std::collections::HashMap<usize, Company>;
 
-    #[derive(Clone, Debug, Deserialize)]
+    #[derive(Clone, Debug, Deserialize, Hash)]
     #[serde(rename = "company")]
     pub struct Company {
         /// Unique identifier.
@@ -39,6 +39,14 @@ pub mod company {
         /// Website URL.
         pub website_url: Option<String>,
     }
+
+    impl PartialEq for Company {
+        fn eq(&self, other: &Self) -> bool {
+            self.id == other.id
+        }
+    }
+
+    impl Eq for Company {}
 }
 
 pub mod password {
@@ -79,10 +87,7 @@ pub mod password {
     }
 
     impl Url<Client> for Password {
-        fn link(&self, hudu: &Client) -> String
-        where
-            Client: Hudu,
-        {
+        fn link(&self, hudu: &Client) -> String {
             format!(
                 "{url}/passwords/{slug}",
                 url = hudu.base_url.strip_suffix(API_ENDPOINT).unwrap(),

@@ -7,12 +7,7 @@ license = "MIT"
 authors = ["Racci <me@racci.dev>"]
 
 [workspace]
-members = [
-    "crates/lib",
-    "crates/cleaner",
-    "crates/rest",
-    "crates/pgen",
-]
+members = ["crates/*"]
 
 [dependencies]
 lib = { path = "crates/lib" }

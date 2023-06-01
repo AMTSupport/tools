@@ -1,133 +1,192 @@
 use crate::hudu::structs::company::{Companies, Company};
 use crate::hudu::structs::password::{Password, Passwords};
 use crate::hudu::{API_ENDPOINT, API_HEADER, COMPANIES_ENDPOINT, PASSWORDS_ENDPOINT};
+use crate::Client;
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use reqwest::{
     header::{self, HeaderMap},
-    RequestBuilder,
+    Response,
 };
 use serde::de::DeserializeOwned;
-use simplelog::trace;
+use simplelog::{error, trace};
+use std::any::Any;
+
+use http_cache_reqwest::{Cache, CacheMode, HttpCache};
+use reqwest_middleware::RequestBuilder;
 use std::collections::HashMap;
+use std::hash::Hash;
 
 #[async_trait]
-pub trait Hudu: Sized {
-    fn prepare_request(&self, uri: &str) -> RequestBuilder;
-
-    async fn paginated_request<I>(&self, builder: RequestBuilder) -> Result<Vec<I>>
+pub trait Hudu {
+    fn hudu(base_url: &str, api_key: &str) -> Result<Self>
     where
-        I: DeserializeOwned + Send,
-    {
-        let builder = builder.query(&[("page_size", 1000)]);
-        let start = std::time::Instant::now();
+        Self: Sized;
 
-        let mut page = 1;
-        let mut results = Vec::new();
+    fn prepare_request(&self, uri: &str) -> RequestBuilder
+    where
+        Self: Sized;
 
-        // TODO :: Stream
-        loop {
-            let builder = builder
-                .try_clone()
-                .context("Clone request builder")?
-                .query(&[("page", &page)]);
+    async fn get_companies(&self) -> Result<Companies>
+    where
+        Self: Sized;
+    async fn get_passwords(&self, companies: &Companies) -> Result<Passwords>
+    where
+        Self: Sized;
 
-            let response = builder
-                .send()
-                .await
-                .context(format!("Send paginated request for page {page}"))?;
-
-            #[derive(serde::Deserialize)]
-            struct VecHandler<I> {
-                #[serde(alias = "companies", alias = "asset_passwords")]
-                // TODO :: is there any way to fix having to hardcode these names?
-                vec: Vec<I>,
-            }
-
-            let handler = response
-                .json::<VecHandler<I>>()
-                .await
-                .context("Deserialise response")?;
-
-            let mut vec = handler.vec;
-
-            if vec.is_empty() {
-                break;
-            }
-
-            results.append(&mut vec);
-            page += 1;
-        }
-        trace!(
-            "Took {:#?} to collect paginated results for {builder:#?}",
-            start.elapsed()
-        );
-
-        Ok(results.into_iter().collect::<Vec<I>>())
-    }
-
-    fn hudu(base_url: &str, api_key: &str) -> Result<Self>;
-
-    async fn get_companies(&self) -> Result<Companies>;
-    async fn get_passwords(&self, companies: &Companies) -> Result<Passwords>;
-    async fn get_company(&self, id: &u8) -> Result<Company>;
+    async fn get_company(&self, id: &u8) -> Result<Company>
+    where
+        Self: Sized;
 }
 
 #[async_trait]
-impl Hudu for crate::Client {
-    fn prepare_request(&self, uri: &str) -> RequestBuilder {
-        self.client.get(format!("{0}{uri}", &self.base_url))
-    }
-
+impl Hudu for Client
+where
+    Self: 'static + Send + Sync + Eq + Hash + Clone,
+{
     fn hudu(base_url: &str, api_key: &str) -> Result<Self> {
         let mut headers = HeaderMap::with_capacity(2);
         headers.insert(API_HEADER, api_key.parse()?);
         headers.insert(header::ACCEPT, "application/json; charset=utf-8".parse()?);
 
+        let base_client = reqwest::Client::builder()
+            .user_agent(crate::AGENT)
+            .default_headers(headers)
+            .gzip(true)
+            .build()?;
+
+        let client = reqwest_middleware::ClientBuilder::new(base_client)
+            .with(Cache(HttpCache {
+                mode: CacheMode::ForceCache,
+                manager: http_cache_reqwest::MokaManager::default(),
+                options: None,
+            }))
+            .build();
+
         Ok(Self {
             base_url: format!("{base_url}{endpoint}", endpoint = API_ENDPOINT),
             api_key: api_key.to_string(),
-            client: reqwest::Client::builder()
-                .user_agent("rest")
-                .default_headers(headers)
-                .gzip(true)
-                .build()?,
+            client,
         })
     }
 
-    async fn get_companies(&self) -> Result<Companies> {
+    // TODO :: Cache
+    fn prepare_request(&self, uri: &str) -> RequestBuilder {
+        self.client.get(format!("{0}{uri}", &self.base_url))
+    }
+
+    async fn get_companies(&self) -> Result<Companies>
+    where
+        Companies: 'static + Clone + Send + Sync + Eq,
+    {
+        "std::option::Option<Pin<Box<(dyn Future<Output = HashMap<usize, Company>> + Send + 'async_trait)>>>";
         let request = self.prepare_request(COMPANIES_ENDPOINT);
-        let companies = self.paginated_request::<Company>(request).await?;
-        let map = companies
+        let companies = match paginated_request::<Company>(request).await {
+            Ok(companies) => companies,
+            Err(e) => {
+                error!("Error getting companies: {:#?}", e);
+                Vec::new()
+            }
+        };
+
+        Ok(companies
             .into_iter()
             .map(|company| (company.id.clone(), company))
-            .collect::<HashMap<usize, Company>>();
-
-        trace!("Got {:#?} companies", map.len());
-        trace!("Companies: {map:#?}");
-
-        Ok(map)
+            .collect::<Companies>())
     }
 
     async fn get_passwords(&self, _companies: &Companies) -> Result<Passwords> {
         let request = self.prepare_request(PASSWORDS_ENDPOINT);
-        let passwords = self.paginated_request::<Password>(request).await?;
+        let passwords = paginated_request::<Password>(request).await?;
 
         // TODO :: Filter companies
 
         Ok(passwords)
     }
 
-    async fn get_company(&self, id: &u8) -> Result<Company> {
-        let response: Company = self
+    async fn get_company(&self, id: &u8) -> Result<Company>
+// where
+        //     Self: 'static + Send + Sync + Eq,
+        //     Option<Company>: 'static + Send + Sync
+    {
+        match self
             .prepare_request(&format!("{COMPANIES_ENDPOINT}/{id}"))
             .send()
             .await
-            .context(format!("Send rest request for company {id}"))?
-            .json()
-            .await
-            .context("Parse json for company")?;
-
-        Ok(response)
+            .context(format!("Send rest request for company {id}"))
+            .and_then(|response| check_auth(response))
+        {
+            Ok(response) => response
+                .json::<Company>()
+                .await
+                .context(format!("Deserialise response for company {id}", id = id)),
+            Err(e) => {
+                error!("Error getting company {id}: {:#?}", e);
+                Err(anyhow::anyhow!("Error getting company {id}", id = id))
+            }
+        }
     }
+}
+
+fn check_auth(response: Response) -> Result<Response> {
+    if response.status().is_client_error() {
+        anyhow::anyhow!("Unable to authenticate with Hudu");
+    }
+
+    return Ok(response);
+}
+
+thread_local! {
+    static REQUESTS: HashMap<RequestBuilder, Vec<Box<dyn Any>>> = std::collections::HashMap::new();
+}
+
+async fn paginated_request<I>(builder: RequestBuilder) -> Result<Vec<I>>
+where
+    I: DeserializeOwned + Send,
+{
+    let builder = builder.query(&[("page_size", 1000)]);
+    let start = std::time::Instant::now();
+
+    let mut page = 1;
+    let mut results = Vec::new();
+
+    // TODO :: Stream
+    loop {
+        let builder = builder
+            .try_clone()
+            .context("Clone request builder")?
+            .query(&[("page", &page)]);
+
+        let response = builder
+            .send()
+            .await
+            .context(format!("Send paginated request for page {page}"))?;
+
+        #[derive(serde::Deserialize)]
+        struct VecHandler<I> {
+            #[serde(alias = "companies", alias = "asset_passwords")]
+            // TODO :: is there any way to fix having to hardcode these names?
+            vec: Vec<I>,
+        }
+
+        let handler = response
+            .json::<VecHandler<I>>()
+            .await
+            .context("Deserialise response")?;
+
+        let mut vec = handler.vec;
+
+        if vec.is_empty() {
+            break;
+        }
+
+        results.append(&mut vec);
+        page += 1;
+    }
+    trace!(
+        "Took {:#?} to collect paginated results for {builder:#?}",
+        start.elapsed()
+    );
+
+    Ok(results.into_iter().collect::<Vec<I>>())
 }

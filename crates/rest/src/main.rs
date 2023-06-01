@@ -1,5 +1,6 @@
 #![feature(async_closure)]
 #![feature(lazy_cell)]
+#![feature(async_fn_in_trait)]
 
 use anyhow::{Context, Result};
 use async_lazy::Lazy;
@@ -9,6 +10,7 @@ use lib::cli::Flags;
 use lib::log::init;
 use rest::hudu::web::Hudu;
 use rest::hudu::HuduCommands;
+use rest::manager::{ManagerCommands};
 use rest::nable::web::NAble;
 use rest::{Client, Url};
 use simplelog::{info, trace};
@@ -40,13 +42,20 @@ enum Commands {
         #[command(flatten)]
         flags: Flags,
     },
-}
-
-pub enum ManagementType {
-    Billable,
-    Managed,
-    Services,
-    Unknown,
+    Manager {
+        #[arg(long)]
+        hudu_endpoint: String,
+        #[arg(long)]
+        hudu_api_key: String,
+        #[arg(long)]
+        nable_endpoint: String,
+        #[arg(long)]
+        nable_api_key: String,
+        #[command(flatten)]
+        flags: Flags,
+        #[command(subcommand)]
+        subcommand: ManagerCommands,
+    },
 }
 
 pub struct Rules {
@@ -137,6 +146,20 @@ async fn main() -> Result<()> {
             let clients = nable.get_clients().await?;
 
             info!("{clients:#?}")
+        }
+        Commands::Manager {
+            hudu_endpoint,
+            hudu_api_key,
+            nable_endpoint,
+            nable_api_key,
+            flags,
+            subcommand,
+        } => {
+            init(format!("manager-{subcommand:#?}").as_str(), &flags).context("Init logging")?;
+            let hudu = Client::hudu(&hudu_endpoint, &hudu_api_key)?;
+            let nable = Client::nable(&nable_endpoint, &nable_api_key)?;
+
+            subcommand.run(hudu, nable).await.expect("Failed to run subcommand")
         }
     }
 
