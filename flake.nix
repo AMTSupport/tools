@@ -16,6 +16,7 @@
           packages = [ pkgs.bashInteractive ];
           buildInputs = [
             openssl
+            mold
             pkg-config
             (rust-bin.selectLatestNightlyWith (toolchain: toolchain.default.override {
               extensions = [ "rust-src" ];
