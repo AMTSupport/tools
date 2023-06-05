@@ -53,9 +53,10 @@ pub static LOCATIONS: Lazy<Vec<CleanableBuilder>> = Lazy::new(|| {
         CleanableBuilder::env(ENV_WINDIR)
             .minimum_age(Duration::weeks(2))
             .path("Panther")
+            .duration_from(AgeType::FromModification)
             .auto(),
         CleanableBuilder::env(ENV_WINDIR)
-            .minimum_age(Duration::weeks(2))
+            .minimum_age(Duration::weeks(1))
             .path("Minidump")
             .auto(),
         CleanableBuilder::collection(PathCollections::User)
@@ -89,8 +90,9 @@ pub static LOCATIONS: Lazy<Vec<CleanableBuilder>> = Lazy::new(|| {
             .path("AppData/Local/D3DSCache")
             .auto(),
         CleanableBuilder::collection(PathCollections::User)
-            .path("AppData/Local/Nvidia/DXCache")
+            .path("AppData/Local/NVIDIA/DXCache")
             .auto(),
+        // TODO :: Figure out how to clean these without restart explorer.exe
         CleanableBuilder::collection(PathCollections::User)
             .path("AppData/Local/Microsoft/Windows/Explorer/thumbcache_*")
             .auto(),

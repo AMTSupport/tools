@@ -2,27 +2,19 @@
 
 use clap::Parser;
 use cleaner::application::{self, application};
-use lib::log as Logger;
+use lib::anyhow::Result;
+use lib::exitcode::is_error;
+use lib::helper::{required_elevated_privileges, required_elevated_privileges_or_exit};
+use lib::sysexits::ExitCode;
+use lib::{log as Logger, sysexits};
 use simplelog::error;
-
-const EXIT_CODE_INVALID_PERMISSIONS: i32 = 4;
+use std::process::exit;
 
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
+async fn main() -> Result<()> {
     let cli = application::Cli::parse();
     Logger::init(env!["CARGO_PKG_NAME"], &cli.flags)?;
-
-    #[cfg(windows)]
-    if is_elevated::is_elevated() == false {
-        error!("This application must be run as an administrator");
-        std::process::exit(EXIT_CODE_INVALID_PERMISSIONS);
-    }
-
-    #[cfg(unix)]
-    if nix::unistd::geteuid().is_root() == false {
-        error!("This application must be run as root");
-        std::process::exit(EXIT_CODE_INVALID_PERMISSIONS);
-    }
+    required_elevated_privileges().if_some(|code| exit(code));
 
     application(cli).await?;
 

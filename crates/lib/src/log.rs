@@ -1,11 +1,12 @@
 use crate::cli::Flags;
 use anyhow::Context;
 use simplelog::{
-    ColorChoice, CombinedLogger, ConfigBuilder, Level, LevelFilter, TermLogger, TerminalMode,
-    ThreadLogMode, WriteLogger,
+    trace, ColorChoice, CombinedLogger, ConfigBuilder, Level, LevelFilter, TermLogger,
+    TerminalMode, ThreadLogMode, WriteLogger,
 };
 use std::env::temp_dir;
 use std::fs::File;
+use std::os::unix::fs::OpenOptionsExt;
 
 pub fn init(named: &str, cli: &Flags) -> anyhow::Result<()> {
     let log_level = match cli.verbose {
@@ -13,6 +14,9 @@ pub fn init(named: &str, cli: &Flags) -> anyhow::Result<()> {
         1 => LevelFilter::Debug,
         _ => LevelFilter::Trace,
     };
+
+    let log_file = temp_dir().join(format!("{0}.log", named));
+    println!("Log file: {0}", log_file.display());
 
     CombinedLogger::init(vec![
         TermLogger::new(
@@ -34,7 +38,12 @@ pub fn init(named: &str, cli: &Flags) -> anyhow::Result<()> {
                 .set_thread_mode(ThreadLogMode::Names)
                 .set_time_format_rfc2822()
                 .build(),
-            File::create(temp_dir().join(format!("{0}.log", named))).context("Create log file")?,
+            File::options()
+                .append(true)
+                .create(true)
+                .mode(0o666)
+                .open(log_file)
+                .context("Create log file")?,
         ),
     ])
     .expect("Initialise Global Loggers");
