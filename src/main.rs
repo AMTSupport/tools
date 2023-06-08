@@ -24,12 +24,12 @@ enum Commands {
 async fn main() -> anyhow::Result<()> {
     let cli = ParentCli::try_parse().context("Parse CLI")?;
 
-    match cli.commands {
-        Commands::Cleaner { flags } => {
-            log::init("cleaner", &flags)?;
-            cleaner::application::application(flags).await?
-        }
-    }
+    // match cli.commands {
+    //     Commands::Cleaner { flags } => {
+    //         log::init("cleaner", &flags)?;
+    //         cleaner::application::application(flags).await?
+    //     }
+    // }
 
     Ok(())
 }

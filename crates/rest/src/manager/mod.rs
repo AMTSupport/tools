@@ -1,4 +1,3 @@
-use std::cmp::max_by_key;
 use crate::hudu::web::Hudu;
 use crate::nable::web::NAble;
 use crate::{nable, Client};
@@ -6,6 +5,7 @@ use clap::Subcommand;
 use fuzzy_matcher::FuzzyMatcher;
 use regex::Regex;
 use simplelog::{info, trace};
+use std::cmp::max_by_key;
 use std::collections::HashMap;
 
 pub mod structs;
@@ -47,7 +47,7 @@ async fn query<H: Hudu, N: NAble>(hudu: H, nable: N) -> anyhow::Result<()> {
 
         let mut scores = HashMap::new();
         // let mut companies = companies.values();
-         Some(company) = hudu_companies.next() {
+        while Some(company) = hudu_companies.values().next() {
             let company_name = company.name.to_lowercase();
             let score = match matcher.fuzzy_match(name, company_name.as_str()) {
                 None => company
@@ -67,7 +67,10 @@ async fn query<H: Hudu, N: NAble>(hudu: H, nable: N) -> anyhow::Result<()> {
 
         let scores = scores.into_iter();
         if let Some((score, hudu_company)) = scores.max_by_key(|(score, _)| *score) {
-            trace!("Best match: {str} with score {score}", str = hudu_company.name);
+            trace!(
+                "Best match: {str} with score {score}",
+                str = hudu_company.name
+            );
             let _ = matching_companies.remove_entry(&hudu_company.id);
             matched.push((hudu_company, client));
         } else {
