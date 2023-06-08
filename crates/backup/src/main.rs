@@ -1,6 +1,4 @@
-#![feature(trait_upcasting)]
-#![allow(incomplete_features)]
-
+use std::error::Error;
 use backup::application;
 use inquire::PathSelectionMode;
 use lib::anyhow::{anyhow, Result};
@@ -8,6 +6,7 @@ use lib::clap::Parser;
 
 use once_cell::sync::Lazy;
 use std::path::PathBuf;
+use std::process::exit;
 use lib::simplelog::trace;
 
 #[cfg(windows)]
@@ -17,28 +16,19 @@ const INTERACTIVE_START: &str = "/";
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let cli = application::Cli::try_parse()?;
+    let cli = application::Cli::parse();
     lib::log::init("backup-interactive", &cli.flags)?;
     // let _ = required_elevated_privileges().is_some_and(|code| code.exit());
 
     // TODO :: Save this in a config on the machine
 
-    let drive = inquire::PathSelect::new("Select your backup destination", Some(INTERACTIVE_START))
-        .with_selection_mode(PathSelectionMode::Directory)
-        .with_select_multiple(false)
-        .prompt();
+    let destination = std::env::var("BACKUP_DIR")
+        .map(PathBuf::from)
+        .or_else(|_| interactive_select_drive())?;
 
-    let destination = match drive {
-        Ok(drive) => {
-            let entry = drive.first().unwrap();
-            entry.path.clone()
-        },
-        Err(_) => Err(anyhow!("No drive selected"))?
-    };
+    trace!("Selected destination: {}", &destination.display());
 
-    trace!("Selected drive: {}", &destination.display());
-
-    application::main(destination, true).await?;
+    application::main(destination, cli, true).await?;
 
     // TODO :: Verify writable
     // TODO :: Verify enough space
@@ -47,6 +37,20 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
+fn interactive_select_drive() -> core::result::Result<PathBuf, impl Error> {
+    let drive = inquire::PathSelect::new("Select your backup destination", Some(INTERACTIVE_START))
+        .with_selection_mode(PathSelectionMode::Directory)
+        .with_select_multiple(false)
+        .prompt();
+
+    match drive {
+        Ok(drive) => {
+            let entry = drive.first().unwrap();
+            Ok(entry.path.clone())
+        },
+        Err(err) => Err(err)
+    }
+}
 
 
 #[cfg(windows)]

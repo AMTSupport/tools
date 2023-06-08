@@ -147,11 +147,11 @@ pub async fn application(cli: Cli) -> anyhow::Result<()> {
                         indicatif::HumanBytes(manual.disk_size)
                     );
                 }
-                Err(e) => info!("Failed to prompt for additional files: {}", e.into()),
+                Err(e) => info!("Failed to prompt for additional files: {}", e),
             }
         }
         Ok(false) => return Ok(()),
-        Err(e) => info!("Failed to prompt for additional files: {}", e.into()),
+        Err(e) => info!("Failed to prompt for additional files: {}", e),
     }
 
     Ok(())
