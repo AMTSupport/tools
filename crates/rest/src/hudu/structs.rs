@@ -71,9 +71,9 @@ pub mod password {
         #[serde(rename = "slug")]
         pub identity_slug: String,
 
-        #[serde(rename = "created_at", deserialize_with = "deserialise_datetime")]
+        #[serde(rename = "created_at")]
         pub meta_created_at: DateTime<Utc>,
-        #[serde(rename = "updated_at", deserialize_with = "deserialise_datetime")]
+        #[serde(rename = "updated_at")]
         pub meta_updated_at: DateTime<Utc>,
 
         #[serde(rename = "password_folder_id")]

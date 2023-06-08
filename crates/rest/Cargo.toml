@@ -12,7 +12,7 @@ simplelog = { version = "0.12.1", features = ["paris"] }
 lib = { path = "../lib" }
 async-trait = "0.1.68"
 serde = { version = "1.0.163", features = ["serde_derive", "derive"] }
-chrono = { version = "0.4.24" }
+chrono = { version = "0.4.24", features = ["serde"] }
 async-lazy = "0.1.0"
 quick-xml = { version = "0.28.2", features = ["serde", "serialize"] }
 cached = "0.43.0"
