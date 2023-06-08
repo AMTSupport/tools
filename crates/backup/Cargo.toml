@@ -7,7 +7,8 @@ keywords = ["backup"]
 
 [dependencies]
 lib = { path = "../lib" }
-clap = { version = "4.2.7", features = ["derive", "std"], default-features = false }
+filetime = "0.2"
+clap = { version = "4.2.7", features = ["derive", "std", "help", "usage", "suggestions", "color"], default-features = false }
 tokio = { version = "1.28.1", features = ["fs", "macros", "rt-multi-thread"] }
 chrono = { version = "0.4.24", features = ["serde"] }
 once_cell = "1.17.1"
