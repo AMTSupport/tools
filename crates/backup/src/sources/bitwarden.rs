@@ -1,99 +1,195 @@
-use crate::config::{AutoPrune, Backend, RuntimeConfig};
+use crate::config::{AutoPrune, Backend, Config, RuntimeConfig};
 use crate::sources::auto_prune::Prune;
 use crate::sources::exporter::Exporter;
 use crate::{continue_loop, env_or_prompt};
 use anyhow::Result;
 use async_trait::async_trait;
+use core::slice::SlicePattern;
+use futures::StreamExt;
 use inquire::validator::Validation;
 use lib::anyhow;
-use lib::anyhow::anyhow;
-use lib::simplelog::{info, trace};
+use lib::anyhow::{anyhow, Context};
+use lib::simplelog::{debug, error, info, trace};
 use serde::{Deserialize, Serialize};
+use std::fmt::{Display, Formatter};
 use std::path::PathBuf;
+use std::process::Command;
+use std::string::ToString;
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BitWardenCore {
+    user: String,
     org_id: String,
     org_name: String,
     session_id: String,
 }
 
+impl BitWardenCore {
+    const BW_SESSION: &'static str = "BW_SESSION";
+    const BW_DIRECTORY: &'static str = "BITWARDENCLI_APPDATA_DIR";
+
+    #[inline]
+    fn base_dir(config: &RuntimeConfig) -> PathBuf {
+        config.directory.join("BitWarden")
+    }
+
+    #[inline]
+    fn data_dir(&self, config: &RuntimeConfig) -> PathBuf {
+        Self::_data_dir(&config, &self.user)
+    }
+
+    #[inline]
+    fn backup_dir(&self, config: &RuntimeConfig) -> PathBuf {
+        Self::_backup_dir(&config, &self.org_name)
+    }
+
+    fn _data_dir(config: &RuntimeConfig, user: &str) -> PathBuf {
+        Self::base_dir(&config).join(PathBuf::from(format!(r"data-{user}")))
+    }
+
+    fn _backup_dir(config: &RuntimeConfig, org_name: &str) -> PathBuf {
+        Self::base_dir(&config).join(PathBuf::from(format!(r"backup-{org_name}")))
+    }
+}
+
 impl Prune for BitWardenCore {
     fn files(&self, config: &RuntimeConfig) -> Vec<PathBuf> {
-        let directory = config.directory.join("BitWarden");
-        if !directory.exists() {
-            return vec![];
-        }
+        let glob = glob::glob(&format!(
+            "{root}/backup-{org}/*.json",
+            root = &config.directory.display(),
+            org = &self.org_name
+        ))
+        .unwrap(); // TODO: Handle this better.
 
-        std::fs::read_dir(directory)
-            .unwrap()
-            .filter_map(|entry| entry.ok().map(|entry| entry.path()))
-            .collect()
+        glob.filter_map(|entry| entry.ok()).collect()
     }
 }
 
 #[async_trait]
 impl Exporter for BitWardenCore {
     fn interactive(config: &RuntimeConfig) -> Result<Vec<Backend>> {
-        let bw = std::process::Command::new("bw")
-            .env("BITWARDENCLI_APPDATA_DIR", config.directory.join("BitWarden/data"))
-            .spawn();
+        let username = inquire::Text::new("BitWarden Username").prompt()?;
+        let data_dir = Self::_data_dir(&config, &username);
+        let login_status = serde_json::from_slice::<LoginStatus>(
+            cli(&data_dir).arg("status").output()?.stdout.as_slice(),
+        )
+        .context("Parse BitWarden status")?;
 
-        info!("{:?}", bw);
+        let session_id = if login_status.status == "unauthenticated" {
+            info!("Not logged into BitWarden, logging in.");
 
-        // let client_id = env_or_prompt("BW_CLIENTID", &interactive, move |str: &_| {
-        //     match str.chars().any(|c| !c.is_ascii_alphanumeric() || c == '.' || c == '-') {
-        //         false => Ok(Validation::Valid),
-        //         true => Ok(Validation::Invalid(
-        //             "Client ID must be only alphanumeric characters, '.', and '-'".into(),
-        //         )),
-        //     }
-        // })?;
-        //
-        // let client_secret = env_or_prompt("BW_CLIENTSECRET", &interactive, move |str: &_| {
-        //     match str.chars().any(|c| !c.is_ascii_alphanumeric()) {
-        //         false => Ok(Validation::Valid),
-        //         true => Ok(Validation::Invalid(
-        //             "Client Key must be only alphanumeric characters".into(),
-        //         )),
-        //     }
-        // })?;
+            let password = inquire::Text::new("BitWarden Password").prompt()?;
+            let two_fa = inquire::Text::new("BitWarden 2FA").prompt()?;
+            let cmd = cli(&data_dir)
+                .arg("login")
+                .arg(&username)
+                .arg(password)
+                .arg("--code")
+                .arg(two_fa)
+                .arg("--raw")
+                .output()?;
 
+            match cmd {
+                out if out.status.success() => {
+                    info!("Successfully logged into BitWarden");
+                    String::from_utf8(out.stdout)?
+                }
+                out => {
+                    info!("Failed to log into BitWarden");
+                    return Err(anyhow!("Failed to log into BitWarden"));
+                }
+            }
+        } else {
+            // TODO: Support already logged in.
+            error!("Already logged into BitWarden, but not supported yet.");
+            error!(
+                "Please remove the existing session file at {}, and try again.",
+                &data_dir.display()
+            );
+            return Err(anyhow!("Already logged into BitWarden"));
+        };
 
+        let organisations = cli(&data_dir)
+            .arg("list")
+            .arg("organizations")
+            .arg("--session")
+            .arg(&session_id)
+            .output()?
+            .stdout;
 
-        Ok(vec![])
+        let organisations = serde_json::from_slice::<Vec<Organisation>>(organisations.as_slice())
+            .context("Parse possible organisations")?;
+
+        let organisations = match organisations.len() {
+            0 => Err(anyhow!(
+                "Unable to find any possible organisations to extract from!"
+            ))?,
+            len if len == 1 => {
+                info!("Only one organisation found, using that one.");
+                vec![Backend::BitWarden(BitWardenCore {
+                    user: username.clone(),
+                    org_id: organisations[0].id.clone(),
+                    org_name: organisations[0].name.clone(),
+                    session_id,
+                })]
+            }
+            len => inquire::MultiSelect::new(
+                "Select which organisations you would like to use.",
+                organisations,
+            )
+            .prompt()?
+            .iter()
+            .map(|org| {
+                Backend::BitWarden(BitWardenCore {
+                    user: username.clone(),
+                    org_id: org.id.clone(),
+                    org_name: org.name.clone(),
+                    session_id: session_id.clone(),
+                })
+            })
+            .collect(),
+        };
+
+        info!("{:?}", &organisations);
+        Ok(organisations)
     }
 
     async fn export(&mut self, config: &RuntimeConfig) -> Result<()> {
-        let child = std::process::Command::new("bw")
+        let output_file = self.backup_dir(&config).join(format!(
+            "{org_id}_{date}.json",
+            org_id = &self.org_id,
+            date = chrono::Local::now().format("%Y-%m-%d")
+        ));
+
+        let mut cmd = cli(&self.data_dir(&config))
+            .env(Self::BW_SESSION, &self.session_id)
             .arg("export")
-            .arg("--organizationid")
-            .arg(&self.org_id)
-            .arg("--format")
-            .arg("json")
-            .arg("--output")
-            .arg(config.directory.join("BitWarden").join(format!(
-                "{}_{}.json",
-                &self.org_name,
-                chrono::Local::now().format("%Y-%m-%d")
-            )))
+            .args(["--organizationid", &self.org_id])
+            .args(["--format", "csv"])
+            .args(["--output", output_file.to_str().unwrap()])
             .spawn()?;
 
-        let out = child.wait_with_output()?;
-        if out.status.exit_ok().is_err() {
-            return Err(anyhow!(
-                "Failed to export BitWarden organisation {}: {}",
-                &self.org_name,
-                String::from_utf8(out.stderr)?
-            ));
+        trace!("Running BitWarden export command: {:?}", &cmd);
+        let status = cmd.wait()?;
+        trace!("BitWarden export command finished: {:?}", &status);
+
+        match status {
+            s if s.success() => info!(
+                "Successfully exported BitWarden organisation {name}",
+                name = &self.org_name
+            ),
+            s => info!("BitWarden export command exited with code {:?}", &s.code()),
         }
 
-        trace!(
-            "Successfully exported BitWarden organisation {}",
-            &self.org_name
-        );
         return Ok(());
     }
+}
+
+#[derive(Serialize, Deserialize)]
+struct LoginStatus {
+    #[serde(rename = "userEmail", default = "String::new")]
+    user_email: String,
+    status: String,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -102,22 +198,14 @@ struct Organisation {
     name: String,
 }
 
-fn get_organisations() -> Vec<Organisation> {
-    let child = std::process::Command::new("bw")
-        .arg("list")
-        .arg("organizations")
-        .stdout(std::process::Stdio::piped())
-        .spawn()
-        .expect("Failed to spawn bw list organizations");
+impl Display for Organisation {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} ({})", self.name, self.id)
+    }
+}
 
-    let output = child
-        .wait_with_output()
-        .expect("Failed to wait for bw list organizations");
-    let output = String::from_utf8(output.stdout)
-        .expect("Failed to parse bw list organizations output as UTF-8");
-    let mut organisations: Vec<Organisation> = serde_json::from_str(&output)
-        .expect("Failed to parse bw list organizations output as JSON");
-
-    organisations.sort_by(|a, b| a.name.cmp(&b.name));
-    organisations
+fn cli(dir: &PathBuf) -> Command {
+    let mut command = Command::new("bw");
+    command.env(BitWardenCore::BW_DIRECTORY, dir.as_os_str());
+    command
 }

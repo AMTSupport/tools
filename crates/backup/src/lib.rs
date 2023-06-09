@@ -3,6 +3,9 @@
 #![feature(trait_alias)]
 #![feature(exit_status_error)]
 #![feature(unwrap_infallible)]
+#![feature(slice_pattern)]
+
+extern crate core;
 
 use std::env::VarError;
 use inquire::validator::StringValidator;

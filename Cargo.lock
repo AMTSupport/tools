@@ -334,7 +334,6 @@ dependencies = [
  "lib",
  "once_cell",
  "opendal",
- "rayon",
  "serde",
  "serde_json",
  "tokio",

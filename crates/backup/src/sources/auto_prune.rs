@@ -3,6 +3,7 @@ use lib::anyhow::Result;
 use lib::simplelog::debug;
 use std::path::PathBuf;
 
+// TODO :: Implement logic from cleaner crate to handle this!
 pub trait Prune {
     /// The files which should be possible to prune.
     /// The files returned by this method will be parsed,

@@ -18,7 +18,7 @@ pub trait Exporter {
     async fn export(&mut self, config: &RuntimeConfig) -> Result<()>;
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, ValueEnum)]
+#[derive(Debug, Clone, Serialize, Deserialize, ValueEnum)]
 pub enum ExporterSource {
     S3,
     BitWarden,

@@ -14,7 +14,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::SystemTime;
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Backend {
     S3(S3Core),
     BitWarden(BitWardenCore),
@@ -176,11 +176,7 @@ impl RuntimeConfig {
 
     fn new_exporters(config: &RuntimeConfig) -> Result<Vec<Backend>> {
         let mut exporters = Vec::new();
-        loop {
-            if continue_loop(&exporters, "Export Source") == false {
-                break;
-            }
-
+        while continue_loop(&exporters, "Export Source") {
             let source_type = inquire::Select::new(
                 "Select your backup source",
                 ExporterSource::value_variants().to_vec(),
