@@ -1,18 +1,10 @@
-use crate::config::{AutoPrune, Backend, Config, Rules, RuntimeConfig};
-use crate::continue_loop;
-use crate::sources::exporter::ExporterSource;
-use clap::builder::TypedValueParser;
-use clap::{Parser, Subcommand, ValueEnum};
-use inquire::validator::Validation;
-use lib::anyhow::{anyhow, Context, Result};
+use crate::config::{AutoPrune, RuntimeConfig};
+use clap::Parser;
+use lib::anyhow::{anyhow, Result};
 use lib::cli::Flags;
-use lib::simplelog::{debug, error, info, trace};
-use serde_json::{from_slice, from_str};
+use lib::simplelog::debug;
 use std::fmt::Debug;
-use std::fs::read;
 use std::path::PathBuf;
-use std::str::FromStr;
-use std::usize;
 
 #[derive(Parser, Debug, Clone)]
 #[command(name = env!["CARGO_PKG_NAME"], version, author, about)]
@@ -39,7 +31,7 @@ pub async fn main(destination: PathBuf, cli: Cli, is_interactive: bool) -> Resul
         todo!("Non-interactive mode not yet implemented")
     }
 
-    let mut config = RuntimeConfig::new(cli, destination)?;
+    let config = RuntimeConfig::new(cli, destination)?;
     debug!("Config: {:?}", config);
 
     for mut e in config.config.exporters.clone() {

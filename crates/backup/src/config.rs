@@ -7,7 +7,7 @@ use crate::sources::s3::S3Core;
 use clap::Parser;
 use clap::ValueEnum;
 use inquire::validator::Validation;
-use lib::anyhow::{anyhow, Context, Result};
+use lib::anyhow::{Context, Result};
 use lib::simplelog::{debug, info, trace};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -95,7 +95,7 @@ impl RuntimeConfig {
         Ok(config)
     }
 
-    pub(crate) fn save(mut self) -> Result<()> {
+    pub(crate) fn save(self) -> Result<()> {
         if !self.mutated {
             return Ok(());
         }

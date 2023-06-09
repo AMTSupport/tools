@@ -1,4 +1,4 @@
-use crate::config::{AutoPrune, Backend, RuntimeConfig};
+use crate::config::{Backend, RuntimeConfig};
 use crate::sources::bitwarden::BitWardenCore;
 use crate::sources::s3::S3Core;
 use async_trait::async_trait;
@@ -6,7 +6,6 @@ use clap::ValueEnum;
 use lib::anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display, Formatter};
-use std::path::PathBuf;
 
 #[async_trait]
 pub trait Exporter {

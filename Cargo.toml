@@ -19,8 +19,10 @@ anyhow = { version = "1.0.71", default-features = false }
 
 [profile.release]
 opt-level = "s" # Optimize for size
-strip = "debuginfo"
-lto = "thin"
+#strip = "debuginfo"
+strip = true
+lto = true
+panic = "abort"
 
 # build with `cargo build --profile profiling`
 # to analyze performance with tooling like linux perf

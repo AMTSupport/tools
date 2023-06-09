@@ -1,20 +1,15 @@
-use crate::config::{AutoPrune, Backend, Config, RuntimeConfig};
+use crate::config::{Backend, RuntimeConfig};
 use crate::sources::auto_prune::Prune;
 use crate::sources::exporter::Exporter;
-use crate::{continue_loop, env_or_prompt};
 use anyhow::Result;
 use async_trait::async_trait;
-use core::slice::SlicePattern;
-use futures::StreamExt;
-use inquire::validator::Validation;
 use lib::anyhow;
 use lib::anyhow::{anyhow, Context};
-use lib::simplelog::{debug, error, info, trace};
+use lib::simplelog::{error, info, trace};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::path::PathBuf;
 use std::process::Command;
-use std::string::ToString;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BitWardenCore {
@@ -94,7 +89,7 @@ impl Exporter for BitWardenCore {
                     info!("Successfully logged into BitWarden");
                     String::from_utf8(out.stdout)?
                 }
-                out => {
+                _ => {
                     info!("Failed to log into BitWarden");
                     return Err(anyhow!("Failed to log into BitWarden"));
                 }
@@ -124,7 +119,7 @@ impl Exporter for BitWardenCore {
             0 => Err(anyhow!(
                 "Unable to find any possible organisations to extract from!"
             ))?,
-            len if len == 1 => {
+            1 => {
                 info!("Only one organisation found, using that one.");
                 vec![Backend::BitWarden(BitWardenCore {
                     user: username.clone(),
@@ -133,7 +128,7 @@ impl Exporter for BitWardenCore {
                     session_id,
                 })]
             }
-            len => inquire::MultiSelect::new(
+            _ => inquire::MultiSelect::new(
                 "Select which organisations you would like to use.",
                 organisations,
             )

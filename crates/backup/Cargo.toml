@@ -8,24 +8,42 @@ keywords = ["backup"]
 [dependencies]
 lib = { path = "../lib" }
 filetime = "0.2"
-clap = { version = "4.2.7", features = ["derive", "std", "help", "usage", "suggestions", "color"], default-features = false }
-tokio = { version = "1.28.1", features = ["fs", "macros", "rt-multi-thread"] }
-chrono = { version = "0.4.24", features = ["serde"] }
-once_cell = "1.17.1"
 glob = "0.3.1"
-indicatif = { version = "0.17.4", features = ["rayon"] }
-opendal = { version = "0.36.0", features = ["services-s3"], default-features = true }
-futures = "0.3.28"
-serde = { version = "1.0.163", features = ["std"]}
+indicatif = "0.17.4"
 serde_json = "1.0.96"
 async-trait = "0.1.68"
-#inquire = "0.6.2"
-# TODO :: remove this once the PR is merged
+futures = "0.3.28" # Needed by opendal
+
+[dependencies.chrono]
+version = "0.4.24"
+default-features = false
+features = []
+
+[dependencies.tokio]
+version = "1.28.1"
+default-features = false
+features = ["rt-multi-thread", "macros"]
+
+[dependencies.opendal]
+version = "0.37.0"
+default-features = false
+features = ["services-s3", "rustls"]
+
+[dependencies.serde]
+version = "1.0.163"
+default-features = false
+features = ["std", "derive"]
+
+[dependencies.clap]
+version = "4.2.7"
+default-features = false
+features = ["derive", "std", "help", "usage", "suggestions", "color"]
 
 [dependencies.inquire]
 git = "https://github.com/anwarhahjjeffersongeorge/inquire-filepath/"
 branch = "filepath-select"
-features = ["path"]
+default-features = false
+features = ["path","crossterm"]
 
 [dependencies.value-bag]
 version = "1.4.0"

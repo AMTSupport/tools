@@ -7,7 +7,6 @@
 
 extern crate core;
 
-use std::env::VarError;
 use inquire::validator::StringValidator;
 use lib::anyhow::{anyhow, Context, Result};
 use lib::simplelog::{trace, warn};
@@ -47,7 +46,7 @@ fn env_or_prompt<V>(
     match std::env::var(key) {
         Ok(str) => match validator.validate(&str) {
             Err(err) => Err(anyhow!("{} is set but invalid: {}", key, err)),
-            Ok(value) => {
+            Ok(_) => {
                 trace!("Validated {} from env", key);
                 Ok(str)
             }

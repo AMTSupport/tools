@@ -1,4 +1,4 @@
-use crate::config::{AutoPrune, Backend, RuntimeConfig};
+use crate::config::{Backend, RuntimeConfig};
 use crate::sources::auto_prune::Prune;
 use crate::sources::exporter::Exporter;
 use crate::{continue_loop, env_or_prompt};
@@ -72,7 +72,7 @@ impl Prune for S3Core {
 
 #[async_trait]
 impl Exporter for S3Core {
-    fn interactive(config: &RuntimeConfig) -> Result<Vec<Backend>> {
+    fn interactive(_config: &RuntimeConfig) -> Result<Vec<Backend>> {
         let not_empty_or_ascii = |str: &str, msg: &str| match str
             .chars()
             .any(|c| !c.is_ascii_alphanumeric() && c != '-' && c != '_')
@@ -99,15 +99,6 @@ impl Exporter for S3Core {
             Ok(Validation::Valid)
         })?;
 
-        let backend = S3::default()
-            .bucket(&bucket)
-            .region(&region)
-            .endpoint(&endpoint)
-            .access_key_id(&key_id)
-            .secret_access_key(&secret_key)
-            .build()
-            .context("Failed to interactive S3 Backend")?;
-
         let base_accessor = HashMap::from([
             ("bucket".to_string(), bucket),
             ("region".to_string(), region),
@@ -115,10 +106,6 @@ impl Exporter for S3Core {
             ("access_key_id".to_string(), key_id),
             ("secret_access_key".to_string(), secret_key), // TODO :: This is not secure at all, maybe use platform specific keychain?
         ]);
-
-        let base_op = OperatorBuilder::new(backend)
-            .layer(LoggingLayer::default())
-            .finish();
 
         let base = S3Base {
             object: PathBuf::from(""),

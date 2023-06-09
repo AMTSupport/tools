@@ -1,12 +1,10 @@
 use std::error::Error;
 use backup::application;
 use inquire::PathSelectionMode;
-use lib::anyhow::{anyhow, Result};
+use lib::anyhow::{Result};
 use lib::clap::Parser;
 
-use once_cell::sync::Lazy;
 use std::path::PathBuf;
-use std::process::exit;
 use lib::simplelog::trace;
 
 #[cfg(windows)]
@@ -66,6 +64,3 @@ static DRIVES: Lazy<Vec<PathBuf>> = Lazy::new(|| {
 
     return drives;
 });
-
-#[cfg(unix)]
-static DRIVES: Lazy<Vec<PathBuf>> = Lazy::new(|| vec![PathBuf::from("/")]);

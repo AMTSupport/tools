@@ -332,19 +332,12 @@ dependencies = [
  "indicatif",
  "inquire 0.6.2 (git+https://github.com/anwarhahjjeffersongeorge/inquire-filepath/?branch=filepath-select)",
  "lib",
- "once_cell",
  "opendal",
  "serde",
  "serde_json",
  "tokio",
  "value-bag",
 ]
-
-[[package]]
-name = "base64"
-version = "0.13.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9e1b586273c5702936fe7b7d6896644d8be71e6314cfe09d3167c95f712589e8"
 
 [[package]]
 name = "base64"
@@ -1632,7 +1625,6 @@ dependencies = [
  "lazy_static",
  "newline-converter 0.3.0",
  "strum",
- "tempfile",
  "thiserror",
  "unicode-segmentation",
  "unicode-width",
@@ -1698,20 +1690,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2f37a4a5928311ac501dee68b3c7613a1037d0edb30c8e5427bd832d55d1b790"
 dependencies = [
  "wasm-bindgen",
-]
-
-[[package]]
-name = "jsonwebtoken"
-version = "8.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6971da4d9c3aa03c3d8f3ff0f4155b534aad021292003895a469716b2a230378"
-dependencies = [
- "base64 0.21.0",
- "pem",
- "ring",
- "serde",
- "serde_json",
- "simple_asn1",
 ]
 
 [[package]]
@@ -2060,17 +2038,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "num-bigint"
-version = "0.4.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f93ab6289c7b344a8a9f60f88d80aa20032336fe78da341afc91c8a2341fc75f"
-dependencies = [
- "autocfg",
- "num-integer",
- "num-traits",
-]
-
-[[package]]
 name = "num-bigint-dig"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2151,15 +2118,15 @@ checksum = "b7e5500299e16ebb147ae15a00a942af264cf3688f47923b8fc2cd5858f23ad3"
 
 [[package]]
 name = "opendal"
-version = "0.36.0"
+version = "0.37.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3555168d4cc9a83c332e1416ff00e3be36a6d78447dff472829962afbc91bb3d"
+checksum = "6a37de9fe637d53550bf3f76d5c731f69cb6f9685ada6afd390ada98994a3f91"
 dependencies = [
  "anyhow",
  "async-compat",
  "async-trait",
  "backon",
- "base64 0.21.0",
+ "base64",
  "bytes",
  "chrono",
  "flagset",
@@ -2177,7 +2144,6 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
- "sha2",
  "tokio",
  "uuid",
 ]
@@ -2281,15 +2247,6 @@ dependencies = [
  "redox_syscall 0.2.16",
  "smallvec",
  "windows-sys 0.45.0",
-]
-
-[[package]]
-name = "pem"
-version = "1.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a8835c273a76a90455d7344889b0964598e3316e2a79ede8e36f16bdcf2228b8"
-dependencies = [
- "base64 0.13.1",
 ]
 
 [[package]]
@@ -2629,20 +2586,19 @@ checksum = "436b050e76ed2903236f032a59761c1eb99e1b0aead2c257922771dab1fc8c78"
 
 [[package]]
 name = "reqsign"
-version = "0.12.0"
+version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b04f5fccb94d61c154f0d8520ec42e79afdc145f4b1a392faa269874995fda66"
+checksum = "b6cb65eb3405f9c2de5c18bfc37338d6bbdb2c35eb8eb0e946208cbb564e4833"
 dependencies = [
  "anyhow",
  "async-trait",
- "base64 0.21.0",
+ "base64",
  "chrono",
  "form_urlencoded",
  "hex",
  "hmac",
  "home",
  "http",
- "jsonwebtoken",
  "log",
  "once_cell",
  "percent-encoding",
@@ -2655,7 +2611,6 @@ dependencies = [
  "serde_json",
  "sha1",
  "sha2",
- "tokio",
 ]
 
 [[package]]
@@ -2665,7 +2620,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cde824a14b7c14f85caff81225f411faacc04a2013f41670f41443742b1c1c55"
 dependencies = [
  "async-compression",
- "base64 0.21.0",
+ "base64",
  "bytes",
  "encoding_rs",
  "futures-core",
@@ -2897,7 +2852,7 @@ version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d194b56d58803a43635bdc398cd17e383d6f71f9182b9a192c127ca42494a59b"
 dependencies = [
- "base64 0.21.0",
+ "base64",
 ]
 
 [[package]]
@@ -3129,18 +3084,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "simple_asn1"
-version = "0.6.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "adc4e5204eb1910f40f9cfa375f6f05b68c3abac4b6fd879c8ff5e7ae8a0a085"
-dependencies = [
- "num-bigint",
- "num-traits",
- "thiserror",
- "time 0.3.21",
-]
-
-[[package]]
 name = "simplelog"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3243,7 +3186,7 @@ version = "9.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b5327a6eb28e137e180380169adeae3ac6128438ca1e8a8dc80118f3d1812cbd"
 dependencies = [
- "base64 0.21.0",
+ "base64",
  "digest",
  "hex",
  "miette",
