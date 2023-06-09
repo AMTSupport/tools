@@ -1,21 +1,22 @@
-use crate::config::AutoPrune;
+use crate::config::{AutoPrune, Backend};
 use crate::sources::auto_prune::Prune;
-use crate::sources::{Backend, Downloader, ExporterSource};
-use crate::{env_or_prompt, trackable_filename};
+use crate::sources::exporter::Exporter;
+use crate::{continue_loop, env_or_prompt};
 use async_trait::async_trait;
-use chrono::{DateTime, FixedOffset, Utc};
-use futures::{StreamExt, TryStreamExt};
+use chrono::Utc;
+use futures::TryStreamExt;
+use inquire::validator::Validation;
 use lib::anyhow::{Context, Result};
-use lib::simplelog::{debug, trace};
+use lib::simplelog::{debug, error, info, trace};
 use opendal::layers::LoggingLayer;
 use opendal::services::S3;
 use opendal::{Builder, Operator, OperatorBuilder};
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::fmt::Display;
 use std::io::Write;
 use std::path::PathBuf;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::string::ToString;
+use std::time::UNIX_EPOCH;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct S3Base {
@@ -27,13 +28,21 @@ pub struct S3Base {
     pub backend: HashMap<String, String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct S3Core {
     #[serde(skip)]
     pub(crate) op: Option<Operator>,
     #[serde(flatten)]
     pub base: S3Base,
 }
+
+impl PartialEq for S3Core {
+    fn eq(&self, other: &Self) -> bool {
+        self.base == other.base
+    }
+}
+
+impl Eq for S3Core {}
 
 impl S3Core {
     fn op(&mut self) -> &Operator {
@@ -46,22 +55,10 @@ impl S3Core {
     }
 }
 
-impl Backend for S3Core {}
-
-impl Display for S3Core {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}: {}",
-            ExporterSource::S3,
-            self.object.to_str().unwrap()
-        )
-    }
-}
-
+#[async_trait]
 impl Prune for S3Core {
     fn files(&self, root_directory: &PathBuf) -> Vec<PathBuf> {
-        let directory = root_directory.join("S3").join(&self.object);
+        let directory = root_directory.join("S3").join(&self.base.object);
         if !directory.exists() {
             return vec![];
         }
@@ -73,37 +70,112 @@ impl Prune for S3Core {
     }
 }
 
-impl Serialize for S3Core {
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut accessor = self.operator.accessor.clone();
-        accessor.insert(
-            "object".to_string(),
-            self.object.to_str().unwrap().to_string(),
-        );
-
-        accessor.serialize(serializer)
-    }
-}
-
 #[async_trait]
-impl Downloader for S3Core {
-    async fn download(&self, root_directory: &PathBuf, auto_prune: &AutoPrune) -> Result<()> {
-        let op = self.operator.op.as_ref().unwrap();
-        let object = self.object.clone();
-        let output = root_directory.join("S3");
+impl Exporter for S3Core {
+    fn create(interactive: bool) -> Result<Vec<Backend>> {
+        let not_empty_or_ascii = |str: &str, msg: &str| match str
+            .chars()
+            .any(|c| !c.is_ascii_alphanumeric() && c != '-' && c != '_')
+            || str.is_empty()
+        {
+            false => Ok(Validation::Valid),
+            true => Ok(Validation::Invalid(msg.into())),
+        };
+
+        let bucket = env_or_prompt("S3_BUCKET", &interactive, move |str: &_| {
+            not_empty_or_ascii(
+                str,
+                "Bucket name must be alphanumeric, and can only contain dashes and underscores.",
+            )
+        })?;
+
+        // TODO VAlidators
+        let region = env_or_prompt("S3_REGION", &interactive, |_: &_| Ok(Validation::Valid))?;
+        let endpoint = env_or_prompt("S3_ENDPOINT", &interactive, |_: &_| Ok(Validation::Valid))?;
+        let key_id = env_or_prompt("S3_ACCESS_KEY_ID", &interactive, |_: &_| {
+            Ok(Validation::Valid)
+        })?;
+        let secret_key = env_or_prompt("S3_SECRET_ACCESS_KEY", &interactive, |_: &_| {
+            Ok(Validation::Valid)
+        })?;
+
+        let backend = S3::default()
+            .bucket(&bucket)
+            .region(&region)
+            .endpoint(&endpoint)
+            .access_key_id(&key_id)
+            .secret_access_key(&secret_key)
+            .build()
+            .context("Failed to create S3 Backend")?;
+
+        let base_accessor = HashMap::from([
+            ("bucket".to_string(), bucket),
+            ("region".to_string(), region),
+            ("endpoint".to_string(), endpoint),
+            ("access_key_id".to_string(), key_id),
+            ("secret_access_key".to_string(), secret_key), // TODO :: This is not secure at all, maybe use platform specific keychain?
+        ]);
+
+        let base_op = OperatorBuilder::new(backend)
+            .layer(LoggingLayer::default())
+            .layer(opendal::layers::RetryLayer::default())
+            .finish();
+
+        let base = S3Base {
+            object: PathBuf::from(""),
+            backend: base_accessor,
+        };
+
+        let prompt = inquire::Text::new("What's the path of the object you want to export?")
+            .with_validator(|path: &str| match path.is_empty() || !path.ends_with('/') {
+                true => Ok(Validation::Invalid("Path must end with /".into())),
+                false => Ok(Validation::Valid),
+            });
+
+        let mut exporters = vec![];
+        while continue_loop(&exporters, "object to export") {
+            match prompt.clone().prompt()? {
+                object_path if object_path.is_empty() => {
+                    info!("Assuming wanted to cancel additional object.");
+                    continue;
+                }
+                object_path => {
+                    let mut base = base.clone();
+                    base.backend.insert("root".to_string(), object_path.clone());
+                    base.object = PathBuf::from(&object_path);
+
+                    let operator = match Operator::from_map::<S3>(base.backend.clone()) {
+                        Ok(b) => b.layer(LoggingLayer::default()).finish(),
+                        Err(e) => {
+                            error!("Failed to create operator: {}", e);
+                            continue;
+                        }
+                    };
+
+                    exporters.push(Backend::S3(S3Core {
+                        op: Some(operator),
+                        base,
+                    }));
+                }
+            }
+        }
+
+        Ok(exporters)
+    }
+
+    // TODO :: Validate files
+    async fn export(&mut self, root_directory: &PathBuf, auto_prune: &AutoPrune) -> Result<()> {
+        let object = self.base.object.clone();
+        let output = root_directory.join("S3").join(&object);
         let mut backup_len = self.files(&root_directory).len();
 
+        let op = self.op();
+
         // TODO :: Should this be recursive?
-        let mut layer = op
-            .list_with(object.to_str().unwrap())
-            .await
-            .context(format!(
-                "Failed to list objects in {}",
-                &object.to_str().unwrap()
-            ))?;
+        let mut layer = op.list_with("/").await.context(format!(
+            "Failed to list objects in {}",
+            &object.to_str().unwrap()
+        ))?;
 
         while let Some(item) = layer.try_next().await? {
             debug!("Processing {:?}", &item);
@@ -127,7 +199,7 @@ impl Downloader for S3Core {
                 if host_len == remote_len
                     && host_modified.as_millis() == remote_modified.timestamp_millis() as u128
                 {
-                    debug!("Skipping download as file is the same");
+                    debug!("Skipping export as file is the same");
                     continue;
                 }
 
@@ -150,7 +222,7 @@ impl Downloader for S3Core {
             let host_path = root_directory.join(&path);
             if host_path.exists() && meta.content_length() == host_path.metadata().unwrap().len() {
                 debug!(
-                    "Skipping download of {} as it already exists",
+                    "Skipping export of {} as it already exists",
                     &path.to_str().unwrap()
                 );
                 continue;
@@ -182,54 +254,4 @@ impl Downloader for S3Core {
 
         Ok(())
     }
-}
-
-pub fn create_operator(interactive: &bool) -> Result<S3Core> {
-    let bucket = env_or_prompt("S3_BUCKET", "S3 Bucket Name", false, &interactive, |_| true)?;
-    let region = env_or_prompt("S3_REGION", "S3 Region", false, &interactive, |_| true)?;
-    let endpoint = env_or_prompt("S3_ENDPOINT", "S3 Endpoint", false, &interactive, |_| true)?;
-    let access_key_id = env_or_prompt(
-        "S3_ACCESS_KEY_ID",
-        "S3 Access Key ID",
-        false,
-        &interactive,
-        |_| true,
-    )?;
-    let secret_access_key = env_or_prompt(
-        "S3_SECRET_ACCESS_KEY",
-        "S3 Access Key",
-        false,
-        &interactive,
-        |_| true,
-    )?;
-
-    let backend = S3::default()
-        .bucket(&bucket)
-        .region(&region)
-        .endpoint(&endpoint)
-        .access_key_id(&access_key_id)
-        .secret_access_key(&secret_access_key)
-        .build()
-        .context("Failed to create S3 Backend")?;
-
-    let accessor = HashMap::from([
-        ("bucket".to_string(), bucket),
-        ("region".to_string(), region),
-        ("endpoint".to_string(), endpoint),
-        ("access_key_id".to_string(), access_key_id),
-        ("secret_access_key".to_string(), secret_access_key), // TODO :: This is not secure at all, maybe use platform specific keychain?
-    ]);
-
-    let op = OperatorBuilder::new(backend)
-        .layer(LoggingLayer::default())
-        .layer(opendal::layers::RetryLayer::default())
-        .finish();
-
-    Ok(S3Core {
-        op: None,
-        base: S3Base {
-            object: PathBuf::new(),
-            backend: accessor,
-        },
-    })
 }

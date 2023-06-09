@@ -1,20 +1,21 @@
-use crate::config::AutoPrune;
-use crate::sources::{CustomSerialisable, Downloader};
+use crate::config::{AutoPrune, Backend};
+use crate::sources::auto_prune::Prune;
+use crate::sources::exporter::Exporter;
 use anyhow::Result;
 use lib::anyhow;
 use lib::anyhow::anyhow;
 use lib::simplelog::trace;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use crate::sources::auto_prune::Prune;
+use async_trait::async_trait;
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
-pub struct BitwardenCore {
+pub struct BitWardenCore {
     id: String,
     name: String,
 }
 
-impl Prune for BitwardenCore {
+impl Prune for BitWardenCore {
     fn files(&self, root_directory: &PathBuf) -> Vec<PathBuf> {
         let directory = root_directory.join("BitWarden");
         if !directory.exists() {
@@ -28,8 +29,13 @@ impl Prune for BitwardenCore {
     }
 }
 
-impl Downloader for BitwardenCore {
-    fn download(&self, root_directory: &PathBuf, _: &AutoPrune) -> Result<()> {
+#[async_trait]
+impl Exporter for BitWardenCore {
+    fn create(interactive: bool) -> Result<Vec<Backend>> {
+        Ok(vec![])
+    }
+
+    async fn export(&mut self, root_directory: &PathBuf, _: &AutoPrune) -> Result<()> {
         let child = std::process::Command::new("bw")
             .arg("--organization")
             .arg(&self.id)
@@ -59,15 +65,7 @@ impl Downloader for BitwardenCore {
     }
 }
 
-impl CustomSerialisable for BitwardenCore {
-    fn serialisable(&self) -> serde_json::Value {
-        serde_json::json!({
-            "id": self.id,
-            "name": self.name,
-        })
-    }
-}
-
+#[derive(Serialize, Deserialize)]
 struct Organisation {
     id: String,
     name: String,

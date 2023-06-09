@@ -1,6 +1,6 @@
 use crate::config::AutoPrune;
 use lib::anyhow::Result;
-use lib::simplelog::{debug, trace};
+use lib::simplelog::debug;
 use std::path::PathBuf;
 
 pub trait Prune {
@@ -36,4 +36,3 @@ pub trait Prune {
         Ok(removed_files)
     }
 }
-

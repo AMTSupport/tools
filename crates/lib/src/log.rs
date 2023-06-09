@@ -1,8 +1,8 @@
 use crate::cli::Flags;
 use anyhow::Context;
 use simplelog::{
-    trace, ColorChoice, CombinedLogger, ConfigBuilder, Level, LevelFilter, TermLogger,
-    TerminalMode, ThreadLogMode, WriteLogger,
+    ColorChoice, CombinedLogger, ConfigBuilder, Level, LevelFilter, TermLogger, TerminalMode,
+    ThreadLogMode, WriteLogger,
 };
 use std::env::temp_dir;
 use std::fs::File;

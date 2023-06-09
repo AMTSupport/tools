@@ -3,11 +3,10 @@
 #![feature(trait_alias)]
 #![feature(exit_status_error)]
 
-use chrono::{DateTime, FixedOffset, Utc};
-use lib::anyhow;
-use lib::anyhow::{anyhow, Context};
+use std::env::VarError;
+use inquire::validator::StringValidator;
+use lib::anyhow::{anyhow, Context, Result};
 use lib::simplelog::{trace, warn};
-use std::path::PathBuf;
 
 pub mod application;
 pub mod config;
@@ -36,36 +35,30 @@ fn continue_loop<I>(vec: &Vec<I>, prompt_type: &str) -> bool {
     }
 }
 
-fn env_or_prompt(
+// TODO:: Derive title from key
+fn env_or_prompt<V>(
     key: &str,
-    prompt_title: &str,
-    sensitive_info: bool,
+    // prompt_title: &str,
     interactive: &bool,
-    validator: fn(&String) -> bool,
-) -> anyhow::Result<String> {
-    let value = std::env::var(key);
-    if let Ok(value) = value {
-        if !validator(&value) {
-            return Err(anyhow!("{} is not valid", key))?;
-        }
-
-        return Ok(value);
-    }
-
-    if !interactive {
-        return Err(anyhow!(
-            "{} is not set and interactive mode is disabled",
-            key
-        ))?;
-    }
-
-    let prompt = match sensitive_info {
-        true => inquire::Password::new(prompt_title).prompt(),
-        false => inquire::Text::new(prompt_title).prompt(),
-    };
-
-    match prompt {
-        Ok(value) => Ok(value),
-        Err(err) => Err(anyhow!("Failed to get {} from user: {}", key, err))?,
+    validator: V,
+) -> Result<String> where V: StringValidator + 'static {
+    match std::env::var(key) {
+        Ok(str) => match validator.validate(&str) {
+            Err(err) => Err(anyhow!("{} is set but invalid: {}", key, err)),
+            Ok(value) => {
+                trace!("Validated {} from env", key);
+                Ok(str)
+            }
+        },
+        _ if interactive.clone() => match inquire::Text::new(key) // TODO :: Pretty title
+                .with_validator(validator)
+                .prompt() {
+            Err(err) => Err(anyhow!("Failed to get {} from user: {}", key, err)),
+            Ok(str) => {
+                trace!("Validated {} from user", key);
+                Ok(str)
+            }
+        },
+        _ => Err(anyhow!("{} is not set and interactive mode is disabled", key))?,
     }
 }

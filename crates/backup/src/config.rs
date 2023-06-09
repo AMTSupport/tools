@@ -1,21 +1,41 @@
+use crate::sources::bitwarden::BitWardenCore;
 use crate::sources::s3::S3Core;
-use crate::sources::{Backend, Downloader, ExporterSource, SerializableOperator};
-use crate::trackable_filename;
-use chrono::Days;
 use clap::Parser;
-use lib::anyhow;
 use lib::anyhow::Result;
-use opendal::layers::LoggingLayer;
-use opendal::{Builder, Operator, OperatorBuilder};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use std::time::{Duration, SystemTime};
+use std::time::SystemTime;
+use crate::sources::auto_prune::Prune;
+use crate::sources::exporter::Exporter;
+
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+pub enum Backend {
+    S3(S3Core),
+    BitWarden(BitWardenCore)
+}
+
+impl Backend {
+    pub async fn run(&mut self, root_directory: &PathBuf, rules: &AutoPrune) -> Result<()> {
+        match self {
+            Backend::S3(ref mut core) => {
+                core.prune(root_directory, rules)?;
+                core.export(root_directory, rules).await?;
+            },
+            Backend::BitWarden(ref mut core) => {
+                core.prune(root_directory, rules)?;
+                core.export(root_directory, rules).await?;
+            }
+        }
+
+        Ok(())
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Config {
     #[serde(default)]
     pub rule: Rules,
-    pub exporters: Vec<dyn Backend>,
+    pub exporters: Vec<Backend>,
 }
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
@@ -59,4 +79,3 @@ impl Default for AutoPrune {
         }
     }
 }
-
