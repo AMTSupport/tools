@@ -18,6 +18,8 @@
             openssl
             mold
             pkg-config
+            gcc_multi
+            gcc
             (rust-bin.selectLatestNightlyWith (toolchain: toolchain.default.override {
               extensions = [ "rust-src" ];
               targets = [ "x86_64-unknown-linux-gnu" "x86_64-pc-windows-gnu" ];
