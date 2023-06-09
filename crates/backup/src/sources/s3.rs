@@ -1,4 +1,4 @@
-use crate::config::{AutoPrune, Backend};
+use crate::config::{AutoPrune, Backend, RuntimeConfig};
 use crate::sources::auto_prune::Prune;
 use crate::sources::exporter::Exporter;
 use crate::{continue_loop, env_or_prompt};
@@ -57,8 +57,8 @@ impl S3Core {
 
 #[async_trait]
 impl Prune for S3Core {
-    fn files(&self, root_directory: &PathBuf) -> Vec<PathBuf> {
-        let directory = root_directory.join("S3").join(&self.base.object);
+    fn files(&self, config: &RuntimeConfig) -> Vec<PathBuf> {
+        let directory = config.directory.join("S3").join(&self.base.object);
         if !directory.exists() {
             return vec![];
         }
@@ -72,7 +72,7 @@ impl Prune for S3Core {
 
 #[async_trait]
 impl Exporter for S3Core {
-    fn create(interactive: bool) -> Result<Vec<Backend>> {
+    fn interactive(config: &RuntimeConfig) -> Result<Vec<Backend>> {
         let not_empty_or_ascii = |str: &str, msg: &str| match str
             .chars()
             .any(|c| !c.is_ascii_alphanumeric() && c != '-' && c != '_')
@@ -82,7 +82,7 @@ impl Exporter for S3Core {
             true => Ok(Validation::Invalid(msg.into())),
         };
 
-        let bucket = env_or_prompt("S3_BUCKET", &interactive, move |str: &_| {
+        let bucket = env_or_prompt("S3_BUCKET", move |str: &_| {
             not_empty_or_ascii(
                 str,
                 "Bucket name must be alphanumeric, and can only contain dashes and underscores.",
@@ -90,12 +90,12 @@ impl Exporter for S3Core {
         })?;
 
         // TODO VAlidators
-        let region = env_or_prompt("S3_REGION", &interactive, |_: &_| Ok(Validation::Valid))?;
-        let endpoint = env_or_prompt("S3_ENDPOINT", &interactive, |_: &_| Ok(Validation::Valid))?;
-        let key_id = env_or_prompt("S3_ACCESS_KEY_ID", &interactive, |_: &_| {
+        let region = env_or_prompt("S3_REGION", |_: &_| Ok(Validation::Valid))?;
+        let endpoint = env_or_prompt("S3_ENDPOINT", |_: &_| Ok(Validation::Valid))?;
+        let key_id = env_or_prompt("S3_ACCESS_KEY_ID", |_: &_| {
             Ok(Validation::Valid)
         })?;
-        let secret_key = env_or_prompt("S3_SECRET_ACCESS_KEY", &interactive, |_: &_| {
+        let secret_key = env_or_prompt("S3_SECRET_ACCESS_KEY", |_: &_| {
             Ok(Validation::Valid)
         })?;
 
@@ -106,7 +106,7 @@ impl Exporter for S3Core {
             .access_key_id(&key_id)
             .secret_access_key(&secret_key)
             .build()
-            .context("Failed to create S3 Backend")?;
+            .context("Failed to interactive S3 Backend")?;
 
         let base_accessor = HashMap::from([
             ("bucket".to_string(), bucket),
@@ -118,7 +118,6 @@ impl Exporter for S3Core {
 
         let base_op = OperatorBuilder::new(backend)
             .layer(LoggingLayer::default())
-            .layer(opendal::layers::RetryLayer::default())
             .finish();
 
         let base = S3Base {
@@ -132,6 +131,7 @@ impl Exporter for S3Core {
                 false => Ok(Validation::Valid),
             });
 
+        // TODO :: Autosuggest for object paths
         let mut exporters = vec![];
         while continue_loop(&exporters, "object to export") {
             match prompt.clone().prompt()? {
@@ -147,7 +147,7 @@ impl Exporter for S3Core {
                     let operator = match Operator::from_map::<S3>(base.backend.clone()) {
                         Ok(b) => b.layer(LoggingLayer::default()).finish(),
                         Err(e) => {
-                            error!("Failed to create operator: {}", e);
+                            error!("Failed to interactive operator: {}", e);
                             continue;
                         }
                     };
@@ -164,10 +164,10 @@ impl Exporter for S3Core {
     }
 
     // TODO :: Validate files
-    async fn export(&mut self, root_directory: &PathBuf, auto_prune: &AutoPrune) -> Result<()> {
+    async fn export(&mut self, config: &RuntimeConfig) -> Result<()> {
         let object = self.base.object.clone();
-        let output = root_directory.join("S3").join(&object);
-        let mut backup_len = self.files(&root_directory).len();
+        let output = config.directory.join("S3").join(&object);
+        let mut backup_len = self.files(&config).len();
 
         let op = self.op();
 
@@ -210,16 +210,18 @@ impl Exporter for S3Core {
                 }
             }
 
-            if auto_prune.enabled.clone() && &backup_len > &auto_prune.keep_latest {
+            if config.config.rules.auto_prune.enabled.clone()
+                && &backup_len > &config.config.rules.auto_prune.keep_latest
+            {
                 let since_mtime = Utc::now() - meta.last_modified().unwrap();
-                if since_mtime.num_days() > auto_prune.keep_for.clone() as i64 {
-                    debug!("File is older than {}, skipping.", &auto_prune.keep_for);
+                if since_mtime.num_days() > config.config.rules.auto_prune.keep_for.clone() as i64 {
+                    debug!("File is older than {}, skipping.", &config.config.rules.auto_prune.keep_for);
                     continue;
                 }
             }
 
             trace!("Checking if {} exists", &path.to_str().unwrap());
-            let host_path = root_directory.join(&path);
+            let host_path = config.directory.join(&path);
             if host_path.exists() && meta.content_length() == host_path.metadata().unwrap().len() {
                 debug!(
                     "Skipping export of {} as it already exists",
@@ -230,7 +232,7 @@ impl Exporter for S3Core {
 
             debug!("Creating parent dir for {}", &path.to_str().unwrap());
             std::fs::create_dir_all(&path.parent().unwrap())
-                .context("Unable to create directory")?;
+                .context("Unable to interactive directory")?;
 
             debug!("Creating file {}", &path.to_str().unwrap());
             let mut file = std::fs::File::create(&path)?;

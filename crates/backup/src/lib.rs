@@ -2,6 +2,7 @@
 #![feature(type_alias_impl_trait)]
 #![feature(trait_alias)]
 #![feature(exit_status_error)]
+#![feature(unwrap_infallible)]
 
 use std::env::VarError;
 use inquire::validator::StringValidator;
@@ -38,8 +39,6 @@ fn continue_loop<I>(vec: &Vec<I>, prompt_type: &str) -> bool {
 // TODO:: Derive title from key
 fn env_or_prompt<V>(
     key: &str,
-    // prompt_title: &str,
-    interactive: &bool,
     validator: V,
 ) -> Result<String> where V: StringValidator + 'static {
     match std::env::var(key) {
@@ -50,7 +49,7 @@ fn env_or_prompt<V>(
                 Ok(str)
             }
         },
-        _ if interactive.clone() => match inquire::Text::new(key) // TODO :: Pretty title
+        _ => match inquire::Text::new(key) // TODO :: Pretty title
                 .with_validator(validator)
                 .prompt() {
             Err(err) => Err(anyhow!("Failed to get {} from user: {}", key, err)),
@@ -58,7 +57,6 @@ fn env_or_prompt<V>(
                 trace!("Validated {} from user", key);
                 Ok(str)
             }
-        },
-        _ => Err(anyhow!("{} is not set and interactive mode is disabled", key))?,
+        }
     }
 }

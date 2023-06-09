@@ -71,7 +71,7 @@ async fn main() -> anyhow::Result<()> {
 
                 if !flags.dry_run {
                     let mut file = File::create(file)
-                        .with_context(|| format!("Unable to create file {}", file.display()))?;
+                        .with_context(|| format!("Unable to interactive file {}", file.display()))?;
                     file.write_all(
                         serde_json::to_string_pretty(&rules)
                             .with_context(|| format!("Unable to serialise rules"))?

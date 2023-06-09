@@ -1,21 +1,21 @@
-use crate::config::{AutoPrune, Backend};
+use crate::config::{AutoPrune, Backend, RuntimeConfig};
 use crate::sources::bitwarden::BitWardenCore;
 use crate::sources::s3::S3Core;
+use async_trait::async_trait;
 use clap::ValueEnum;
 use lib::anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display, Formatter};
 use std::path::PathBuf;
-use async_trait::async_trait;
 
 #[async_trait]
 pub trait Exporter {
-    /// Used to attempt to interactively create a new exporter.
-    fn create(interactive: bool) -> Result<Vec<Backend>>;
+    /// Used to attempt to interactively interactive a new exporter.
+    fn interactive(config: &RuntimeConfig) -> Result<Vec<Backend>>;
 
     /// This method will export the backup data into memory,
     /// and then write it to the backup directory.
-    async fn export(&mut self, root_directory: &PathBuf, auto_prune: &AutoPrune) -> Result<()>;
+    async fn export(&mut self, config: &RuntimeConfig) -> Result<()>;
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, ValueEnum)]
@@ -34,10 +34,10 @@ impl Display for ExporterSource {
 }
 
 impl ExporterSource {
-    pub fn create(&self, interactive: &bool) -> Result<Vec<Backend>> {
+    pub fn create(&self, config: &RuntimeConfig) -> Result<Vec<Backend>> {
         let exporters = match self {
-            Self::S3 => S3Core::create(interactive.clone()),
-            Self::BitWarden => BitWardenCore::create(interactive.clone()),
+            Self::S3 => S3Core::interactive(config),
+            Self::BitWarden => BitWardenCore::interactive(config),
         };
 
         exporters
