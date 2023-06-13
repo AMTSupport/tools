@@ -35,11 +35,27 @@ pub async fn main(destination: PathBuf, cli: Cli, is_interactive: bool) -> Resul
     let config = RuntimeConfig::new(cli, destination).await?;
     debug!("Config: {:?}", config);
 
+    // TODO :: Store errors and continue; report them at the end
+    // TODO :: Maybe pass progress bar to exporters for better UX
+    let mut errors = vec![];
     for mut e in config.config.exporters.clone() {
-        e.run(&config).await?;
+        info!("Running exporter: {}", e);
+        match e.run(&config).await {
+            Ok(_) => trace!("Exporter finished successfully"),
+            Err(err) => {
+                trace!("Exporter failed");
+                errors.push((e, err));
+            }
+        }
     }
 
-    // Creates exports for bitwarden, 1password for drive
+    if let Err(e) = config.save() {
+        error!("Failed to save config: {}", e);
+    }
 
-    config.save()
+    if !errors.is_empty() {
+        Err(anyhow!("Some exporters failed: {:?}", errors))?
+    }
+
+    Ok(())
 }
