@@ -1,6 +1,7 @@
 use crate::config::backend::Backend;
 use crate::config::runtime::RuntimeConfig;
 use crate::sources::auto_prune::Prune;
+use crate::sources::download_to;
 use crate::sources::exporter::Exporter;
 use crate::{continue_loop, env_or_prompt};
 use async_trait::async_trait;
@@ -15,7 +16,6 @@ use opendal::services::S3;
 use opendal::{Builder, Operator, OperatorBuilder};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::io::Write;
 use std::path::PathBuf;
 use std::string::ToString;
 use std::time::UNIX_EPOCH;
@@ -74,7 +74,7 @@ impl Prune for S3Core {
 
 #[async_trait]
 impl Exporter for S3Core {
-    fn interactive(_config: &RuntimeConfig) -> Result<Vec<Backend>> {
+    async fn interactive(_config: &RuntimeConfig) -> Result<Vec<Backend>> {
         let not_empty_or_ascii = |str: &str, msg: &str| match str
             .chars()
             .any(|c| !c.is_ascii_alphanumeric() && c != '-' && c != '_')
@@ -223,11 +223,15 @@ impl Exporter for S3Core {
                 .context("Unable to interactive directory")?;
 
             debug!("Creating file {}", &path.to_str().unwrap());
-            let mut file = std::fs::File::create(&path)?;
+            // let mut file = std::fs::File::create(&path)?;
+            // let mut reader = op.reader_with(&item.path()).await?;
             let mut reader = op.reader_with(&item.path()).await?;
-            while let Some(chunk) = reader.try_next().await? {
-                file.write_all(&chunk)?;
-            }
+            // op.reader(&item.path()).await?;
+            download_to(meta.content_length(), reader.boxed(), &path).await?;
+
+            // while let Some(chunk) = reader.try_next().await? {
+            //     file.write_all(&chunk)?;
+            // }
 
             debug!("Setting access time for {}", &path.to_str().unwrap());
             let access_time = meta.last_modified().unwrap();

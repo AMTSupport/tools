@@ -11,7 +11,7 @@ use std::fmt::{Debug, Display, Formatter};
 #[async_trait]
 pub trait Exporter {
     /// Used to attempt to interactively interactive a new exporter.
-    fn interactive(config: &RuntimeConfig) -> Result<Vec<Backend>>;
+    async fn interactive(config: &RuntimeConfig) -> Result<Vec<Backend>>;
 
     /// This method will export the backup data into memory,
     /// and then write it to the backup directory.
@@ -34,7 +34,7 @@ impl Display for ExporterSource {
 }
 
 impl ExporterSource {
-    pub fn create(&self, config: &RuntimeConfig) -> Result<Vec<Backend>> {
+    pub async fn create(&self, config: &RuntimeConfig) -> Result<Vec<Backend>> {
         let exporters = match self {
             Self::S3 => S3Core::interactive(config),
             Self::BitWarden => BitWardenCore::interactive(config),
