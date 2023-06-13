@@ -1,8 +1,9 @@
-use crate::config::{AutoPrune, RuntimeConfig};
+use crate::config::rules::AutoPrune;
+use crate::config::runtime::RuntimeConfig;
 use clap::Parser;
 use lib::anyhow::{anyhow, Result};
 use lib::cli::Flags;
-use lib::simplelog::debug;
+use lib::simplelog::{debug, error, info, trace};
 use std::fmt::Debug;
 use std::path::PathBuf;
 
@@ -31,7 +32,7 @@ pub async fn main(destination: PathBuf, cli: Cli, is_interactive: bool) -> Resul
         todo!("Non-interactive mode not yet implemented")
     }
 
-    let config = RuntimeConfig::new(cli, destination)?;
+    let config = RuntimeConfig::new(cli, destination).await?;
     debug!("Config: {:?}", config);
 
     for mut e in config.config.exporters.clone() {

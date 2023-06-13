@@ -1,10 +1,12 @@
-use crate::config::{Backend, RuntimeConfig};
+use crate::config::backend::Backend;
+use crate::config::runtime::RuntimeConfig;
 use crate::sources::auto_prune::Prune;
 use crate::sources::exporter::Exporter;
 use crate::{continue_loop, env_or_prompt};
 use async_trait::async_trait;
 use chrono::Utc;
 use futures::TryStreamExt;
+use futures_util::StreamExt;
 use inquire::validator::Validation;
 use lib::anyhow::{Context, Result};
 use lib::simplelog::{debug, error, info, trace};
@@ -89,15 +91,11 @@ impl Exporter for S3Core {
             )
         })?;
 
-        // TODO VAlidators
+        // TODO Validators
         let region = env_or_prompt("S3_REGION", |_: &_| Ok(Validation::Valid))?;
         let endpoint = env_or_prompt("S3_ENDPOINT", |_: &_| Ok(Validation::Valid))?;
-        let key_id = env_or_prompt("S3_ACCESS_KEY_ID", |_: &_| {
-            Ok(Validation::Valid)
-        })?;
-        let secret_key = env_or_prompt("S3_SECRET_ACCESS_KEY", |_: &_| {
-            Ok(Validation::Valid)
-        })?;
+        let key_id = env_or_prompt("S3_ACCESS_KEY_ID", |_: &_| Ok(Validation::Valid))?;
+        let secret_key = env_or_prompt("S3_SECRET_ACCESS_KEY", |_: &_| Ok(Validation::Valid))?;
 
         let base_accessor = HashMap::from([
             ("bucket".to_string(), bucket),
@@ -118,7 +116,7 @@ impl Exporter for S3Core {
                 false => Ok(Validation::Valid),
             });
 
-        // TODO :: Autosuggest for object paths
+        // TODO :: Auto suggest for object paths
         let mut exporters = vec![];
         while continue_loop(&exporters, "object to export") {
             match prompt.clone().prompt()? {
@@ -202,7 +200,10 @@ impl Exporter for S3Core {
             {
                 let since_mtime = Utc::now() - meta.last_modified().unwrap();
                 if since_mtime.num_days() > config.config.rules.auto_prune.keep_for.clone() as i64 {
-                    debug!("File is older than {}, skipping.", &config.config.rules.auto_prune.keep_for);
+                    debug!(
+                        "File is older than {}, skipping.",
+                        &config.config.rules.auto_prune.keep_for
+                    );
                     continue;
                 }
             }

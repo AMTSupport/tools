@@ -26,13 +26,11 @@ async fn main() -> Result<()> {
 
     trace!("Selected destination: {}", &destination.display());
 
-    application::main(destination, cli, true).await?;
+    application::main(destination, cli, true).await
 
     // TODO :: Verify writable
     // TODO :: Verify enough space
     // TODO :: Verify dir is either empty, or has existing backup data
-
-    Ok(())
 }
 
 fn interactive_select_drive() -> core::result::Result<PathBuf, impl Error> {

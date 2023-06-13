@@ -1,4 +1,5 @@
-use crate::config::{Backend, RuntimeConfig};
+use crate::config::backend::Backend;
+use crate::config::runtime::RuntimeConfig;
 use crate::sources::bitwarden::BitWardenCore;
 use crate::sources::s3::S3Core;
 use async_trait::async_trait;

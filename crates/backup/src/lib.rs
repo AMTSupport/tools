@@ -4,6 +4,8 @@
 #![feature(exit_status_error)]
 #![feature(unwrap_infallible)]
 #![feature(slice_pattern)]
+#![feature(let_chains)]
+#![feature(return_position_impl_trait_in_trait)]
 
 extern crate core;
 
@@ -12,8 +14,8 @@ use lib::anyhow::{anyhow, Context, Result};
 use lib::simplelog::{trace, warn};
 
 pub mod application;
-pub mod config;
 pub mod sources;
+pub mod config;
 
 fn continue_loop<I>(vec: &Vec<I>, prompt_type: &str) -> bool {
     if vec.is_empty() {

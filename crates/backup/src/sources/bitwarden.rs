@@ -1,21 +1,22 @@
-use crate::config::{Backend, RuntimeConfig};
 use crate::sources::auto_prune::Prune;
 use crate::sources::exporter::Exporter;
 use anyhow::Result;
 use async_trait::async_trait;
 use lib::anyhow;
 use lib::anyhow::{anyhow, Context};
-use lib::simplelog::{error, info, trace};
+use lib::simplelog::{debug, error, info};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::path::PathBuf;
 use std::process::Command;
+use crate::config::backend::Backend;
+use crate::config::runtime::RuntimeConfig;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BitWardenCore {
-    user: String,
-    org_id: String,
-    org_name: String,
+    pub user: String,
+    pub org_id: String,
+    pub org_name: String,
     session_id: String,
 }
 
@@ -62,7 +63,7 @@ impl Prune for BitWardenCore {
 
 #[async_trait]
 impl Exporter for BitWardenCore {
-    fn interactive(config: &RuntimeConfig) -> Result<Vec<Backend>> {
+    async fn interactive(config: &RuntimeConfig) -> Result<Vec<Backend>> {
         let username = inquire::Text::new("BitWarden Username").prompt()?;
         let data_dir = Self::_data_dir(&config, &username);
         let login_status = serde_json::from_slice::<LoginStatus>(
@@ -156,27 +157,22 @@ impl Exporter for BitWardenCore {
             date = chrono::Local::now().format("%Y-%m-%d")
         ));
 
-        let mut cmd = cli(&self.data_dir(&config))
+        let cmd = cli(&self.data_dir(&config))
             .env(Self::BW_SESSION, &self.session_id)
             .arg("export")
             .args(["--organizationid", &self.org_id])
             .args(["--format", "csv"])
             .args(["--output", output_file.to_str().unwrap()])
-            .spawn()?;
+            .output()?;
 
-        trace!("Running BitWarden export command: {:?}", &cmd);
-        let status = cmd.wait()?;
-        trace!("BitWarden export command finished: {:?}", &status);
+        debug!("BitWarden export command: {:?}", &cmd);
 
-        match status {
-            s if s.success() => info!(
-                "Successfully exported BitWarden organisation {name}",
-                name = &self.org_name
-            ),
-            s => info!("BitWarden export command exited with code {:?}", &s.code()),
+        if !cmd.stderr.is_empty() {
+            let string = String::from_utf8(cmd.stderr)?;
+            return Err(anyhow!("BitWarden export failed: {string}"));
         }
 
-        return Ok(());
+        Ok(())
     }
 }
 

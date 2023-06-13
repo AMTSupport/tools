@@ -1,4 +1,4 @@
-use crate::config::RuntimeConfig;
+use crate::config::runtime::RuntimeConfig;
 use lib::anyhow::Result;
 use lib::simplelog::debug;
 use std::path::PathBuf;
