@@ -1,6 +1,7 @@
 use crate::config::backend::Backend;
 use crate::config::runtime::RuntimeConfig;
 use crate::sources::bitwarden::BitWardenCore;
+use crate::sources::op::core::OnePasswordCore;
 use crate::sources::s3::S3Core;
 use async_trait::async_trait;
 use clap::ValueEnum;
@@ -22,6 +23,7 @@ pub trait Exporter {
 pub enum ExporterSource {
     S3,
     BitWarden,
+    OnePassword,
 }
 
 impl Display for ExporterSource {
@@ -29,6 +31,7 @@ impl Display for ExporterSource {
         match self {
             Self::S3 => write!(f, "S3"),
             Self::BitWarden => write!(f, "BitWarden"),
+            Self::OnePassword => write!(f, "1Password"),
         }
     }
 }
@@ -36,8 +39,9 @@ impl Display for ExporterSource {
 impl ExporterSource {
     pub async fn create(&self, config: &RuntimeConfig) -> Result<Vec<Backend>> {
         let exporters = match self {
-            Self::S3 => S3Core::interactive(config),
-            Self::BitWarden => BitWardenCore::interactive(config),
+            Self::S3 => S3Core::interactive(config).await,
+            Self::BitWarden => BitWardenCore::interactive(config).await,
+            Self::OnePassword => OnePasswordCore::interactive(config).await,
         };
 
         exporters
