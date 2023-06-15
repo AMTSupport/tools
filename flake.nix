@@ -15,13 +15,13 @@
         devShells.default = mkShell {
           packages = [ pkgs.bashInteractive ];
           buildInputs = [
-            openssl
-            mold
-            pkg-config
+            glibc
             gcc_multi
             gcc
+            pkgsCross.mingwW64.buildPackages.gcc
+            mold
+            pkg-config
             (rust-bin.selectLatestNightlyWith (toolchain: toolchain.default.override {
-              extensions = [ "rust-src" ];
               targets = [ "x86_64-unknown-linux-gnu" "x86_64-pc-windows-gnu" ];
             }))
           ];
