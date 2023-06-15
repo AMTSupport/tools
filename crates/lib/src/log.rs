@@ -6,6 +6,7 @@ use simplelog::{
 };
 use std::env::temp_dir;
 use std::fs::File;
+#[cfg(unix)]
 use std::os::unix::fs::OpenOptionsExt;
 
 pub fn init(named: &str, cli: &Flags) -> anyhow::Result<()> {
@@ -17,6 +18,15 @@ pub fn init(named: &str, cli: &Flags) -> anyhow::Result<()> {
 
     let log_file = temp_dir().join(format!("{0}.log", named));
     println!("Log file: {0}", log_file.display());
+
+    let mut file_options = File::options();
+    file_options.append(true).create(true);
+    #[cfg(unix)]
+    file_options.mode(0o666);
+
+    let log_file = file_options
+        .open(log_file)
+        .context("Create/Open log file")?;
 
     CombinedLogger::init(vec![
         TermLogger::new(
@@ -38,12 +48,7 @@ pub fn init(named: &str, cli: &Flags) -> anyhow::Result<()> {
                 .set_thread_mode(ThreadLogMode::Names)
                 .set_time_format_rfc2822()
                 .build(),
-            File::options()
-                .append(true)
-                .create(true)
-                .mode(0o666)
-                .open(log_file)
-                .context("Create log file")?,
+            log_file,
         ),
     ])
     .expect("Initialise Global Loggers");

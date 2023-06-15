@@ -5,6 +5,7 @@ use crate::sources::exporter::Exporter;
 use crate::sources::op::core::OnePasswordCore;
 use crate::sources::s3::S3Core;
 use lib::anyhow::Result;
+use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

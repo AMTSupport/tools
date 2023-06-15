@@ -1,16 +1,15 @@
-use std::error::Error;
+#![feature(result_option_inspect)]
+
 use backup::application;
-use inquire::PathSelectionMode;
-use lib::anyhow::{Result};
+use inquire::{PathSelect, PathSelectionMode};
+use lib::anyhow::{anyhow, Context, Result};
 use lib::clap::Parser;
-
+use lib::simplelog::{error, trace};
+use std::env;
+use std::env::VarError;
+use std::error::Error;
+use std::ops::Deref;
 use std::path::PathBuf;
-use lib::simplelog::trace;
-
-#[cfg(windows)]
-const INTERACTIVE_START: &str = r"C:\";
-#[cfg(unix)]
-const INTERACTIVE_START: &str = "/";
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -20,10 +19,7 @@ async fn main() -> Result<()> {
 
     // TODO :: Save this in a config on the machine
 
-    let destination = std::env::var("BACKUP_DIR")
-        .map(PathBuf::from)
-        .or_else(|_| interactive_select_drive())?;
-
+    let destination = select_location()?;
     trace!("Selected destination: {}", &destination.display());
 
     application::main(destination, cli, true).await
@@ -33,32 +29,20 @@ async fn main() -> Result<()> {
     // TODO :: Verify dir is either empty, or has existing backup data
 }
 
-fn interactive_select_drive() -> core::result::Result<PathBuf, impl Error> {
-    let drive = inquire::PathSelect::new("Select your backup destination", Some(INTERACTIVE_START))
-        .with_selection_mode(PathSelectionMode::Directory)
-        .with_select_multiple(false)
-        .prompt();
-
-    match drive {
-        Ok(drive) => {
-            let entry = drive.first().unwrap();
-            Ok(entry.path.clone())
-        },
-        Err(err) => Err(err)
-    }
+// TODO :: maybe drop this and have the binary placed in the directory where it will be used?
+fn select_location() -> Result<PathBuf> {
+    env::var("BACKUP_DIR")
+        .map(PathBuf::from)
+        // TODO :: Verify writable
+        .and_then(|path| if path.exists() { Ok(path) } else { Err(VarError::NotPresent) })
+        .inspect_err(|err| {
+            error!("The path specified in BACKUP_DIR does not exist.");
+            error!("Please fix this, or unset the BACKUP_DIR environment variable to use the interactive mode.");
+        })
+        .or_else(|_| PathSelect::<&str>::new("Select your backup destination", None)
+            .with_selection_mode(PathSelectionMode::Directory)
+            .with_select_multiple(false)
+            .prompt()
+            .map_err(|err| anyhow!("No path selected or error while selecting path: {}", err))
+            .map(|vec| vec.first().unwrap().path.clone()))
 }
-
-
-#[cfg(windows)]
-static DRIVES: Lazy<Vec<PathBuf>> = Lazy::new(|| {
-    let mut drives = Vec::with_capacity(26);
-    for x in 0..26 {
-        let drive = format!("{}:", (x + 64) as u8 as char);
-        let drive = PathBuf::from(drive);
-        if drive.exists() {
-            drives.push(drive);
-        }
-    }
-
-    return drives;
-});

@@ -14,6 +14,7 @@ pub trait Exporter {
     /// Used to attempt to interactively interactive a new exporter.
     async fn interactive(config: &RuntimeConfig) -> Result<Vec<Backend>>;
 
+    // TODO :: Maybe return a reference to file/files which were exported?
     /// This method will export the backup data into memory,
     /// and then write it to the backup directory.
     async fn export(&mut self, config: &RuntimeConfig) -> Result<()>;

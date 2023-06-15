@@ -6,6 +6,8 @@
 #![feature(slice_pattern)]
 #![feature(let_chains)]
 #![feature(return_position_impl_trait_in_trait)]
+#![feature(result_option_inspect)]
+#![feature(thin_box)]
 
 extern crate core;
 
