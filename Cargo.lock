@@ -1834,6 +1834,7 @@ dependencies = [
  "anyhow",
  "clap 4.3.3",
  "exitcode",
+ "indicatif",
  "is_elevated",
  "nix 0.26.2",
  "simplelog",

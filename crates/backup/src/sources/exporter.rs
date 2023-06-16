@@ -5,6 +5,7 @@ use crate::sources::op::core::OnePasswordCore;
 use crate::sources::s3::S3Core;
 use async_trait::async_trait;
 use clap::ValueEnum;
+use indicatif::{MultiProgress, ProgressBar};
 use lib::anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display, Formatter};
@@ -17,7 +18,12 @@ pub trait Exporter {
     // TODO :: Maybe return a reference to file/files which were exported?
     /// This method will export the backup data into memory,
     /// and then write it to the backup directory.
-    async fn export(&mut self, config: &RuntimeConfig) -> Result<()>;
+    async fn export(
+        &mut self,
+        config: &RuntimeConfig,
+        main_bar: &ProgressBar,
+        progress_bar: &MultiProgress,
+    ) -> Result<()>;
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ValueEnum)]

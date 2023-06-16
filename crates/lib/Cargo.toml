@@ -9,6 +9,7 @@ anyhow = { version = "1.0.71" }
 simplelog = { version = "0.12.1", features = ["paris"] }
 exitcode = "1.1.2"
 sysexits = "0.6.0"
+indicatif = { version = "0.17.4" }
 
 [target.'cfg(unix)'.dependencies]
 systemd-journal-logger = "1.0.0"

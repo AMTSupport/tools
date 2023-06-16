@@ -4,6 +4,7 @@ use crate::sources::bitwarden::BitWardenCore;
 use crate::sources::exporter::Exporter;
 use crate::sources::op::core::OnePasswordCore;
 use crate::sources::s3::S3Core;
+use indicatif::{MultiProgress, ProgressBar};
 use lib::anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
@@ -31,22 +32,27 @@ impl Display for Backend {
 }
 
 impl Backend {
-    pub async fn run(&mut self, config: &RuntimeConfig) -> Result<()> {
+    pub async fn run(
+        mut self,
+        config: &RuntimeConfig,
+        main_bar: &ProgressBar,
+        progress_bar: &MultiProgress,
+    ) -> Result<Backend> {
         match self {
             Backend::S3(ref mut core) => {
-                core.prune(&config)?;
-                core.export(&config).await?;
+                core.prune(&config, &progress_bar)?;
+                core.export(&config, main_bar, &progress_bar).await?;
             }
             Backend::BitWarden(ref mut core) => {
-                core.prune(&config)?;
-                core.export(&config).await?;
+                core.prune(&config, &progress_bar)?;
+                core.export(&config, main_bar, &progress_bar).await?;
             }
             Backend::OnePassword(ref mut core) => {
-                core.prune(&config)?;
-                core.export(&config).await?;
+                core.prune(&config, &progress_bar)?;
+                core.export(&config, main_bar, &progress_bar).await?;
             }
         }
 
-        Ok(())
+        Ok(self)
     }
 }

@@ -150,8 +150,13 @@ impl Exporter for OnePasswordCore {
     }
 
     // TODO :: Zip export
-    async fn export(&mut self, config: &RuntimeConfig) -> Result<()> {
-        let export = super::one_pux::create_export(Box::new(self.account.get()), &config);
+    async fn export(
+        &mut self,
+        config: &RuntimeConfig,
+        _main_bar: &ProgressBar,
+        _progress_bar: &MultiProgress,
+    ) -> Result<()> {
+        let export = one_pux::create_export(Box::new(self.account.get()), &config);
 
         let file = format!("export_{}.json", Local::now().format("%Y-%m-%dT%H-%M-%SZ%z"));
         let file = self.account.get().directory(&config).join(file);

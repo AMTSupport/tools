@@ -6,10 +6,12 @@ use crate::sources::exporter::Exporter;
 use crate::{continue_loop, env_or_prompt};
 use async_trait::async_trait;
 use chrono::Utc;
-use futures::TryStreamExt;
+use futures::{Stream, TryStreamExt};
 use futures_util::StreamExt;
+use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget};
 use inquire::validator::Validation;
 use lib::anyhow::{Context, Result};
+use lib::progress::{download, download_style, spinner};
 use lib::simplelog::{debug, error, info, trace};
 use opendal::layers::LoggingLayer;
 use opendal::services::S3;
@@ -50,9 +52,7 @@ impl S3Core {
     fn op(&mut self) -> &Operator {
         self.op.get_or_insert_with(|| {
             let backend = S3::from_map(self.base.backend.clone()).build().unwrap();
-            OperatorBuilder::new(backend)
-                .layer(LoggingLayer::default())
-                .finish()
+            OperatorBuilder::new(backend).layer(LoggingLayer::default()).finish()
         })
     }
 }
@@ -149,12 +149,21 @@ impl Exporter for S3Core {
     }
 
     // TODO :: Validate files
-    async fn export(&mut self, config: &RuntimeConfig) -> Result<()> {
+    async fn export(
+        &mut self,
+        config: &RuntimeConfig,
+        main_bar: &ProgressBar,
+        progress_bar: &MultiProgress,
+    ) -> Result<()> {
+        let progress_state = progress_bar.insert_after(&main_bar, spinner());
+        progress_state.set_message("Initialising S3 exporter...");
+
         let object = self.base.object.clone();
         let output = config.directory.join("S3").join(&object);
         let mut backup_len = self.files(&config).len();
-
         let op = self.op();
+
+        progress_state.set_message("Requesting objects from S3...");
 
         // TODO :: Should this be recursive?
         let mut layer = op.list_with("/").await.context(format!(
@@ -162,29 +171,45 @@ impl Exporter for S3Core {
             &object.to_str().unwrap()
         ))?;
 
-        while let Some(item) = layer.try_next().await? {
-            debug!("Processing {:?}", &item);
+        progress_state.set_message("Processing objects from S3...");
+        progress_state.set_length(layer.size_hint().1.unwrap_or(0) as u64);
+        progress_state.set_position(0);
+        let download_bar = progress_bar.insert_after(&progress_state, download());
 
+        while let Some(item) = layer.try_next().await? {
             let meta = op.metadata(&item, None).await?;
             if meta.is_dir() {
+                progress_state.inc(1);
                 continue;
             }
 
             let path = output.join(&item.path());
-            debug!("Working with item at {:?}", &path);
+            let filename = path.file_name().unwrap().to_str().unwrap();
+            progress_state.set_message(format!("Processing {:#}", &filename));
 
             if path.exists() {
-                debug!("Item at path exists");
+                debug!("Checking if file has changed...");
+                progress_state.set_message(format!("Checking if {:#} has changed...", &filename));
+
                 let host_meta = std::fs::metadata(&path)?;
                 let host_len = host_meta.len();
                 let host_modified = host_meta.modified().unwrap().duration_since(UNIX_EPOCH)?;
                 let remote_len = meta.content_length();
                 let remote_modified = meta.last_modified().unwrap();
 
+                debug!("Host len: {}", host_len);
+                debug!("Host modified: {}", host_modified.as_millis());
+                debug!("Remote len: {}", remote_len);
+                debug!(
+                    "Remote modified: {}",
+                    remote_modified.timestamp_millis() as u128
+                );
+
                 if host_len == remote_len
                     && host_modified.as_millis() == remote_modified.timestamp_millis() as u128
                 {
                     debug!("Skipping export as file is the same");
+                    progress_state.inc(1);
                     continue;
                 }
 
@@ -193,7 +218,12 @@ impl Exporter for S3Core {
                     std::fs::remove_file(&path)?;
                     backup_len -= 1;
                 }
+
+                progress_state.inc(1)
             }
+
+            debug!("Checking if file should be pruned...");
+            progress_state.set_message(format!("Checking if {:#} would be pruned...", &filename));
 
             if config.config.rules.auto_prune.enabled.clone()
                 && &backup_len > &config.config.rules.auto_prune.keep_latest
@@ -204,6 +234,7 @@ impl Exporter for S3Core {
                         "File is older than {}, skipping.",
                         &config.config.rules.auto_prune.keep_for
                     );
+                    progress_state.inc(1);
                     continue;
                 }
             }
@@ -215,6 +246,7 @@ impl Exporter for S3Core {
                     "Skipping export of {} as it already exists",
                     &path.to_str().unwrap()
                 );
+                progress_state.inc(1);
                 continue;
             }
 
@@ -223,17 +255,15 @@ impl Exporter for S3Core {
                 .context("Unable to interactive directory")?;
 
             debug!("Creating file {}", &path.to_str().unwrap());
-            // let mut file = std::fs::File::create(&path)?;
-            // let mut reader = op.reader_with(&item.path()).await?;
-            let mut reader = op.reader_with(&item.path()).await?;
-            // op.reader(&item.path()).await?;
-            download_to(meta.content_length(), reader.boxed(), &path).await?;
+            progress_state.set_message(format!("Downloading {:#}...", &filename));
 
-            // while let Some(chunk) = reader.try_next().await? {
-            //     file.write_all(&chunk)?;
-            // }
+            let mut reader = op.reader_with(&item.path()).await?;
+            download_to(meta.content_length(), reader.boxed(), &path, &download_bar).await?;
+
 
             debug!("Setting access time for {}", &path.to_str().unwrap());
+            progress_state.set_message(format!("Setting access time for {:#}...", &filename));
+
             let access_time = meta.last_modified().unwrap();
             filetime::set_file_mtime(
                 &path,
@@ -243,8 +273,11 @@ impl Exporter for S3Core {
                 format!("Failed to set access time for {}", &path.to_str().unwrap())
             })?;
 
+            progress_state.inc(1);
             backup_len += 1;
         }
+
+        download_bar.finish_and_clear();
 
         Ok(())
     }

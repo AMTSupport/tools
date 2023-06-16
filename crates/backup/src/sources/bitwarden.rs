@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::path::PathBuf;
 use std::process::Command;
+use indicatif::{MultiProgress, ProgressBar};
 use crate::config::backend::Backend;
 use crate::config::runtime::RuntimeConfig;
 
@@ -150,7 +151,7 @@ impl Exporter for BitWardenCore {
         Ok(organisations)
     }
 
-    async fn export(&mut self, config: &RuntimeConfig) -> Result<()> {
+    async fn export(&mut self, config: &RuntimeConfig, main_bar: &ProgressBar, progress_bar: &MultiProgress) -> Result<()> {
         let output_file = self.backup_dir(&config).join(format!(
             "{org_id}_{date}.json",
             org_id = &self.org_id,

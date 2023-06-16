@@ -5,6 +5,7 @@ pub mod helper;
 pub mod log;
 #[cfg(windows)]
 pub mod windows;
+pub mod progress;
 
 pub use anyhow;
 pub use clap;

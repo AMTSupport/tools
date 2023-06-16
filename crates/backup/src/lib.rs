@@ -8,6 +8,8 @@
 #![feature(return_position_impl_trait_in_trait)]
 #![feature(result_option_inspect)]
 #![feature(thin_box)]
+#![feature(async_closure)]
+#![feature(file_create_new)]
 
 extern crate core;
 
