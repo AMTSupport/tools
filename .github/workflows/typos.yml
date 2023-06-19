@@ -7,7 +7,7 @@ jobs:
     name: Spell Check with Typos
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Actions Repository
+      - name: Checkout Action Repository
         uses: actions/checkout@v3
 
       - name: Check spelling
