@@ -1,20 +1,21 @@
 use crate::config::runtime::RuntimeConfig;
 use crate::sources::interactive::Interactive;
+use crate::sources::op::cli;
 use crate::sources::op::core::OnePasswordCore;
 use async_trait::async_trait;
+use inquire::list_option::ListOption;
 use inquire::validator::Validation;
 use inquire::{MultiSelect, Password, Select, Text};
 use lib::anyhow::{anyhow, Context, Result};
+use lib::fs::normalise_path;
 use lib::simplelog::{info, trace};
 use serde::{Deserialize, Serialize};
+use serde_json::from_slice;
 use std::fmt::{Debug, Display, Formatter};
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
 
-use crate::sources::op::cli;
-use inquire::list_option::ListOption;
-use serde_json::from_slice;
 #[cfg(unix)]
 use std::os::unix::prelude::PermissionsExt;
 
@@ -36,8 +37,16 @@ impl OnePasswordAccount {
 impl Display for OnePasswordAccount {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Service(account) => write!(f, "Service Account: {}-{}", &account.attrs.name, &account.attrs.id),
-            Self::Personal(account) => write!(f, "Personal Account: {}-{}", &account.attrs.email, &account.attrs.id), // TODO :: Domain
+            Self::Service(account) => write!(
+                f,
+                "Service Account: {}-{}",
+                &account.attrs.name, &account.attrs.id
+            ),
+            Self::Personal(account) => write!(
+                f,
+                "Personal Account: {}-{}",
+                &account.attrs.email, &account.attrs.id
+            ), // TODO :: Domain
         }
     }
 }
@@ -157,7 +166,9 @@ impl Interactive<OnePasswordAccount> for ServiceAccount {
 
         account.vaults = MultiSelect::new("Select the vaults you want to use", vaults)
             .with_validator(|selections: &[ListOption<&Vault>]| match selections.len() {
-                0 => Ok(Validation::Invalid("You must select at least one vault.".into())),
+                0 => Ok(Validation::Invalid(
+                    "You must select at least one vault.".into(),
+                )),
                 _ => Ok(Validation::Valid),
             })
             .prompt()?;
@@ -175,8 +186,9 @@ impl Interactive<OnePasswordAccount> for PersonalAccount {
 
         if false {
             trace!("Getting list of accounts from 1Password");
-            let output =
-                Command::new(OnePasswordCore::binary(config)).args(&["account", "list", "--format=json"]).output()?;
+            let output = Command::new(OnePasswordCore::binary(config))
+                .args(&["account", "list", "--format=json"])
+                .output()?;
 
             let accounts = match output.status.success() {
                 true => output.stdout,
@@ -206,12 +218,16 @@ impl Interactive<OnePasswordAccount> for PersonalAccount {
         }
 
         let domain = Text::new("Enter your 1Password account domain")
-            .with_help_message("This is the domain you use to login to 1Password, e.g. `https://my.1password.com`")
+            .with_help_message(
+                "This is the domain you use to login to 1Password, e.g. `https://my.1password.com`",
+            )
             .with_default("https://my.1password.com")
             // TODO :: Better Validator
             .with_validator(|url: &str| match url.starts_with("https://") {
                 true => Ok(Validation::Valid),
-                false => Ok(Validation::Invalid("The URL must start with https://".into())),
+                false => Ok(Validation::Invalid(
+                    "The URL must start with https://".into(),
+                )),
             })
             .prompt()?;
 
@@ -254,7 +270,13 @@ impl AccountCommon for ServiceAccount {
     }
 
     fn directory(&self, config: &RuntimeConfig) -> PathBuf {
-        OnePasswordCore::base_dir(config).join(format!("{name}-{id}", name = &self.attrs.name, id = &self.attrs.id))
+        let dir = OnePasswordCore::base_dir(config).join(format!(
+            "{name}-{id}",
+            name = &self.attrs.name,
+            id = &self.attrs.id
+        ));
+
+        normalise_path(dir)
     }
 
     fn vaults(&self) -> Vec<Vault> {
@@ -284,11 +306,19 @@ impl AccountCommon for PersonalAccount {
 
     // TODO :: Ensure this is a valid directory name on windows
     fn directory(&self, config: &RuntimeConfig) -> PathBuf {
-        OnePasswordCore::base_dir(config).join(format!(
+        let dir = OnePasswordCore::base_dir(config).join(format!(
             "{email}-{domain}",
             email = &self.attrs.email,
-            domain = &self.attrs.id.split('.').next().map(|s| s.strip_prefix("https://").unwrap()).unwrap()
-        ))
+            domain = &self
+                .attrs
+                .id
+                .split('.')
+                .next()
+                .map(|s| s.strip_prefix("https://").unwrap())
+                .unwrap()
+        ));
+
+        normalise_path(dir)
     }
 
     fn vaults(&self) -> Vec<Vault> {

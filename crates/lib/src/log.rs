@@ -1,11 +1,17 @@
 use crate::cli::Flags;
 use anyhow::Context;
-use simplelog::{
-    ColorChoice, CombinedLogger, ConfigBuilder, Level, LevelFilter, TermLogger, TerminalMode,
-    ThreadLogMode, WriteLogger,
-};
+use simplelog::ColorChoice;
+use simplelog::CombinedLogger;
+use simplelog::ConfigBuilder;
+use simplelog::Level;
+use simplelog::LevelFilter;
+use simplelog::TermLogger;
+use simplelog::TerminalMode;
+use simplelog::ThreadLogMode;
+use simplelog::WriteLogger;
 use std::env::temp_dir;
 use std::fs::File;
+
 #[cfg(unix)]
 use std::os::unix::fs::OpenOptionsExt;
 
@@ -24,9 +30,7 @@ pub fn init(named: &str, cli: &Flags) -> anyhow::Result<()> {
     #[cfg(unix)]
     file_options.mode(0o666);
 
-    let log_file = file_options
-        .open(log_file)
-        .context("Create/Open log file")?;
+    let log_file = file_options.open(log_file).context("Create/Open log file")?;
 
     CombinedLogger::init(vec![
         TermLogger::new(

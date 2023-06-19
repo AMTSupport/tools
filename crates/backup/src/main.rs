@@ -1,28 +1,18 @@
 #![feature(result_option_inspect)]
 
 use backup::application;
-use inquire::{PathSelect, PathSelectionMode};
-use lib::anyhow::{anyhow, Context, Result};
+use lib::anyhow::{Context, Result};
 use lib::clap::Parser;
-use lib::simplelog::{error, trace};
+use lib::simplelog::{error, info, trace};
 use std::env;
 use std::env::VarError;
-use std::error::Error;
-use std::ops::Deref;
 use std::path::PathBuf;
 
 #[tokio::main]
-async fn main() -> Result<()> {
-    let cli = application::Cli::parse();
+pub async fn main() -> Result<()> {
+    let cli = application::Cli::try_parse()?;
     lib::log::init("backup-interactive", &cli.flags)?;
-    // let _ = required_elevated_privileges().is_some_and(|code| code.exit());
-
-    // TODO :: Save this in a config on the machine
-
-    let destination = select_location()?;
-    trace!("Selected destination: {}", &destination.display());
-
-    application::main(destination, cli, true).await
+    application::main(select_location()?, cli, true).await
 
     // TODO :: Verify writable
     // TODO :: Verify enough space
@@ -31,6 +21,12 @@ async fn main() -> Result<()> {
 
 // TODO :: maybe drop this and have the binary placed in the directory where it will be used?
 fn select_location() -> Result<PathBuf> {
+    let working_dir = env::current_dir().context("Failed to get current directory")?;
+    if working_dir.join("settings.json").exists() {
+        trace!("Running from working dir {}", working_dir.display());
+        return Ok(working_dir);
+    }
+
     env::var("BACKUP_DIR")
         .map(PathBuf::from)
         // TODO :: Verify writable

@@ -11,5 +11,7 @@ pub static DRIVES: LazyLock<Vec<PathBuf>> = LazyLock::new(|| {
         }
     }
 
-    return drives;
+    drives
 });
+
+pub static ROOT_DRIVE: LazyLock<&'static PathBuf> = LazyLock::new(|| DRIVES.first().unwrap());

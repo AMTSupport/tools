@@ -10,6 +10,7 @@
 #![feature(thin_box)]
 #![feature(async_closure)]
 #![feature(file_create_new)]
+#![feature(const_trait_impl)]
 
 extern crate core;
 

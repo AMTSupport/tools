@@ -9,9 +9,16 @@ use indicatif::{MultiProgress, ProgressBar};
 use lib::anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display, Formatter};
+use std::path::PathBuf;
 
 #[async_trait]
 pub trait Exporter {
+    const DIRECTORY: &'static str;
+
+    fn base_dir(config: &RuntimeConfig) -> PathBuf {
+        config.directory.join(Self::DIRECTORY)
+    }
+
     /// Used to attempt to interactively interactive a new exporter.
     async fn interactive(config: &RuntimeConfig) -> Result<Vec<Backend>>;
 

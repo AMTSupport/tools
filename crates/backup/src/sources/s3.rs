@@ -8,10 +8,11 @@ use async_trait::async_trait;
 use chrono::Utc;
 use futures::{Stream, TryStreamExt};
 use futures_util::StreamExt;
-use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget};
+use indicatif::{MultiProgress, ProgressBar};
 use inquire::validator::Validation;
 use lib::anyhow::{Context, Result};
-use lib::progress::{download, download_style, spinner};
+use lib::fs::normalise_path;
+use lib::progress::{download, spinner};
 use lib::simplelog::{debug, error, info, trace};
 use opendal::layers::LoggingLayer;
 use opendal::services::S3;
@@ -60,20 +61,24 @@ impl S3Core {
 #[async_trait]
 impl Prune for S3Core {
     fn files(&self, config: &RuntimeConfig) -> Vec<PathBuf> {
-        let directory = config.directory.join("S3").join(&self.base.object);
+        let directory = normalise_path(S3Core::base_dir(&config).join(&self.base.object));
         if !directory.exists() {
             return vec![];
         }
 
-        std::fs::read_dir(directory)
+        glob::glob(normalise_path(directory.join("*")).to_str().unwrap())
             .unwrap()
-            .filter_map(|entry| entry.ok().map(|entry| entry.path()))
+            .flatten()
+            .filter(|path| path.is_file() && !path.is_symlink())
+            .inspect(|path| trace!("Found file: {}", path.display()))
             .collect()
     }
 }
 
 #[async_trait]
 impl Exporter for S3Core {
+    const DIRECTORY: &'static str = "S3";
+
     async fn interactive(_config: &RuntimeConfig) -> Result<Vec<Backend>> {
         let not_empty_or_ascii = |str: &str, msg: &str| match str
             .chars()
@@ -159,7 +164,7 @@ impl Exporter for S3Core {
         progress_state.set_message("Initialising S3 exporter...");
 
         let object = self.base.object.clone();
-        let output = config.directory.join("S3").join(&object);
+        let output = normalise_path(Self::base_dir(&config).join(&object));
         let mut backup_len = self.files(&config).len();
         let op = self.op();
 
@@ -183,7 +188,7 @@ impl Exporter for S3Core {
                 continue;
             }
 
-            let path = output.join(&item.path());
+            let path = normalise_path(output.join(&item.name()));
             let filename = path.file_name().unwrap().to_str().unwrap();
             progress_state.set_message(format!("Processing {:#}", &filename));
 
@@ -240,7 +245,7 @@ impl Exporter for S3Core {
             }
 
             trace!("Checking if {} exists", &path.to_str().unwrap());
-            let host_path = config.directory.join(&path);
+            let host_path = normalise_path(config.directory.join(&path));
             if host_path.exists() && meta.content_length() == host_path.metadata().unwrap().len() {
                 debug!(
                     "Skipping export of {} as it already exists",
@@ -250,16 +255,9 @@ impl Exporter for S3Core {
                 continue;
             }
 
-            debug!("Creating parent dir for {}", &path.to_str().unwrap());
-            std::fs::create_dir_all(&path.parent().unwrap())
-                .context("Unable to interactive directory")?;
-
-            debug!("Creating file {}", &path.to_str().unwrap());
             progress_state.set_message(format!("Downloading {:#}...", &filename));
-
-            let mut reader = op.reader_with(&item.path()).await?;
+            let reader = op.reader_with(&item.path()).await?;
             download_to(meta.content_length(), reader.boxed(), &path, &download_bar).await?;
-
 
             debug!("Setting access time for {}", &path.to_str().unwrap());
             progress_state.set_message(format!("Setting access time for {:#}...", &filename));

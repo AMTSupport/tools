@@ -1,27 +1,31 @@
-use crate::config::backend::Backend;
-use crate::config::backend::Backend::OnePassword;
-use crate::config::runtime::RuntimeConfig;
-use crate::sources::auto_prune::Prune;
-use crate::sources::download;
-use crate::sources::exporter::Exporter;
-use crate::sources::interactive::Interactive;
-use crate::sources::op::account;
-use crate::sources::op::account::OnePasswordAccount;
+use crate::sources::downloader::Downloader;
+use crate::{
+    config::{
+        backend::{Backend, Backend::OnePassword},
+        runtime::RuntimeConfig,
+    },
+    sources::{
+        auto_prune::Prune,
+        exporter::Exporter,
+        interactive::Interactive,
+        op::{account, account::OnePasswordAccount, one_pux},
+    },
+};
 use async_trait::async_trait;
+use chrono::Local;
 use const_format::formatcp;
-use futures_util::StreamExt;
+use indicatif::{MultiProgress, ProgressBar};
 use inquire::Select;
 use lib::anyhow::Context;
 use lib::anyhow::Result;
-use lib::simplelog::{debug, trace};
+use lib::fs::normalise_path;
 use serde::{Deserialize, Serialize};
+use serde_json::to_string_pretty;
 use std::fmt::{Display, Formatter};
+use std::io::Write;
 use std::path::PathBuf;
 use std::{env, fs};
-
-use chrono::Local;
-#[cfg(unix)]
-use std::os::unix::prelude::PermissionsExt;
+use zip::write::FileOptions;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -30,32 +34,6 @@ pub struct OnePasswordCore {
 }
 
 impl OnePasswordCore {
-    #[cfg(unix)]
-    const FILENAME: &'static str = "op";
-    #[cfg(windows)]
-    const FILENAME: &'static str = "op.exe";
-    const DIRECTORY: &'static str = "1Password";
-    // const CLI_VERSION: &'static str = "v2.19.0-beta.01";
-    const CLI_VERSION: &'static str = "v2.18.0";
-    #[cfg(target_arch = "x86")]
-    const ARCH: &'static str = "386";
-    #[cfg(target_arch = "x86_64")]
-    const ARCH: &'static str = "amd64";
-    const URL: &'static str = formatcp!(
-        "https://cache.agilebits.com/dist/1P/op2/pkg/{version}/op_{os}_{arch}_{version}.zip",
-        version = OnePasswordCore::CLI_VERSION,
-        os = env::consts::OS,
-        arch = OnePasswordCore::ARCH
-    );
-
-    pub fn binary(config: &RuntimeConfig) -> PathBuf {
-        Self::base_dir(config).join(Self::FILENAME)
-    }
-
-    pub fn base_dir(config: &RuntimeConfig) -> PathBuf {
-        config.directory.join(Self::DIRECTORY)
-    }
-
     pub fn data_dir(config: &RuntimeConfig) -> PathBuf {
         Self::base_dir(&config).join("data")
     }
@@ -130,6 +108,8 @@ impl Display for AccountType {
 
 #[async_trait]
 impl Exporter for OnePasswordCore {
+    const DIRECTORY: &'static str = "1Password";
+
     async fn interactive(config: &RuntimeConfig) -> Result<Vec<Backend>> {
         OnePasswordCore::download_cli(&config).await?;
         let account_type = Select::new(

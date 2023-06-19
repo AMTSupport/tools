@@ -1,17 +1,21 @@
+use crate::config::backend::Backend;
+use crate::config::runtime::RuntimeConfig;
 use crate::sources::auto_prune::Prune;
+use crate::sources::downloader::Downloader;
 use crate::sources::exporter::Exporter;
 use anyhow::Result;
 use async_trait::async_trait;
+use const_format::formatcp;
+use indicatif::{MultiProgress, ProgressBar};
 use lib::anyhow;
 use lib::anyhow::{anyhow, Context};
-use lib::simplelog::{debug, error, info};
+use lib::fs::normalise_path;
+use lib::simplelog::{error, info};
 use serde::{Deserialize, Serialize};
+use std::env;
 use std::fmt::{Display, Formatter};
 use std::path::PathBuf;
 use std::process::Command;
-use indicatif::{MultiProgress, ProgressBar};
-use crate::config::backend::Backend;
-use crate::config::runtime::RuntimeConfig;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BitWardenCore {
@@ -25,17 +29,10 @@ impl BitWardenCore {
     const BW_SESSION: &'static str = "BW_SESSION";
     const BW_DIRECTORY: &'static str = "BITWARDENCLI_APPDATA_DIR";
 
-    #[inline]
-    fn base_dir(config: &RuntimeConfig) -> PathBuf {
-        config.directory.join("BitWarden")
-    }
-
-    #[inline]
     fn data_dir(&self, config: &RuntimeConfig) -> PathBuf {
         Self::_data_dir(&config, &self.user)
     }
 
-    #[inline]
     fn backup_dir(&self, config: &RuntimeConfig) -> PathBuf {
         Self::_backup_dir(&config, &self.org_name)
     }
@@ -58,12 +55,14 @@ impl Prune for BitWardenCore {
         ))
         .unwrap(); // TODO: Handle this better.
 
-        glob.filter_map(|entry| entry.ok()).collect()
+        glob.flatten().collect()
     }
 }
 
 #[async_trait]
 impl Exporter for BitWardenCore {
+    const DIRECTORY: &'static str = "Bitwarden";
+
     async fn interactive(config: &RuntimeConfig) -> Result<Vec<Backend>> {
         let username = inquire::Text::new("BitWarden Username").prompt()?;
         let data_dir = Self::_data_dir(&config, &username);
@@ -147,7 +146,6 @@ impl Exporter for BitWardenCore {
             .collect(),
         };
 
-        info!("{:?}", &organisations);
         Ok(organisations)
     }
 

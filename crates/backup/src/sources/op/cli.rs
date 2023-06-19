@@ -160,10 +160,8 @@ pub mod item {
             let login_fields = fields
                 .clone()
                 .into_iter()
-                .enumerate()
-                .inspect(|(_, f)| trace!("Testing {:?} for login field", f))
-                .filter(|(_, f)| f.is_login_field())
-                .map(|(i, _)| fields.remove(i))
+                .inspect(|f| trace!("Testing {:?} for login field", f))
+                .filter(|f| f.is_login_field())
                 .inspect(|f| {
                     // TODO :: This is a bit of a hack, but it works for now
                     if f.password_details.as_ref().is_some() {
@@ -176,9 +174,7 @@ pub mod item {
             let notes_plain = fields
                 .clone()
                 .into_iter()
-                .enumerate()
-                .find(|(_, f)| f.is_notes_field())
-                .map(|(i, _)| fields.remove(i))
+                .find(|f| f.is_notes_field())
                 .and_then(|f| f.attrs.value)
                 .unwrap_or_default();
 
