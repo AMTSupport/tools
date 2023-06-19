@@ -78,7 +78,7 @@
           # TODO :: Default run/build from system arch
           default = buildPackage system { };
 
-          backup.x86_64-unknown-linux-gnu = buildPackage "x86_64-unkown-linux-gnu" {
+          backup.x86_64-unknown-linux-gnu = buildPackage "x86_64-unknown-linux-gnu" {
             nativeBuildInputs = with pkgs; [ openssl pkgsStatic.stdenv.cc mold ];
             CARGO_BUILD_TARGET = "x86_64-unknown-linux-gnu";
             CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUSTFLAGS = "-C link-arg=-fuse-ld=mold";

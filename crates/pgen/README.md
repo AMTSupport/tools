@@ -4,7 +4,7 @@
 
 ### Getting Started
 
-PGen is available on crates.io under the name rpgen standing for Rememberable Password Generator.
+PGen is available on crates.io under the name rpgen.
 Install it with cargo by running
 ```bash
 cargo install rpgen

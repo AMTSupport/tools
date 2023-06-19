@@ -9,7 +9,7 @@ use lib::simplelog::debug;
 /// export.data is the main archive file
 /// export.attributes is the metadata for the archive
 /// files.* are the files in the archive
-/// Kind of shitty but still relavent info at https://support.1password.com/1pux-format/
+/// Kind of shitty but still relevant info at https://support.1password.com/1pux-format/
 
 pub const ONE_PUX_VERSION: u8 = 3;
 
