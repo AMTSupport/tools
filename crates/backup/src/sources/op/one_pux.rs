@@ -11,6 +11,8 @@ use lib::simplelog::debug;
 /// files.* are the files in the archive
 /// Kind of shitty but still relavent info at https://support.1password.com/1pux-format/
 
+pub const ONE_PUX_VERSION: u8 = 3;
+
 pub async fn create_export(account: Box<&dyn AccountCommon>, config: &RuntimeConfig) -> Result<Export> {
     let pairs = cli::vault::Vault::parse(&account, &config)
         .into_iter()
@@ -36,6 +38,33 @@ pub async fn create_export(account: Box<&dyn AccountCommon>, config: &RuntimeCon
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Export {
     pub accounts: Vec<account::Account>,
+}
+
+pub mod attributes {
+    use serde::{Deserialize, Serialize};
+    
+    /// An additional file which gets packaged alongside the export,
+    /// This file contains metadata about the export which can be used to,
+    /// determine how to handle deserialization.
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct Attributes {
+        /// The 1PUX format version
+        pub version: u8,
+        /// The description of the export
+        pub description: String,
+        /// The unix epoch timestamp of when the export was created
+        pub created: i64,
+    }
+    
+    impl Default for Attributes {
+        fn default() -> Self {
+            Self {
+                version: super::ONE_PUX_VERSION,
+                description: String::from("1Password Unencrypted Export"),
+                created: chrono::Utc::now().timestamp(),
+            }
+        }
+    }
 }
 
 pub mod account {

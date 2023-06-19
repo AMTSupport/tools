@@ -103,10 +103,23 @@ impl Exporter for OnePasswordCore {
     ) -> Result<()> {
         let export = one_pux::create_export(Box::new(self.account.get()), &config);
 
-        let file = format!("export_{}.json", Local::now().format("%Y-%m-%dT%H-%M-%SZ%z"));
+        let file = format!("export_{}.zip", Local::now().format("%Y-%m-%dT%H:%M:%SZ%z"));
         let file = self.account.get().directory(&config).join(file);
-        let writer = fs::File::create(&file).context("Create export file")?;
-        serde_json::to_writer_pretty(writer, &export.await?).context("Write export file")?;
+        let file = normalise_path(file);
+        let file = fs::File::create_new(file).context("Create export file")?;
+        let mut zip = zip::ZipWriter::new(file);
+
+        let options = FileOptions::default();
+        let attributes = one_pux::attributes::Attributes::default();
+        let serialised = to_string_pretty(&attributes).context("Serialise to 1PUX")?;
+        zip.start_file("export.attributes", options.clone()).context("Start writer for attrs.")?;
+        zip.write_all(serialised.as_bytes()).context("Write attrs to zip file.")?;
+
+        let serialised = to_string_pretty(&export.await?).context("Serialise to 1PUX")?;
+        zip.start_file("export.data", options)?;
+        zip.write_all(serialised.as_bytes())?;
+
+        zip.finish().context("Finish export file")?;
 
         return Ok(());
     }
