@@ -1,7 +1,7 @@
 use crate::application::Cli;
 use crate::config::backend::Backend;
-use crate::config::config::Config;
 use crate::config::rules::{AutoPrune, Rules};
+use crate::config::Config;
 use crate::continue_loop;
 use crate::sources::exporter::ExporterSource;
 use clap::ValueEnum;

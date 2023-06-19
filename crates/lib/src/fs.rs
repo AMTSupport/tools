@@ -53,7 +53,7 @@ pub fn normalise_path(path: PathBuf) -> PathBuf {
         format!(
             "{drive}{sep}{path}",
             drive = drive.to_string(),
-            sep = PATH_SEPARATOR.to_string(),
+            sep = PATH_SEPARATOR,
             path = p
         )
     } else {

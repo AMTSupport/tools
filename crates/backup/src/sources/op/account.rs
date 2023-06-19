@@ -7,10 +7,10 @@ use crate::sources::op::core::OnePasswordCore;
 use async_trait::async_trait;
 use inquire::list_option::ListOption;
 use inquire::validator::Validation;
-use inquire::{MultiSelect, Password, Select, Text};
+use inquire::{MultiSelect, Text};
 use lib::anyhow::{anyhow, Context, Result};
 use lib::fs::normalise_path;
-use lib::simplelog::{info, trace};
+use lib::simplelog::info;
 use serde::{Deserialize, Serialize};
 use serde_json::from_slice;
 use std::fmt::{Debug, Display, Formatter};
@@ -183,76 +183,76 @@ impl Interactive<OnePasswordAccount> for ServiceAccount {
 impl Interactive<OnePasswordAccount> for PersonalAccount {
     // TODO :: Error Handling
     // TODO :: Cli integration instance
-    async fn interactive(config: &RuntimeConfig) -> Result<OnePasswordAccount> {
+    async fn interactive(_config: &RuntimeConfig) -> Result<OnePasswordAccount> {
         return Err(anyhow!("Personal accounts are not yet supported."));
 
-        if false {
-            trace!("Getting list of accounts from 1Password");
-            let output = Command::new(OnePasswordCore::binary(config))
-                .args(["account", "list", "--format=json"])
-                .output()?;
-
-            let accounts = match output.status.success() {
-                true => output.stdout,
-                false => {
-                    return Err(anyhow!(
-                        r#"
-                    Failed to get account information from 1Password
-                    (stderr: {0})
-                    "#,
-                        String::from_utf8_lossy(output.stderr.as_slice())
-                    ))
-                }
-            };
-
-            trace!("Got list of accounts from 1Password: {:?}", &accounts);
-            let accounts: Vec<PersonalAccount> =
-                from_slice(&accounts).context("Failed to parse accounts as Personal Accounts")?;
-
-            trace!("Prompting user to select an account");
-            let account = Select::new(
-                "Which account do you want to use?",
-                accounts
-            ).with_help_message("If you don't see your account here, you may need to login to the 1Password desktop application first.").prompt()?;
-            trace!("Prompted user to select an account: {:?}", &account);
-
-            return Ok(OnePasswordAccount::Personal(account));
-        }
-
-        let _domain = Text::new("Enter your 1Password account domain")
-            .with_help_message(
-                "This is the domain you use to login to 1Password, e.g. `https://my.1password.com`",
-            )
-            .with_default("https://my.1password.com")
-            // TODO :: Better Validator
-            .with_validator(|url: &str| match url.starts_with("https://") {
-                true => Ok(Validation::Valid),
-                false => Ok(Validation::Invalid(
-                    "The URL must start with https://".into(),
-                )),
-            })
-            .prompt()?;
-
-        let _email = Text::new("Enter your 1Password account email")
-            .with_help_message("This is the email you use to login to 1Password")
-            // TODO :: Better Validator
-            .with_validator(|email: &str| match email.contains('@') {
-                true => Ok(Validation::Valid),
-                false => Ok(Validation::Invalid("Invalid email address!".into())),
-            })
-            .prompt()?;
-
-        let _secret_key = Password::new("Enter your 1Password secret key")
-            .without_confirmation()
-            .with_help_message("This is the secret key you use to login to 1Password")
-            .prompt()?;
-
-        let _password = Password::new("Enter your 1Password account password")
-            .without_confirmation()
-            .with_help_message("This is the password you use to login to 1Password")
-            .prompt()?;
-
-        let _output = Command::new(OnePasswordCore::binary(config));
+        // if false {
+        //     trace!("Getting list of accounts from 1Password");
+        //     let output = Command::new(OnePasswordCore::binary(config))
+        //         .args(["account", "list", "--format=json"])
+        //         .output()?;
+        //
+        //     let accounts = match output.status.success() {
+        //         true => output.stdout,
+        //         false => {
+        //             return Err(anyhow!(
+        //                 r#"
+        //             Failed to get account information from 1Password
+        //             (stderr: {0})
+        //             "#,
+        //                 String::from_utf8_lossy(output.stderr.as_slice())
+        //             ))
+        //         }
+        //     };
+        //
+        //     trace!("Got list of accounts from 1Password: {:?}", &accounts);
+        //     let accounts: Vec<PersonalAccount> =
+        //         from_slice(&accounts).context("Failed to parse accounts as Personal Accounts")?;
+        //
+        //     trace!("Prompting user to select an account");
+        //     let account = Select::new(
+        //         "Which account do you want to use?",
+        //         accounts
+        //     ).with_help_message("If you don't see your account here, you may need to login to the 1Password desktop application first.").prompt()?;
+        //     trace!("Prompted user to select an account: {:?}", &account);
+        //
+        //     return Ok(OnePasswordAccount::Personal(account));
+        // }
+        //
+        // let _domain = Text::new("Enter your 1Password account domain")
+        //     .with_help_message(
+        //         "This is the domain you use to login to 1Password, e.g. `https://my.1password.com`",
+        //     )
+        //     .with_default("https://my.1password.com")
+        //     // TODO :: Better Validator
+        //     .with_validator(|url: &str| match url.starts_with("https://") {
+        //         true => Ok(Validation::Valid),
+        //         false => Ok(Validation::Invalid(
+        //             "The URL must start with https://".into(),
+        //         )),
+        //     })
+        //     .prompt()?;
+        //
+        // let _email = Text::new("Enter your 1Password account email")
+        //     .with_help_message("This is the email you use to login to 1Password")
+        //     // TODO :: Better Validator
+        //     .with_validator(|email: &str| match email.contains('@') {
+        //         true => Ok(Validation::Valid),
+        //         false => Ok(Validation::Invalid("Invalid email address!".into())),
+        //     })
+        //     .prompt()?;
+        //
+        // let _secret_key = Password::new("Enter your 1Password secret key")
+        //     .without_confirmation()
+        //     .with_help_message("This is the secret key you use to login to 1Password")
+        //     .prompt()?;
+        //
+        // let _password = Password::new("Enter your 1Password account password")
+        //     .without_confirmation()
+        //     .with_help_message("This is the password you use to login to 1Password")
+        //     .prompt()?;
+        //
+        // let _output = Command::new(OnePasswordCore::binary(config));
     }
 }
 

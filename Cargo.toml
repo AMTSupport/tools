@@ -1,8 +1,13 @@
 [workspace]
-members = ["crates/lib","crates/backup","crates/cleaner","crates/rest"]
+members = ["crates/*"]
+default-members = [
+    "crates/lib",
+    "crates/backup",
+    "crates/cleaner"
+]
 
 [profile.release]
-opt-level= 3
+opt-level= 2
 lto = true
 strip = true
 panic = "abort"

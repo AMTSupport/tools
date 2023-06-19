@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 pub mod account {
     use crate::sources::op::one_pux;
     use chrono::{DateTime, FixedOffset};
@@ -12,9 +14,8 @@ pub mod account {
     }
 
     // TODO :: Add more states
-    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[derive(Default, Debug, Clone, Serialize, Deserialize)]
     #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-    #[derive(Default)]
     pub enum State {
         #[default]
         Active,
@@ -38,14 +39,14 @@ pub mod account {
         pub last_auth_at: DateTime<FixedOffset>,
     }
 
-    impl Into<one_pux::account::Attrs> for Account {
-        fn into(self) -> one_pux::account::Attrs {
+    impl From<Account> for one_pux::account::Attrs {
+        fn from(value: Account) -> one_pux::account::Attrs {
             one_pux::account::Attrs {
-                account_name: self.name.clone(), // TODO :: Org name or just account name if personal account
-                name: self.name,
+                account_name: value.name.clone(), // TODO :: Org name or just account name if personal account
+                name: value.name,
                 avatar: "".to_string(),
-                email: self.email,
-                uuid: self.id,
+                email: value.email,
+                uuid: value.id,
                 domain: format!("https://{}.1password.com/", "todo"), // TODO :: Requires output from op account get --format=json // WHY ?????
             }
         }
