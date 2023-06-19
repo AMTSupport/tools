@@ -82,8 +82,15 @@ impl Exporter for BitWardenCore {
     async fn interactive(config: &RuntimeConfig) -> Result<Vec<Backend>> {
         let username = inquire::Text::new("BitWarden Username").prompt()?;
         let data_dir = Self::_data_dir(&config, &username);
+
+        let command = || -> Command {
+            let mut cmd = BitWardenCore::base_command(&config);
+            cmd.env(Self::BW_DIRECTORY, &data_dir);
+            cmd
+        };
+
         let login_status = serde_json::from_slice::<LoginStatus>(
-            cli(&data_dir).arg("status").output().context("Get login status")?.stdout.as_slice(),
+            command().arg("status").output().context("Get login status")?.stdout.as_slice(),
         )
         .context("Parse BitWarden status")?;
 
@@ -92,7 +99,7 @@ impl Exporter for BitWardenCore {
 
             let password = inquire::Text::new("BitWarden Password").prompt()?;
             let two_fa = inquire::Text::new("BitWarden 2FA").prompt()?;
-            let cmd = cli(&data_dir)
+            let cmd = command()
                 .arg("login")
                 .arg(&username)
                 .arg(password)
@@ -114,6 +121,7 @@ impl Exporter for BitWardenCore {
             }
         } else {
             // TODO: Support already logged in.
+            // TODO -> Prompt to log out?
             error!("Already logged into BitWarden, but not supported yet.");
             error!(
                 "Please remove the existing session file at {}, and try again.",
@@ -122,7 +130,7 @@ impl Exporter for BitWardenCore {
             return Err(anyhow!("Already logged into BitWarden"));
         };
 
-        let organisations = cli(&data_dir)
+        let organisations = command()
             .arg("list")
             .arg("organizations")
             .arg("--session")
@@ -139,7 +147,7 @@ impl Exporter for BitWardenCore {
                 "Unable to find any possible organisations to extract from!"
             ))?,
             1 => {
-                info!("Only one organisation found, using that one.");
+                info!("Only one organisation found, using {}.", organisations[0].name);
                 vec![Backend::BitWarden(BitWardenCore {
                     user: username.clone(),
                     org_id: organisations[0].id.clone(),
@@ -216,10 +224,4 @@ impl Display for Organisation {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{} ({})", self.name, self.id)
     }
-}
-
-fn cli(dir: &PathBuf) -> Command {
-    let mut command = Command::new("bw");
-    command.env(BitWardenCore::BW_DIRECTORY, dir.as_os_str());
-    command
 }
