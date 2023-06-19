@@ -3,7 +3,7 @@ pub mod company {
 
     pub type Companies = std::collections::HashMap<usize, Company>;
 
-    #[derive(Clone, Debug, Deserialize, Hash)]
+    #[derive(Clone, Debug, Deserialize)]
     #[serde(rename = "company")]
     pub struct Company {
         /// Unique identifier.
@@ -51,8 +51,7 @@ pub mod company {
 
 pub mod password {
     use crate::{
-        deserialise_datetime,
-        hudu::{web::Hudu, API_ENDPOINT},
+        hudu::{API_ENDPOINT},
         Client, Url,
     };
     use chrono::{DateTime, Utc};

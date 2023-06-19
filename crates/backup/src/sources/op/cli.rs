@@ -14,7 +14,9 @@ pub mod account {
     // TODO :: Add more states
     #[derive(Debug, Clone, Serialize, Deserialize)]
     #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+    #[derive(Default)]
     pub enum State {
+        #[default]
         Active,
     }
 
@@ -34,12 +36,6 @@ pub mod account {
         pub updated_at: DateTime<FixedOffset>,
         #[serde(skip)]
         pub last_auth_at: DateTime<FixedOffset>,
-    }
-
-    impl Default for State {
-        fn default() -> Self {
-            State::Active
-        }
     }
 
     impl Into<one_pux::account::Attrs> for Account {
@@ -102,9 +98,9 @@ pub mod item {
         fields: Vec<super::field::Field>,
     }
 
-    impl Into<String> for ItemCategory {
-        fn into(self) -> String {
-            match self {
+    impl From<ItemCategory> for String {
+        fn from(val: ItemCategory) -> Self {
+            match val {
                 ItemCategory::Login => "001".to_string(),
                 ItemCategory::CreditCard => "002".to_string(),
                 ItemCategory::SecureNote => "003".to_string(),
@@ -113,32 +109,32 @@ pub mod item {
         }
     }
 
-    impl Into<one_pux::item::Attrs> for Item {
-        fn into(self) -> one_pux::item::Attrs {
+    impl From<Item> for one_pux::item::Attrs {
+        fn from(val: Item) -> Self {
             one_pux::item::Attrs {
-                uuid: self.id,
-                fav_index: if self.favorite { 1 } else { 0 },
-                created_at: self.created_at.timestamp(),
-                updated_at: self.updated_at.timestamp(),
-                state: self.state.unwrap_or_else(|| "active".to_string()),
-                category_uuid: self.category.into(),
+                uuid: val.id,
+                fav_index: if val.favorite { 1 } else { 0 },
+                created_at: val.created_at.timestamp(),
+                updated_at: val.updated_at.timestamp(),
+                state: val.state.unwrap_or_else(|| "active".to_string()),
+                category_uuid: val.category.into(),
             }
         }
     }
 
-    impl Into<one_pux::item::Overview> for Item {
-        fn into(self) -> one_pux::item::Overview {
+    impl From<Item> for one_pux::item::Overview {
+        fn from(val: Item) -> Self {
             one_pux::item::Overview {
-                title: self.title,
-                subtitle: self.additional_information,
-                url: self
+                title: val.title,
+                subtitle: val.additional_information,
+                url: val
                     .urls
                     .iter()
                     .find(|u| u.primary)
                     .map(|u| u.href.clone())
                     .unwrap_or("".to_string()),
-                urls: self.urls.into_iter().map(super::url::Url::into).collect(),
-                tags: match self.tags {
+                urls: val.urls.into_iter().map(super::url::Url::into).collect(),
+                tags: match val.tags {
                     tag if tag.is_empty() => None,
                     tags => Some(tags),
                 },
@@ -151,9 +147,9 @@ pub mod item {
         }
     }
 
-    impl Into<one_pux::item::Details> for Item {
-        fn into(self) -> one_pux::item::Details {
-            let mut fields = self.fields.clone();
+    impl From<Item> for one_pux::item::Details {
+        fn from(value: Item) -> one_pux::item::Details {
+            let fields = value.fields.clone();
 
             let mut password_history: Option<Vec<one_pux::item::PasswordHistory>> = None;
 
@@ -178,7 +174,7 @@ pub mod item {
                 .and_then(|f| f.attrs.value)
                 .unwrap_or_default();
 
-            let sections = self
+            let sections = value
                 .sections
                 .into_iter()
                 .map(|s| s.into(fields.clone()))
@@ -193,12 +189,12 @@ pub mod item {
         }
     }
 
-    impl Into<one_pux::item::Item> for Item {
+    impl From<Item> for one_pux::item::Item {
         // TODO -> Don't clone twice
-        fn into(self) -> one_pux::item::Item {
-            let attrs = self.clone().into();
-            let overview = self.clone().into();
-            let details = self.into();
+        fn from(value: Item) -> one_pux::item::Item {
+            let attrs = value.clone().into();
+            let overview = value.clone().into();
+            let details = value.into();
 
             one_pux::item::Item {
                 attrs,
@@ -211,8 +207,8 @@ pub mod item {
     impl Item {
         fn raw(vault_id: &String, mut command: Command) -> Vec<u8> {
             command
-                .args(&["item", "list"])
-                .args(&["--vault", &vault_id, "--format=json"])
+                .args(["item", "list"])
+                .args(["--vault", vault_id, "--format=json"])
                 .output()
                 .unwrap()
                 .stdout
@@ -220,8 +216,8 @@ pub mod item {
 
         fn raw_long(vault_id: &String, item_id: &String, mut command: Command) -> Vec<u8> {
             command
-                .args(&["item", "get", &item_id])
-                .args(&["--vault", &vault_id, "--format=json"])
+                .args(["item", "get", item_id])
+                .args(["--vault", vault_id, "--format=json"])
                 .output()
                 .unwrap()
                 .stdout
@@ -229,7 +225,7 @@ pub mod item {
 
         pub fn parse(
             vault: super::vault::Vault,
-            account: &Box<&dyn AccountCommon>,
+            account: &&dyn AccountCommon,
             config: &RuntimeConfig,
         ) -> Vec<Item> {
             trace!(
@@ -238,13 +234,13 @@ pub mod item {
                 &vault.reference.id
             );
 
-            let raw = Self::raw(&vault.reference.id, account.command(&config));
+            let raw = Self::raw(&vault.reference.id, account.command(config));
             trace!("Raw Items JSON {}", String::from_utf8_lossy(&raw));
             let parsed = from_slice::<Vec<Item>>(&raw).unwrap();
             trace!("Parsed Items {:?}", parsed);
             parsed
                 .into_iter()
-                .map(|item| Self::raw_long(&vault.reference.id, &item.id, account.command(&config)))
+                .map(|item| Self::raw_long(&vault.reference.id, &item.id, account.command(config)))
                 .map(|raw| {
                     trace!("Raw Item JSON {}", String::from_utf8_lossy(&raw));
                     let parsed = from_slice::<Item>(&raw).unwrap();
@@ -297,24 +293,24 @@ pub mod vault {
 
     impl Vault {
         fn raw(vault_id: &String, mut command: Command) -> Vec<u8> {
-            command.args(&["vault", "get", &vault_id, "--format=json"]).output().unwrap().stdout
+            command.args(["vault", "get", vault_id, "--format=json"]).output().unwrap().stdout
         }
 
-        pub fn parse(account: &Box<&dyn AccountCommon>, config: &RuntimeConfig) -> Vec<Vault> {
+        pub fn parse(account: &&dyn AccountCommon, config: &RuntimeConfig) -> Vec<Vault> {
             account
                 .vaults()
                 .into_iter()
                 .inspect(|vault| trace!("Requesting Vault {}-{}", &vault.name, &vault.id))
-                .map(|reference| Self::raw(&reference.id, account.command(&config)))
-                .inspect(|output| trace!("Parsing Vault JSON {}", String::from_utf8_lossy(&output)))
+                .map(|reference| Self::raw(&reference.id, account.command(config)))
+                .inspect(|output| trace!("Parsing Vault JSON {}", String::from_utf8_lossy(output)))
                 .map(|output| from_slice::<Vault>(output.as_slice()).unwrap())
                 .collect()
         }
     }
 
-    impl Into<one_pux::vault::Type> for Type {
-        fn into(self) -> one_pux::vault::Type {
-            match self {
+    impl From<Type> for one_pux::vault::Type {
+        fn from(val: Type) -> Self {
+            match val {
                 Type::Personal => one_pux::vault::Type::P,
                 Type::Shared => one_pux::vault::Type::E,
                 Type::UserCreated => one_pux::vault::Type::U,
@@ -322,14 +318,14 @@ pub mod vault {
         }
     }
 
-    impl Into<one_pux::vault::Attrs> for Vault {
-        fn into(self) -> one_pux::vault::Attrs {
+    impl From<Vault> for one_pux::vault::Attrs {
+        fn from(val: Vault) -> Self {
             one_pux::vault::Attrs {
-                uuid: self.reference.id,
+                uuid: val.reference.id,
                 desc: "".to_string(),   // TODO
                 avatar: "".to_string(), // TODO
-                name: self.reference.name,
-                vault_type: self.vault_type.into(),
+                name: val.reference.name,
+                vault_type: val.vault_type.into(),
             }
         }
     }
@@ -358,11 +354,11 @@ pub mod url {
         }
     }
 
-    impl Into<one_pux::item::UrlObject> for Url {
-        fn into(self) -> one_pux::item::UrlObject {
+    impl From<Url> for one_pux::item::UrlObject {
+        fn from(val: Url) -> Self {
             one_pux::item::UrlObject {
-                url: self.href,
-                label: self.label.unwrap_or("".to_string()),
+                url: val.href,
+                label: val.label.unwrap_or("".to_string()),
                 mode: "default".to_string(), // Unable to get from CLI
             }
         }
@@ -433,20 +429,16 @@ pub mod field {
                 s if s.attrs.section.as_ref().is_some() => false,
                 s if !Self::LOGIN_TYPES.contains(&s.attrs.field_type) => false,
                 s if s.attrs.purpose.as_ref().is_none() => false,
-                s if !Self::LOGIN_PURPOSES.contains(&s.attrs.purpose.as_ref().unwrap()) => false,
+                s if !Self::LOGIN_PURPOSES.contains(s.attrs.purpose.as_ref().unwrap()) => false,
                 _ => true,
             }
         }
 
         pub fn is_notes_field(&self) -> bool {
-            match self {
-                s if s.attrs.section.as_ref().is_some() => false,
-                s if &s.attrs.field_type != &Type::String => false,
-                s if s.attrs.purpose.as_ref().is_none() => false,
-                s if s.attrs.purpose.as_ref().unwrap() != &Purpose::Notes => false,
-                s if s.attrs.value.is_none() => false,
-                _ => true,
-            }
+            self.attrs.section.as_ref().is_none()
+                && self.attrs.field_type == Type::String
+                && self.attrs.purpose.as_ref().is_some_and(|p| p == &Purpose::Notes)
+                && self.attrs.value.is_some()
         }
     }
 
@@ -485,9 +477,9 @@ pub mod field {
     //     }
     // }
 
-    impl Into<one_pux::item::FieldType> for Type {
-        fn into(self) -> one_pux::item::FieldType {
-            match self {
+    impl From<Type> for one_pux::item::FieldType {
+        fn from(val: Type) -> Self {
+            match val {
                 Type::String => one_pux::item::FieldType::Text,
                 Type::Concealed => one_pux::item::FieldType::Password,
                 Type::SshKey => one_pux::item::FieldType::Text, // TODO
@@ -497,9 +489,9 @@ pub mod field {
         }
     }
 
-    impl Into<one_pux::item::FieldDesignation> for Purpose {
-        fn into(self) -> one_pux::item::FieldDesignation {
-            match self {
+    impl From<Purpose> for one_pux::item::FieldDesignation {
+        fn from(val: Purpose) -> Self {
+            match val {
                 Purpose::Username => one_pux::item::FieldDesignation::Username,
                 Purpose::Password => one_pux::item::FieldDesignation::Password,
                 Purpose::Notes => one_pux::item::FieldDesignation::None,
@@ -507,9 +499,9 @@ pub mod field {
         }
     }
 
-    impl Into<one_pux::item::Field> for Field {
-        fn into(self) -> one_pux::item::Field {
-            let common = self.attrs.clone();
+    impl From<Field> for one_pux::item::Field {
+        fn from(val: Field) -> Self {
+            let common = val.attrs;
             one_pux::item::Field {
                 id: common.id,
                 name: common.label,
@@ -523,9 +515,9 @@ pub mod field {
         }
     }
 
-    impl Into<Vec<one_pux::item::PasswordHistory>> for PasswordDetails {
-        fn into(self) -> Vec<one_pux::item::PasswordHistory> {
-            self.history
+    impl From<PasswordDetails> for Vec<one_pux::item::PasswordHistory> {
+        fn from(val: PasswordDetails) -> Self {
+            val.history
                 .iter()
                 .map(|h| one_pux::item::PasswordHistory {
                     value: h.clone(),
@@ -536,9 +528,9 @@ pub mod field {
     }
 
     // TODO :: SSHKey support
-    impl Into<one_pux::section::Field> for Field {
-        fn into(self) -> one_pux::section::Field {
-            let common = self.attrs.clone();
+    impl From<Field> for one_pux::section::Field {
+        fn from(val: Field) -> Self {
+            let common = val.attrs;
 
             one_pux::section::Field {
                 title: common.label,
@@ -639,7 +631,7 @@ pub mod section {
                 name: self.label.unwrap_or_default(),
                 fields: fields
                     .into_iter()
-                    .filter(|f| f.attrs.section.clone().is_some_and(|s| &s.id == &self.id))
+                    .filter(|f| f.attrs.section.clone().is_some_and(|s| s.id == self.id))
                     .map(|f| f.into())
                     .collect(),
             }

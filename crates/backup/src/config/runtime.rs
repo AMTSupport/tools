@@ -7,11 +7,11 @@ use crate::sources::exporter::ExporterSource;
 use clap::ValueEnum;
 use inquire::validator::Validation;
 use lib::anyhow::{anyhow, Context, Result};
-use lib::simplelog::{debug, error, info, trace};
-use std::path::PathBuf;
+use lib::simplelog::{error, info, trace};
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
-use futures::executor::block_on;
-use tokio::task::block_in_place;
+
+
 
 #[derive(Clone, Debug)]
 pub struct RuntimeConfig {
@@ -26,7 +26,7 @@ impl RuntimeConfig {
     const FILENAME: &'static str = "settings.json";
 
     /// Initialise a new configuration interactively.
-    pub(crate) async fn new(cli: &Cli, directory: &PathBuf) -> Result<Self> {
+    pub(crate) async fn new(cli: &Cli, directory: &Path) -> Result<Self> {
         let config_path = directory.join(Self::FILENAME);
 
         if config_path.exists() {
@@ -38,7 +38,7 @@ impl RuntimeConfig {
 
         let mut config = RuntimeConfig {
             mutated: true,
-            directory: directory.clone(),
+            directory: directory.to_path_buf(),
             cli: cli.clone(),
             config: Config {
                 rules: Self::new_rules()?,
@@ -51,7 +51,7 @@ impl RuntimeConfig {
         Ok(config)
     }
 
-    pub(crate) async fn load(cli: &Cli, directory: &PathBuf) -> Result<Self> {
+    pub(crate) async fn load(cli: &Cli, directory: &Path) -> Result<Self> {
         let config_path = directory.join(Self::FILENAME);
 
         if !config_path.exists() {
@@ -63,7 +63,7 @@ impl RuntimeConfig {
 
         Ok(Self {
             mutated: false,
-            directory: directory.clone(),
+            directory: directory.to_path_buf(),
             cli: cli.clone(),
             config: std::fs::read(config_path).context("Reading settings.json").and_then(
                 |vec| serde_json::from_slice::<Config>(&vec).context("Parsing settings.json"),
@@ -156,8 +156,7 @@ impl RuntimeConfig {
             .with_default(true)
             .prompt()?
         {
-            let mut prune = AutoPrune::default();
-            prune.enabled = true;
+            let mut prune = AutoPrune { enabled: true, ..Default::default() };
 
             if let Ok(days) = inquire::Text::new("How long do you want to retain backups for?")
                 .with_default(&prune.keep_for.to_string())
@@ -207,7 +206,7 @@ impl RuntimeConfig {
 
             match source_type {
                 Ok(t) => {
-                    let vec = t.create(&config).await?;
+                    let vec = t.create(config).await?;
                     exporters.extend(vec);
                 }
                 Err(_) => {

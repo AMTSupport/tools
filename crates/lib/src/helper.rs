@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+
 use simplelog::error;
 use sysexits::ExitCode;
 

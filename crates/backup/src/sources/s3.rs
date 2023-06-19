@@ -61,7 +61,7 @@ impl S3Core {
 #[async_trait]
 impl Prune for S3Core {
     fn files(&self, config: &RuntimeConfig) -> Vec<PathBuf> {
-        let directory = normalise_path(S3Core::base_dir(&config).join(&self.base.object));
+        let directory = normalise_path(S3Core::base_dir(config).join(&self.base.object));
         if !directory.exists() {
             return vec![];
         }
@@ -160,12 +160,12 @@ impl Exporter for S3Core {
         main_bar: &ProgressBar,
         progress_bar: &MultiProgress,
     ) -> Result<()> {
-        let progress_state = progress_bar.insert_after(&main_bar, spinner());
+        let progress_state = progress_bar.insert_after(main_bar, spinner());
         progress_state.set_message("Initialising S3 exporter...");
 
         let object = self.base.object.clone();
-        let output = normalise_path(Self::base_dir(&config).join(&object));
-        let mut backup_len = self.files(&config).len();
+        let output = normalise_path(Self::base_dir(config).join(&object));
+        let mut backup_len = self.files(config).len();
         let op = self.op();
 
         progress_state.set_message("Requesting objects from S3...");
@@ -188,7 +188,7 @@ impl Exporter for S3Core {
                 continue;
             }
 
-            let path = normalise_path(output.join(&item.name()));
+            let path = normalise_path(output.join(item.name()));
             let filename = path.file_name().unwrap().to_str().unwrap();
             progress_state.set_message(format!("Processing {:#}", &filename));
 
@@ -230,11 +230,11 @@ impl Exporter for S3Core {
             debug!("Checking if file should be pruned...");
             progress_state.set_message(format!("Checking if {:#} would be pruned...", &filename));
 
-            if config.config.rules.auto_prune.enabled.clone()
-                && &backup_len > &config.config.rules.auto_prune.keep_latest
+            if config.config.rules.auto_prune.enabled
+                && backup_len > config.config.rules.auto_prune.keep_latest
             {
                 let since_mtime = Utc::now() - meta.last_modified().unwrap();
-                if since_mtime.num_days() > config.config.rules.auto_prune.keep_for.clone() as i64 {
+                if since_mtime.num_days() > config.config.rules.auto_prune.keep_for as i64 {
                     debug!(
                         "File is older than {}, skipping.",
                         &config.config.rules.auto_prune.keep_for
@@ -256,7 +256,7 @@ impl Exporter for S3Core {
             }
 
             progress_state.set_message(format!("Downloading {:#}...", &filename));
-            let reader = op.reader_with(&item.path()).await?;
+            let reader = op.reader_with(item.path()).await?;
             download_to(meta.content_length(), reader.boxed(), &path, &download_bar).await?;
 
             debug!("Setting access time for {}", &path.to_str().unwrap());

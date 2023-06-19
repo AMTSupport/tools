@@ -30,19 +30,19 @@ impl BitWardenCore {
     const BW_DIRECTORY: &'static str = "BITWARDENCLI_APPDATA_DIR";
 
     fn data_dir(&self, config: &RuntimeConfig) -> PathBuf {
-        Self::_data_dir(&config, &self.user)
+        Self::_data_dir(config, &self.user)
     }
 
     fn backup_dir(&self, config: &RuntimeConfig) -> PathBuf {
-        Self::_backup_dir(&config, &self.org_name)
+        Self::_backup_dir(config, &self.org_name)
     }
 
     fn _data_dir(config: &RuntimeConfig, user: &str) -> PathBuf {
-        Self::base_dir(&config).join(PathBuf::from(format!(r"data-{user}")))
+        Self::base_dir(config).join(PathBuf::from(format!(r"data-{user}")))
     }
 
     fn _backup_dir(config: &RuntimeConfig, org_name: &str) -> PathBuf {
-        Self::base_dir(&config).join(PathBuf::from(format!(r"backup-{org_name}")))
+        Self::base_dir(config).join(PathBuf::from(format!(r"backup-{org_name}")))
     }
 
     fn command(&self, config: &RuntimeConfig) -> Command {
@@ -81,10 +81,10 @@ impl Exporter for BitWardenCore {
 
     async fn interactive(config: &RuntimeConfig) -> Result<Vec<Backend>> {
         let username = inquire::Text::new("BitWarden Username").prompt()?;
-        let data_dir = Self::_data_dir(&config, &username);
+        let data_dir = Self::_data_dir(config, &username);
 
         let command = || -> Command {
-            let mut cmd = BitWardenCore::base_command(&config);
+            let mut cmd = BitWardenCore::base_command(config);
             cmd.env(Self::BW_DIRECTORY, &data_dir);
             cmd
         };
@@ -149,7 +149,7 @@ impl Exporter for BitWardenCore {
             1 => {
                 info!("Only one organisation found, using {}.", organisations[0].name);
                 vec![Backend::BitWarden(BitWardenCore {
-                    user: username.clone(),
+                    user: username,
                     org_id: organisations[0].id.clone(),
                     org_name: organisations[0].name.clone(),
                     session_id,
@@ -181,7 +181,7 @@ impl Exporter for BitWardenCore {
         _main_bar: &ProgressBar,
         _progress_bar: &MultiProgress,
     ) -> Result<()> {
-        let output_file = self.backup_dir(&config).join(format!(
+        let output_file = self.backup_dir(config).join(format!(
             "{org_id}_{date}.json",
             org_id = &self.org_id,
             date = chrono::Local::now().format("%Y-%m-%dT%H:%M:%SZ%z")
@@ -190,7 +190,7 @@ impl Exporter for BitWardenCore {
         let output_file = normalise_path(output_file);
 
         let cmd = self
-            .command(&config)
+            .command(config)
             .arg("export")
             .args(["--organizationid", &self.org_id])
             .args(["--format", "csv"])

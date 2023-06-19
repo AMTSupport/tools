@@ -1,12 +1,12 @@
 use indicatif::{ProgressBar, ProgressStyle};
 use std::time::Duration;
 
-pub const PROGRESS_CHARS: &'static str = "█▓▒░  ";
-pub const TICK_CHARS: &'static str = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏";
-pub const SPINNER_TEMPLATE: &'static str = "{spinner:.green} {msg:.cyan/blue}";
-pub const BAR_TEMPLATE: &'static str =
+pub const PROGRESS_CHARS: &str = "█▓▒░  ";
+pub const TICK_CHARS: &str = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏";
+pub const SPINNER_TEMPLATE: &str = "{spinner:.green} {msg:.cyan/blue}";
+pub const BAR_TEMPLATE: &str =
     "{spinner:.green} {msg:.cyan/blue} {pos}/{len} {bar:.cyan/blue}";
-pub const DOWNLOAD_TEMPLATE: &'static str =
+pub const DOWNLOAD_TEMPLATE: &str =
     "{spinner:.green} {bytes:.cyan/blue}/{total_bytes:.cyan/blue} ({bytes_per_sec:.cyan/blue}, {eta:.cyan/blue}) {wide_bar:.cyan/blue}";
 
 pub fn spinner() -> ProgressBar {

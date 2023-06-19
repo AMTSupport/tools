@@ -35,7 +35,7 @@ pub struct OnePasswordCore {
 
 impl OnePasswordCore {
     pub fn data_dir(config: &RuntimeConfig) -> PathBuf {
-        Self::base_dir(&config).join("data")
+        Self::base_dir(config).join("data")
     }
 }
 
@@ -87,24 +87,25 @@ impl Exporter for OnePasswordCore {
         "#.trim()).prompt()?;
 
         let account = match account_type {
-            AccountType::Personal => account::PersonalAccount::interactive(&config).await,
-            AccountType::Service => account::ServiceAccount::interactive(&config).await,
+            AccountType::Personal => account::PersonalAccount::interactive(config).await,
+            AccountType::Service => account::ServiceAccount::interactive(config).await,
         }?;
 
         Ok(vec![OnePassword(OnePasswordCore { account })])
     }
 
-    // TODO :: Zip export
+    // TODO :: Export of extra stuff like logos in the zip
+    // TODO :: I'm unsure if that's even possible though.
     async fn export(
         &mut self,
         config: &RuntimeConfig,
         _main_bar: &ProgressBar,
         _progress_bar: &MultiProgress,
     ) -> Result<()> {
-        let export = one_pux::create_export(Box::new(self.account.get()), &config);
+        let export = one_pux::create_export(self.account.get(), config);
 
         let file = format!("export_{}.zip", Local::now().format("%Y-%m-%dT%H:%M:%SZ%z"));
-        let file = self.account.get().directory(&config).join(file);
+        let file = self.account.get().directory(config).join(file);
         let file = normalise_path(file);
         let file = fs::File::create_new(file).context("Create export file")?;
         let mut zip = zip::ZipWriter::new(file);
@@ -112,7 +113,7 @@ impl Exporter for OnePasswordCore {
         let options = FileOptions::default();
         let attributes = one_pux::attributes::Attributes::default();
         let serialised = to_string_pretty(&attributes).context("Serialise to 1PUX")?;
-        zip.start_file("export.attributes", options.clone()).context("Start writer for attrs.")?;
+        zip.start_file("export.attributes", options).context("Start writer for attrs.")?;
         zip.write_all(serialised.as_bytes()).context("Write attrs to zip file.")?;
 
         let serialised = to_string_pretty(&export.await?).context("Serialise to 1PUX")?;
@@ -127,7 +128,7 @@ impl Exporter for OnePasswordCore {
 
 impl Prune for OnePasswordCore {
     fn files(&self, config: &RuntimeConfig) -> Vec<PathBuf> {
-        let dir = self.account.get().directory(&config).join("export_*.zip");
+        let dir = self.account.get().directory(config).join("export_*.zip");
         let dir = normalise_path(dir);
         let glob = glob::glob(dir.to_str().unwrap()).unwrap();
         glob.flatten().collect()

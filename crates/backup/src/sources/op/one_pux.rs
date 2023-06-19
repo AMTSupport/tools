@@ -13,10 +13,10 @@ use lib::simplelog::debug;
 
 pub const ONE_PUX_VERSION: u8 = 3;
 
-pub async fn create_export(account: Box<&dyn AccountCommon>, config: &RuntimeConfig) -> Result<Export> {
-    let pairs = cli::vault::Vault::parse(&account, &config)
+pub async fn create_export(account: &dyn AccountCommon, config: &RuntimeConfig) -> Result<Export> {
+    let pairs = cli::vault::Vault::parse(&account, config)
         .into_iter()
-        .map(|vault| (vault.clone(), cli::item::Item::parse(vault, &account, &config)))
+        .map(|vault| (vault.clone(), cli::item::Item::parse(vault, &account, config)))
         .collect::<Vec<(cli::vault::Vault, Vec<cli::item::Item>)>>();
 
     debug!("pairs: {:#?}", pairs);
@@ -191,14 +191,18 @@ pub mod section {
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
     #[serde(rename_all = "lowercase")]
+    #[derive(Default)]
     pub enum Correction {
+        #[default]
         Default,
         No,
     }
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
     #[serde(rename_all = "camelCase")]
+    #[derive(Default)]
     pub enum Keyboard {
+        #[default]
         Default,
         NumbersAndPunctuation,
         NumberPad,
@@ -209,7 +213,9 @@ pub mod section {
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
     #[serde(rename_all = "camelCase")]
+    #[derive(Default)]
     pub enum Capitalization {
+        #[default]
         Default,
         Words,
         None,
@@ -217,23 +223,11 @@ pub mod section {
         AllCharacters,
     }
 
-    impl Default for Correction {
-        fn default() -> Self {
-            Correction::Default
-        }
-    }
+    
 
-    impl Default for Keyboard {
-        fn default() -> Self {
-            Keyboard::Default
-        }
-    }
+    
 
-    impl Default for Capitalization {
-        fn default() -> Self {
-            Capitalization::Default
-        }
-    }
+    
 }
 
 pub mod item {
@@ -291,10 +285,7 @@ pub mod item {
 
     impl FieldDesignation {
         pub fn is_none(&self) -> bool {
-            match self {
-                FieldDesignation::None => true,
-                _ => false,
-            }
+            matches!(self, FieldDesignation::None)
         }
     }
 

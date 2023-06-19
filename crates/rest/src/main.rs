@@ -104,7 +104,7 @@ async fn main() -> Result<()> {
                         let instant = chrono::Utc::now();
                         let companies = companies.force().await.as_ref().unwrap();
 
-                        let passwords = hudu.get_passwords(&companies).await.unwrap();
+                        let passwords = hudu.get_passwords(companies).await.unwrap();
                         let outdated_passwords = passwords
                             .iter()
                             .filter(|password| password.identity_company_id.is_some_and(|id| companies.contains_key(&id)))

@@ -1,8 +1,8 @@
-use lib::anyhow::Result;
-use std::path::PathBuf;
-use std::time::SystemTime;
 use clap::Parser;
+use lib::anyhow::Result;
 use serde::{Deserialize, Serialize};
+use std::path::Path;
+use std::time::SystemTime;
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct Rules {
@@ -26,13 +26,13 @@ pub struct AutoPrune {
 }
 
 impl AutoPrune {
-    pub fn should_prune(&self, file: &PathBuf, remaining_files: usize) -> Result<bool> {
+    pub fn should_prune(&self, file: &Path, remaining_files: usize) -> Result<bool> {
         let mtime = file.metadata()?.modified()?;
         let now = SystemTime::now();
         let age = now.duration_since(mtime)?;
         let days = chrono::Duration::from_std(age)?.num_days();
 
-        Ok(days > self.keep_for.clone() as i64 && remaining_files > *&self.keep_latest)
+        Ok(days > self.keep_for as i64 && remaining_files > self.keep_latest)
     }
 }
 

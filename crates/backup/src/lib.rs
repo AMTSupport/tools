@@ -28,7 +28,7 @@ fn continue_loop<I>(vec: &Vec<I>, prompt_type: &str) -> bool {
     }
 
     let should_continue =
-        inquire::Confirm::new(&*format!("Do you want to add another {}?", prompt_type))
+        inquire::Confirm::new(&format!("Do you want to add another {}?", prompt_type))
             .with_default(true)
             .prompt()
             .with_context(|| format!("Prompting for additional {}", prompt_type));

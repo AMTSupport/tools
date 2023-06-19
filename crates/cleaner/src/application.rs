@@ -75,7 +75,7 @@ pub async fn application(cli: Cli) -> anyhow::Result<()> {
     if !cli.flags.dry_run {
         info!("Cleaning up...");
         let uncleaned_size = clean(&auto)?;
-        auto.disk_size -= uncleaned_size.clone();
+        auto.disk_size -= uncleaned_size;
         missed_size += uncleaned_size;
     } else {
         info!("Dry run, no files have been <red>deleted</> or <yellow>modified</>.");

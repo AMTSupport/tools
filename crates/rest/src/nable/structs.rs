@@ -23,14 +23,14 @@ pub mod xml {
 
 pub mod client {
 
-    use crate::{Client, deserialise_date};
+    use crate::{deserialise_date};
     use anyhow::Context;
-    use async_trait::async_trait;
+    
     use chrono::NaiveDate;
     use quick_xml::{events::Event, Reader};
     use serde::{Deserialize, Deserializer};
-    use crate::hudu::web::Hudu;
-    use crate::manager::structs::client::{ClientFinder, ClientGrouper};
+    
+    
 
     pub fn deserialise_raw<'de, D>(deserializer: D) -> Result<String, D::Error>
     where

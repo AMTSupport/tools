@@ -34,7 +34,7 @@ pub trait Downloader: Exporter {
         main_bar: &ProgressBar,
         multi_bar: &MultiProgress,
     ) -> Result<()> {
-        let target = Self::binary(&config);
+        let target = Self::binary(config);
         create_parents(&target)?;
 
         // TODO :: Check for correct version, platform & arch

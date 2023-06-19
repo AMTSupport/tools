@@ -10,7 +10,7 @@ use rayon::prelude::*;
 use simplelog::{debug, error, trace, warn};
 use std::collections::HashSet;
 use std::ops::Not;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub mod application;
 pub mod builder;
@@ -150,8 +150,8 @@ impl Indexed for CleanablePath {
         };
 
         let bar = bar.with_message(format!("Collecting files from {}", self.base_buf));
-        let iter = (&self.paths)
-            .into_iter()
+        let iter = self.paths
+            .iter()
             .flat_map(|path| path.collect())
             .progress_with(bar);
 
@@ -177,7 +177,7 @@ impl Indexed for CleanablePath {
 }
 
 impl CleanablePath {
-    fn newer_than_allowed(&self, buf: &PathBuf) -> anyhow::Result<bool> {
+    fn newer_than_allowed(&self, buf: &Path) -> anyhow::Result<bool> {
         // There is no minimum age set, so it's allowed to be removed.
         if self.minimum_age.is_zero() {
             return Ok(false);
@@ -345,7 +345,7 @@ pub(crate) fn clean(prepared: &PreparedPaths) -> anyhow::Result<u64> {
                 }
                 Err(e) => {
                     trace!("Failed to delete: {0} ({1})", buf.display(), e);
-                    buf.metadata().unwrap().len() as u64
+                    buf.metadata().unwrap().len()
                 }
             }
         })

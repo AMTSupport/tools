@@ -1,9 +1,9 @@
-use std::ops::Mul;
+
 use crate::config::runtime::RuntimeConfig;
 use lib::anyhow::Result;
 use lib::simplelog::debug;
 use std::path::PathBuf;
-use indicatif::{MultiProgress, ProgressBar};
+use indicatif::{MultiProgress};
 
 // TODO :: Implement logic from cleaner crate to handle this!
 pub trait Prune {
@@ -19,19 +19,18 @@ pub trait Prune {
     /// * `rules` - The `AutoPrune` struct which contains the rules for pruning.
     /// # Returns
     /// A `Result` with the `Vec<PathBuf>` of the files which were removed.
-    fn prune(&self, config: &RuntimeConfig, progress_bar: &MultiProgress) -> Result<Vec<PathBuf>> {
-        let files = self.files(&config);
+    fn prune(&self, config: &RuntimeConfig, _progress_bar: &MultiProgress) -> Result<Vec<PathBuf>> {
+        let files = self.files(config);
         let mut files = files.iter();
         let mut removed_files = vec![];
 
         // TODO :: Add dry run option.
         while let Some(file) = files.next() {
-            if config
+            if !(config
                 .config
                 .rules
                 .auto_prune
-                .should_prune(&file, files.len())?
-                == false
+                .should_prune(file, files.len())?)
             {
                 debug!("Unable to prune file: {}", file.display());
                 continue;

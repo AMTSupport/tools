@@ -1,11 +1,11 @@
 use crate::hudu::web::Hudu;
 use crate::nable::web::NAble;
-use crate::{nable, Client};
+
 use clap::Subcommand;
 use fuzzy_matcher::FuzzyMatcher;
 use regex::Regex;
 use simplelog::{info, trace};
-use std::cmp::max_by_key;
+
 use std::collections::HashMap;
 
 pub mod structs;
@@ -18,7 +18,7 @@ pub enum ManagerCommands {
 }
 
 impl ManagerCommands {
-    pub async fn run<H: Hudu, N: NAble>(&self, mut hudu: H, mut nable: N) -> anyhow::Result<()> {
+    pub async fn run<H: Hudu, N: NAble>(&self, hudu: H, nable: N) -> anyhow::Result<()> {
         match self {
             ManagerCommands::Query => query(hudu, nable).await?,
         }
@@ -46,7 +46,7 @@ async fn query<H: Hudu, N: NAble>(hudu: H, nable: N) -> anyhow::Result<()> {
         trace!("Trying to match client: {name}", name = name);
 
         let mut scores = HashMap::new();
-        let mut companies = companies.values();
+        // let mut companies = companies.values();
         while let Some(company) = hudu_companies.values().next() {
             let company_name = company.name.to_lowercase();
             let score = match matcher.fuzzy_match(name, company_name.as_str()) {

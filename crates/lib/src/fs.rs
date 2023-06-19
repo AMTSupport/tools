@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[cfg(windows)]
 const PATH_SEPARATOR: char = '\\';
@@ -11,7 +11,7 @@ const PATH_SEPARATOR: char = '/';
 #[cfg(unix)]
 const OTHER_PATH_SEPARATOR: char = '\\';
 
-pub fn create_parents(path: &PathBuf) -> Result<()> {
+pub fn create_parents(path: &Path) -> Result<()> {
     path.parent().with_context(|| format!("Get parent directory for {}", &path.display())).and_then(
         |p| {
             fs::create_dir_all(p)
@@ -44,7 +44,7 @@ pub fn normalise_path(path: PathBuf) -> PathBuf {
     // Fuck you windows and your shitty filename limitations
     // TODO -> What else do we need to replace?
     let mut p = if cfg!(windows) {
-        let drive = p.nth(0).expect("Get drive root");
+        let drive = p.next().expect("Get drive root");
         let p = p
             .map(|v| v.replace(':', "_"))
             .collect::<Vec<String>>()

@@ -71,7 +71,7 @@ where
     /// Ensures that the directory exists and has the correct permissions wanted by 1Password.
     /// 1Password requires that directories have 700 permissions. (Only the owner can read, write, and execute)
     fn ensure_directory(&self, config: &RuntimeConfig) -> Result<()> {
-        let directory = self.directory(&config);
+        let directory = self.directory(config);
         if !directory.exists() {
             fs::create_dir_all(&directory)?;
             #[cfg(unix)]
@@ -141,7 +141,7 @@ impl Interactive<OnePasswordAccount> for ServiceAccount {
 
         let output = &Command::new(OnePasswordCore::binary(config))
             .env("OP_SERVICE_ACCOUNT_TOKEN", &token)
-            .args(&["user", "get", "--me", "--format=json"])
+            .args(["user", "get", "--me", "--format=json"])
             .output()?;
 
         // This check should be redundant, but it's here just in case.
@@ -162,7 +162,7 @@ impl Interactive<OnePasswordAccount> for ServiceAccount {
 
         let vaults = &Command::new(OnePasswordCore::binary(config))
             .env("OP_SERVICE_ACCOUNT_TOKEN", &account.token)
-            .args(&["vault", "list", "--format=json"])
+            .args(["vault", "list", "--format=json"])
             .output()?;
         let vaults = from_slice::<Vec<Vault>>(&vaults.stdout)?;
 
@@ -189,7 +189,7 @@ impl Interactive<OnePasswordAccount> for PersonalAccount {
         if false {
             trace!("Getting list of accounts from 1Password");
             let output = Command::new(OnePasswordCore::binary(config))
-                .args(&["account", "list", "--format=json"])
+                .args(["account", "list", "--format=json"])
                 .output()?;
 
             let accounts = match output.status.success() {
@@ -219,7 +219,7 @@ impl Interactive<OnePasswordAccount> for PersonalAccount {
             return Ok(OnePasswordAccount::Personal(account));
         }
 
-        let domain = Text::new("Enter your 1Password account domain")
+        let _domain = Text::new("Enter your 1Password account domain")
             .with_help_message(
                 "This is the domain you use to login to 1Password, e.g. `https://my.1password.com`",
             )
@@ -233,7 +233,7 @@ impl Interactive<OnePasswordAccount> for PersonalAccount {
             })
             .prompt()?;
 
-        let email = Text::new("Enter your 1Password account email")
+        let _email = Text::new("Enter your 1Password account email")
             .with_help_message("This is the email you use to login to 1Password")
             // TODO :: Better Validator
             .with_validator(|email: &str| match email.contains('@') {
@@ -242,17 +242,17 @@ impl Interactive<OnePasswordAccount> for PersonalAccount {
             })
             .prompt()?;
 
-        let secret_key = Password::new("Enter your 1Password secret key")
+        let _secret_key = Password::new("Enter your 1Password secret key")
             .without_confirmation()
             .with_help_message("This is the secret key you use to login to 1Password")
             .prompt()?;
 
-        let password = Password::new("Enter your 1Password account password")
+        let _password = Password::new("Enter your 1Password account password")
             .without_confirmation()
             .with_help_message("This is the password you use to login to 1Password")
             .prompt()?;
 
-        let output = Command::new(OnePasswordCore::binary(config));
+        let _output = Command::new(OnePasswordCore::binary(config));
     }
 }
 
@@ -263,9 +263,9 @@ impl AccountCommon for ServiceAccount {
     }
 
     fn command(&self, config: &RuntimeConfig) -> Command {
-        let directory = self.directory(&config);
+        let directory = self.directory(config);
         let mut command = Command::new(OnePasswordCore::binary(config));
-        command.args(&["--config", &directory.display().to_string()]);
+        command.args(["--config", &directory.display().to_string()]);
         command.arg("--cache");
         command.env("OP_SERVICE_ACCOUNT_TOKEN", &self.token);
         command
@@ -293,16 +293,16 @@ impl AccountCommon for ServiceAccount {
 #[async_trait]
 impl AccountCommon for PersonalAccount {
     async fn signin(&self, config: &RuntimeConfig) -> bool {
-        self.command(&config)
-            .args(&["signin", "--account", &self.attrs.id])
+        self.command(config)
+            .args(["signin", "--account", &self.attrs.id])
             .output()
             .is_ok_and(|out| out.status.success())
     }
 
     fn command(&self, config: &RuntimeConfig) -> Command {
-        let directory = self.directory(&config);
+        let directory = self.directory(config);
         let mut command = Command::new(OnePasswordCore::binary(config));
-        command.args(&["--config", &directory.display().to_string()]);
+        command.args(["--config", &directory.display().to_string()]);
         command
     }
 

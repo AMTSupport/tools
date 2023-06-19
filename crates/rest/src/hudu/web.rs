@@ -79,7 +79,6 @@ where
     where
         Companies: 'static + Clone + Send + Sync + Eq,
     {
-        "std::option::Option<Pin<Box<(dyn Future<Output = HashMap<usize, Company>> + Send + 'async_trait)>>>";
         let request = self.prepare_request(COMPANIES_ENDPOINT);
         let companies = match paginated_request::<Company>(request).await {
             Ok(companies) => companies,
@@ -91,7 +90,7 @@ where
 
         Ok(companies
             .into_iter()
-            .map(|company| (company.id.clone(), company))
+            .map(|company| (company.id, company))
             .collect::<Companies>())
     }
 
@@ -114,7 +113,7 @@ where
             .send()
             .await
             .context(format!("Send rest request for company {id}"))
-            .and_then(|response| check_auth(response))
+            .and_then(check_auth)
         {
             Ok(response) => response
                 .json::<Company>()
@@ -130,10 +129,10 @@ where
 
 fn check_auth(response: Response) -> Result<Response> {
     if response.status().is_client_error() {
-        anyhow::anyhow!("Unable to authenticate with Hudu");
+        return Err(anyhow::anyhow!("Unable to authenticate with Hudu"));
     }
 
-    return Ok(response);
+    Ok(response)
 }
 
 thread_local! {

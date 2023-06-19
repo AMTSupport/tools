@@ -28,12 +28,12 @@ async fn download_to<E: Error>(
     progress: &ProgressBar,
 ) -> anyhow::Result<()> {
     debug!("Creating parent dir for {}", &path.display());
-    create_parents(&path)?;
+    create_parents(path)?;
 
     progress.set_length(total_size);
     let mut downloaded = 0u64;
     let mut file =
-        fs::File::create(&path).with_context(|| format!("Create file {}", path.display()))?;
+        fs::File::create(path).with_context(|| format!("Create file {}", path.display()))?;
 
     progress.set_message(format!(
         "Downloading {}...",
