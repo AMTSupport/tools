@@ -1,7 +1,7 @@
-use std::hash::Hash;
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Deserializer};
 use simplelog::error;
+use std::hash::Hash;
 use std::str::FromStr;
 
 pub mod hudu;

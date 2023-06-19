@@ -88,10 +88,7 @@ where
             }
         };
 
-        Ok(companies
-            .into_iter()
-            .map(|company| (company.id, company))
-            .collect::<Companies>())
+        Ok(companies.into_iter().map(|company| (company.id, company)).collect::<Companies>())
     }
 
     async fn get_passwords(&self, _companies: &Companies) -> Result<Passwords> {
@@ -151,15 +148,11 @@ where
 
     // TODO :: Stream
     loop {
-        let builder = builder
-            .try_clone()
-            .context("Clone request builder")?
-            .query(&[("page", &page)]);
+        let builder =
+            builder.try_clone().context("Clone request builder")?.query(&[("page", &page)]);
 
-        let response = builder
-            .send()
-            .await
-            .context(format!("Send paginated request for page {page}"))?;
+        let response =
+            builder.send().await.context(format!("Send paginated request for page {page}"))?;
 
         #[derive(serde::Deserialize)]
         struct VecHandler<I> {
@@ -168,10 +161,7 @@ where
             vec: Vec<I>,
         }
 
-        let handler = response
-            .json::<VecHandler<I>>()
-            .await
-            .context("Deserialise response")?;
+        let handler = response.json::<VecHandler<I>>().await.context("Deserialise response")?;
 
         let mut vec = handler.vec;
 

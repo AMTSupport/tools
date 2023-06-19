@@ -50,10 +50,7 @@ pub mod company {
 }
 
 pub mod password {
-    use crate::{
-        hudu::{API_ENDPOINT},
-        Client, Url,
-    };
+    use crate::{hudu::API_ENDPOINT, Client, Url};
     use chrono::{DateTime, Utc};
     use serde::Deserialize;
 

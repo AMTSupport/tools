@@ -10,7 +10,7 @@ use lib::cli::Flags;
 use lib::log::init;
 use rest::hudu::web::Hudu;
 use rest::hudu::HuduCommands;
-use rest::manager::{ManagerCommands};
+use rest::manager::ManagerCommands;
 use rest::nable::web::NAble;
 use rest::{Client, Url};
 use simplelog::{info, trace};

@@ -15,11 +15,11 @@ use std::{env, fs};
 
 pub mod auto_prune;
 pub mod bitwarden;
+pub mod downloader;
 pub mod exporter;
 pub(crate) mod interactive;
 pub mod op;
 pub mod s3;
-pub mod downloader;
 
 async fn download_to<E: Error>(
     total_size: u64,

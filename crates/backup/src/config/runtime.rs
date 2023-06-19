@@ -11,8 +11,6 @@ use lib::simplelog::{error, info, trace};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
-
-
 #[derive(Clone, Debug)]
 pub struct RuntimeConfig {
     // If this config requires saving.
@@ -80,7 +78,7 @@ impl RuntimeConfig {
     }
 
     // TODO :: More options or maybe full tui
-    pub(crate) async fn modify(cli: &Cli, directory: &PathBuf) -> Result<Self> {
+    pub(crate) async fn modify(cli: &Cli, directory: &Path) -> Result<Self> {
         let mut config = Self::load(cli, directory).await?;
 
         // TODO :: Show current values
@@ -156,7 +154,10 @@ impl RuntimeConfig {
             .with_default(true)
             .prompt()?
         {
-            let mut prune = AutoPrune { enabled: true, ..Default::default() };
+            let mut prune = AutoPrune {
+                enabled: true,
+                ..Default::default()
+            };
 
             if let Ok(days) = inquire::Text::new("How long do you want to retain backups for?")
                 .with_default(&prune.keep_for.to_string())

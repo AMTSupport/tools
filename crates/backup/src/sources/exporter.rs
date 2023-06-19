@@ -52,8 +52,6 @@ impl Display for ExporterSource {
 
 impl ExporterSource {
     pub async fn create(&self, config: &RuntimeConfig) -> Result<Vec<Backend>> {
-        
-
         match self {
             Self::S3 => S3Core::interactive(config).await,
             Self::BitWarden => BitWardenCore::interactive(config).await,

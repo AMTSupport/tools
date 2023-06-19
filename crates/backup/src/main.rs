@@ -35,10 +35,10 @@ fn select_location() -> Result<PathBuf> {
             error!("The path specified in BACKUP_DIR does not exist.");
             error!("Please fix this, or unset the BACKUP_DIR environment variable to use the interactive mode.");
         }).context("Failed to get backup directory from BACKUP_DIR environment variable")
-        // .or_else(|_| PathSelect::<&str>::new("Select your backup destination", None)
-        //     .with_selection_mode(PathSelectionMode::Directory)
-        //     .with_select_multiple(false)
-        //     .prompt()
-        //     .map_err(|err| anyhow!("No path selected or error while selecting path: {}", err))
-        //     .map(|vec| vec.first().unwrap().path.clone()))
+    // .or_else(|_| PathSelect::<&str>::new("Select your backup destination", None)
+    //     .with_selection_mode(PathSelectionMode::Directory)
+    //     .with_select_multiple(false)
+    //     .prompt()
+    //     .map_err(|err| anyhow!("No path selected or error while selecting path: {}", err))
+    //     .map(|vec| vec.first().unwrap().path.clone()))
 }

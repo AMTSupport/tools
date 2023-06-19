@@ -1,9 +1,9 @@
-use serde::{Deserialize, Serialize};
 use super::cli;
 use crate::config::runtime::RuntimeConfig;
 use crate::sources::op::account::AccountCommon;
 use lib::anyhow::Result;
 use lib::simplelog::debug;
+use serde::{Deserialize, Serialize};
 
 /// Zip format
 /// export.data is the main archive file
@@ -16,7 +16,12 @@ pub const ONE_PUX_VERSION: u8 = 3;
 pub async fn create_export(account: &dyn AccountCommon, config: &RuntimeConfig) -> Result<Export> {
     let pairs = cli::vault::Vault::parse(&account, config)
         .into_iter()
-        .map(|vault| (vault.clone(), cli::item::Item::parse(vault, &account, config)))
+        .map(|vault| {
+            (
+                vault.clone(),
+                cli::item::Item::parse(vault, &account, config),
+            )
+        })
         .collect::<Vec<(cli::vault::Vault, Vec<cli::item::Item>)>>();
 
     debug!("pairs: {:#?}", pairs);
@@ -42,7 +47,7 @@ pub struct Export {
 
 pub mod attributes {
     use serde::{Deserialize, Serialize};
-    
+
     /// An additional file which gets packaged alongside the export,
     /// This file contains metadata about the export which can be used to,
     /// determine how to handle deserialization.
@@ -55,7 +60,7 @@ pub mod attributes {
         /// The unix epoch timestamp of when the export was created
         pub created: i64,
     }
-    
+
     impl Default for Attributes {
         fn default() -> Self {
             Self {
@@ -222,12 +227,6 @@ pub mod section {
         Sentences,
         AllCharacters,
     }
-
-    
-
-    
-
-    
 }
 
 pub mod item {

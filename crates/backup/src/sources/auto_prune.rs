@@ -1,9 +1,8 @@
-
 use crate::config::runtime::RuntimeConfig;
+use indicatif::MultiProgress;
 use lib::anyhow::Result;
 use lib::simplelog::debug;
 use std::path::PathBuf;
-use indicatif::{MultiProgress};
 
 // TODO :: Implement logic from cleaner crate to handle this!
 pub trait Prune {
@@ -26,12 +25,7 @@ pub trait Prune {
 
         // TODO :: Add dry run option.
         while let Some(file) = files.next() {
-            if !(config
-                .config
-                .rules
-                .auto_prune
-                .should_prune(file, files.len())?)
-            {
+            if !(config.config.rules.auto_prune.should_prune(file, files.len())?) {
                 debug!("Unable to prune file: {}", file.display());
                 continue;
             }

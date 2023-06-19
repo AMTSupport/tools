@@ -1,4 +1,3 @@
-
 use simplelog::error;
 use sysexits::ExitCode;
 

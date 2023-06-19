@@ -3,12 +3,12 @@
 #![feature(const_option)]
 
 pub mod cli;
+pub mod fs;
 pub mod helper;
 pub mod log;
+pub mod progress;
 #[cfg(windows)]
 pub mod windows;
-pub mod progress;
-pub mod fs;
 
 pub use anyhow;
 pub use clap;

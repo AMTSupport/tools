@@ -35,18 +35,10 @@ pub static LOCATIONS: Lazy<Vec<CleanableBuilder>> = Lazy::new(|| {
             .minimum_age(Duration::weeks(1))
             .duration_from(AgeType::FromModification),
         CleanableBuilder::env(ENV_PROGRAMDATA).path("NVIDIA").auto(),
-        CleanableBuilder::env(ENV_PROGRAMDATA)
-            .path("Nvidia Corporation/Downloader")
-            .auto(),
-        CleanableBuilder::env(ENV_PROGRAMDATA)
-            .path("Microsoft/Windows/WER/ReportArchive")
-            .auto(),
-        CleanableBuilder::env(ENV_PROGRAMDATA)
-            .path("NinitePro/NiniteDownloads/Files")
-            .auto(),
-        CleanableBuilder::env(ENV_WINDIR)
-            .path("Downloaded Program Files")
-            .auto(),
+        CleanableBuilder::env(ENV_PROGRAMDATA).path("Nvidia Corporation/Downloader").auto(),
+        CleanableBuilder::env(ENV_PROGRAMDATA).path("Microsoft/Windows/WER/ReportArchive").auto(),
+        CleanableBuilder::env(ENV_PROGRAMDATA).path("NinitePro/NiniteDownloads/Files").auto(),
+        CleanableBuilder::env(ENV_WINDIR).path("Downloaded Program Files").auto(),
         CleanableBuilder::env(ENV_WINDIR).path("SoftwareDistribution/Download"),
         CleanableBuilder::env(ENV_WINDIR).path("Prefetch").auto(),
         CleanableBuilder::env(ENV_WINDIR).path("Temp").auto(),
@@ -55,13 +47,8 @@ pub static LOCATIONS: Lazy<Vec<CleanableBuilder>> = Lazy::new(|| {
             .path("Panther")
             .duration_from(AgeType::FromModification)
             .auto(),
-        CleanableBuilder::env(ENV_WINDIR)
-            .minimum_age(Duration::weeks(1))
-            .path("Minidump")
-            .auto(),
-        CleanableBuilder::collection(PathCollections::User)
-            .path("AppData/Local/Temp")
-            .auto(),
+        CleanableBuilder::env(ENV_WINDIR).minimum_age(Duration::weeks(1)).path("Minidump").auto(),
+        CleanableBuilder::collection(PathCollections::User).path("AppData/Local/Temp").auto(),
         CleanableBuilder::collection(PathCollections::User)
             .path("AppData/Local/Microsoft/Windows/INetCache/IE")
             .auto(),
@@ -86,9 +73,7 @@ pub static LOCATIONS: Lazy<Vec<CleanableBuilder>> = Lazy::new(|| {
         CleanableBuilder::collection(PathCollections::User)
             .path("AppData/Local/Mozilla/Firefox/Profiles/*.default-release/cache2")
             .auto(),
-        CleanableBuilder::collection(PathCollections::User)
-            .path("AppData/Local/D3DSCache")
-            .auto(),
+        CleanableBuilder::collection(PathCollections::User).path("AppData/Local/D3DSCache").auto(),
         CleanableBuilder::collection(PathCollections::User)
             .path("AppData/Local/NVIDIA/DXCache")
             .auto(),
@@ -150,10 +135,7 @@ impl Indexed for CleanablePath {
         };
 
         let bar = bar.with_message(format!("Collecting files from {}", self.base_buf));
-        let iter = self.paths
-            .iter()
-            .flat_map(|path| path.collect())
-            .progress_with(bar);
+        let iter = self.paths.iter().flat_map(|path| path.collect()).progress_with(bar);
 
         for buf in iter {
             if self.newer_than_allowed(&buf)? {

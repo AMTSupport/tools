@@ -23,14 +23,12 @@ pub mod xml {
 
 pub mod client {
 
-    use crate::{deserialise_date};
+    use crate::deserialise_date;
     use anyhow::Context;
-    
+
     use chrono::NaiveDate;
     use quick_xml::{events::Event, Reader};
     use serde::{Deserialize, Deserializer};
-    
-    
 
     pub fn deserialise_raw<'de, D>(deserializer: D) -> Result<String, D::Error>
     where
@@ -41,11 +39,7 @@ pub mod client {
         reader.trim_text(true);
 
         loop {
-            match reader
-                .read_event()
-                .context("Read event for raw deserialization")
-                .unwrap()
-            {
+            match reader.read_event().context("Read event for raw deserialization").unwrap() {
                 Event::Text(bytes) => {
                     return Ok(String::from_utf8_lossy(bytes.as_ref()).to_string())
                 }

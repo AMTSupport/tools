@@ -115,11 +115,7 @@ pub async fn application(cli: Cli) -> anyhow::Result<()> {
         Ok(true) => {
             // Display the additional files and prompt for confirmation.
             // Maybe allow selecting which files to clean up?
-            let fmt_paths = manual
-                .paths
-                .iter()
-                .map(|path| path.display())
-                .collect::<Vec<_>>();
+            let fmt_paths = manual.paths.iter().map(|path| path.display()).collect::<Vec<_>>();
             let select =
                 inquire::MultiSelect::new("Select additional files to clean up.", fmt_paths)
                     .with_page_size(15);

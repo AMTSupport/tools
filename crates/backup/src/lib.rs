@@ -19,8 +19,8 @@ use lib::anyhow::{anyhow, Context, Result};
 use lib::simplelog::{trace, warn};
 
 pub mod application;
-pub mod sources;
 pub mod config;
+pub mod sources;
 
 fn continue_loop<I>(vec: &Vec<I>, prompt_type: &str) -> bool {
     if vec.is_empty() {
@@ -46,10 +46,10 @@ fn continue_loop<I>(vec: &Vec<I>, prompt_type: &str) -> bool {
 }
 
 // TODO:: Derive title from key
-fn env_or_prompt<V>(
-    key: &str,
-    validator: V,
-) -> Result<String> where V: StringValidator + 'static {
+fn env_or_prompt<V>(key: &str, validator: V) -> Result<String>
+where
+    V: StringValidator + 'static,
+{
     match std::env::var(key) {
         Ok(str) => match validator.validate(&str) {
             Err(err) => Err(anyhow!("{} is set but invalid: {}", key, err)),
@@ -59,13 +59,14 @@ fn env_or_prompt<V>(
             }
         },
         _ => match inquire::Text::new(key) // TODO :: Pretty title
-                .with_validator(validator)
-                .prompt() {
+            .with_validator(validator)
+            .prompt()
+        {
             Err(err) => Err(anyhow!("Failed to get {} from user: {}", key, err)),
             Ok(str) => {
                 trace!("Validated {} from user", key);
                 Ok(str)
             }
-        }
+        },
     }
 }

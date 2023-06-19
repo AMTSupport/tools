@@ -147,7 +147,10 @@ impl Exporter for BitWardenCore {
                 "Unable to find any possible organisations to extract from!"
             ))?,
             1 => {
-                info!("Only one organisation found, using {}.", organisations[0].name);
+                info!(
+                    "Only one organisation found, using {}.",
+                    organisations[0].name
+                );
                 vec![Backend::BitWarden(BitWardenCore {
                     user: username,
                     org_id: organisations[0].id.clone(),
