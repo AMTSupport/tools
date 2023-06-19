@@ -48,31 +48,13 @@
               CARGO_BUILD_TARGET = target;
             }) // args // {
               nativeBuildInputs = with pkgs; [
-#                fenix.complete.rustfmt-preview
+                fenix.complete.cargo
+                fenix.complete.clippy-preview
+                fenix.complete.rustfmt-preview
               ] ++ nativeBuildInputs;
             }
           );
 
-#
-#        buildWindows = target: { nativeBuildInputs ? [ ], ...}@args:
-#          buildPackage "x86_64-pc-windows-gnu" {
-#            doCheck = false;#system == "x86_64-linux";
-#
-#            depsBuildBuild = with pkgs; [
-#              pkgsCross.mingwW64.stdenv.cc
-#              pkgsCross.mingwW64.windows.pthreads
-#            ];
-#
-#            nativeBuildInputs = lib.optional doCheck pkgs.wineWowPackages.stable;
-#
-#            CARGO_BUILD_TARGET = "x86_64-pc-windows-gnu";
-#            CARGO_TARGET_X86_64_PC_WINDOWS_GNU_RUNNER = pkgs.writeScript "wine-wrapper" ''
-#              # Without this, wine will error out when attempting to create the
-#              # prefix in the build's homeless shelter.
-#              export WINEPREFIX="$(mktemp -d)"
-#              exec wine64 $@
-#            '';
-#          };
       in rec {
         packages = {
           # TODO :: Default run/build from system arch
@@ -109,9 +91,14 @@
         devShells.default = pkgs.mkShell {
           packages = [ pkgs.bashInteractive ];
           nativeBuildInputs = with pkgs; [
+            pkg-config
+            openssl
             license-cli
-            cargo
-          ];
+          ] ++ (with fenix.packages.${system}; [
+            complete.cargo
+            complete.clippy-preview
+            complete.rustfmt-preview
+          ]);
         };
       });
 }
