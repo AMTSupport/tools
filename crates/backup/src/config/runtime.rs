@@ -1,15 +1,17 @@
 use crate::application::Cli;
+use crate::config::backend::Backend;
 use crate::config::config::Config;
+use crate::config::rules::{AutoPrune, Rules};
 use crate::continue_loop;
 use crate::sources::exporter::ExporterSource;
 use clap::ValueEnum;
 use inquire::validator::Validation;
-use lib::anyhow::{Context, Result};
+use lib::anyhow::{anyhow, Context, Result};
 use lib::simplelog::{debug, error, info, trace};
 use std::path::PathBuf;
 use std::str::FromStr;
-use crate::config::backend::Backend;
-use crate::config::rules::{AutoPrune, Rules};
+use futures::executor::block_on;
+use tokio::task::block_in_place;
 
 #[derive(Clone, Debug)]
 pub struct RuntimeConfig {
@@ -21,51 +23,82 @@ pub struct RuntimeConfig {
 }
 
 impl RuntimeConfig {
-    pub(crate) async fn new(cli: Cli, directory: PathBuf) -> Result<Self> {
-        let config_path = directory.join("settings.json");
+    const FILENAME: &'static str = "settings.json";
+
+    /// Initialise a new configuration interactively.
+    pub(crate) async fn new(cli: &Cli, directory: &PathBuf) -> Result<Self> {
+        let config_path = directory.join(Self::FILENAME);
 
         if config_path.exists() {
-            debug!("Existing Settings found at {}", &config_path.display());
-
-            if inquire::Confirm::new("Do you want to load the existing settings file?")
-                .with_default(true)
-                .prompt()
-                .is_ok_and(|b| b)
-            {
-                let mut config = Self {
-                    mutated: false,
-                    directory,
-                    cli,
-                    config: std::fs::read(config_path)
-                        .context("Reading settings.json")
-                        .and_then(|vec| {
-                            serde_json::from_slice::<Config>(&vec).context("Parsing settings.json")
-                        })?,
-                };
-
-                if config.cli.append {
-                    let exporters = Self::new_exporters(&config).await?;
-                    if !exporters.is_empty() {
-                        config.config.exporters.extend(exporters);
-                        config.mutated = true;
-                    }
-                }
-
-                return Ok(config);
-            }
+            return Err(anyhow!(
+                "Existing settings found at {}, please delete or run modify instead.",
+                &config_path.display()
+            ));
         }
 
         let mut config = RuntimeConfig {
             mutated: true,
-            directory,
-            cli,
+            directory: directory.clone(),
+            cli: cli.clone(),
             config: Config {
                 rules: Self::new_rules()?,
                 exporters: vec![],
             },
         };
-
         config.config.exporters = Self::new_exporters(&config).await?;
+
+        config.clone().save()?;
+        Ok(config)
+    }
+
+    pub(crate) async fn load(cli: &Cli, directory: &PathBuf) -> Result<Self> {
+        let config_path = directory.join(Self::FILENAME);
+
+        if !config_path.exists() {
+            return Err(anyhow!(
+                "No settings found at {}, please run init instead.",
+                &config_path.display()
+            ));
+        }
+
+        Ok(Self {
+            mutated: false,
+            directory: directory.clone(),
+            cli: cli.clone(),
+            config: std::fs::read(config_path).context("Reading settings.json").and_then(
+                |vec| serde_json::from_slice::<Config>(&vec).context("Parsing settings.json"),
+            )?,
+        })
+    }
+
+    pub(crate) async fn get(cli: Cli, directory: PathBuf) -> Result<Self> {
+        if let Ok(existing) = Self::load(&cli, &directory).await {
+            return Ok(existing);
+        }
+
+        Self::new(&cli, &directory).await
+    }
+
+    // TODO :: More options or maybe full tui
+    pub(crate) async fn modify(cli: &Cli, directory: &PathBuf) -> Result<Self> {
+        let mut config = Self::load(cli, directory).await?;
+
+        if inquire::Confirm::new("Do you want to modify the rules?").with_default(true).prompt()? {
+            config.config.rules = Self::new_rules()?;
+            config.mutated = true;
+        }
+
+        if inquire::Confirm::new("Do you want to modify the exporters?")
+            .with_default(true)
+            .prompt()?
+        {
+            let exporters = Self::new_exporters(&config).await?;
+            if !exporters.is_empty() {
+                config.config.exporters.extend(exporters);
+                config.mutated = true;
+            }
+        }
+
         Ok(config)
     }
 
