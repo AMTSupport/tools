@@ -31,16 +31,11 @@ jobs:
         run: |
           cargo build --workspace --release
 
-      - uses: actions/upload-artifact@v3.0.0
-        with:
-          name: tools-${{ matrix.os }}
-          path: target/release/${{ matrix.extra }}
-
       - name: Publish
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: target/release/backup{{ matrix.extra }}
+          file: target/release/backup${{ matrix.extra }}
           file_glob: true
           asset_name: tools-${{ matrix.os }}${{ matrix.extra }}
           tag: ${{ github.ref }}

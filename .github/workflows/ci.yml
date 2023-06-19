@@ -7,7 +7,6 @@ on:
 
 jobs:
   fmt-clippy:
-
     runs-on: ubuntu-latest
 
     steps:
@@ -17,7 +16,6 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1.4.4
         with:
           toolchain: nightly
-          target: ${{ matrix.target }}
           components: rustfmt, clippy
 
       - name: Cargo fmt
@@ -38,8 +36,37 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1.4.4
         with:
           toolchain: nightly
-          target: ${{ matrix.target }}
 
       - name: Run tests
         run: |
           cargo test --workspace --profile ci
+
+
+  artifact:
+    strategy:
+      matrix:
+        build: [ linux, windows ]
+        include:
+          - target: windows
+            os: windows-latest
+            extra: '.exe'
+          - target: linux
+            os: ubuntu-latest
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Rust Toolchain and Cache
+        uses: actions-rust-lang/setup-rust-toolchain@v1.4.4
+        with:
+          toolchain: nightly
+
+      - name: Run
+        run: |
+          cargo build --workspace --release
+
+      - uses: actions/upload-artifact@v3.0.0
+        with:
+          name: tools-${{ matrix.os }}
+          path: target/release/backup${{ matrix.extra }}
