@@ -1,6 +1,7 @@
 use crate::config::runtime::RuntimeConfig;
 use crate::sources::auto_prune::Prune;
 use crate::sources::bitwarden::BitWardenCore;
+use crate::sources::downloader::Downloader;
 use crate::sources::exporter::Exporter;
 use crate::sources::op::core::OnePasswordCore;
 use crate::sources::s3::S3Core;
@@ -41,15 +42,17 @@ impl Backend {
         match self {
             Backend::S3(ref mut core) => {
                 core.prune(&config, &progress_bar)?;
-                core.export(&config, main_bar, &progress_bar).await?;
+                core.export(&config, &main_bar, &progress_bar).await?;
             }
             Backend::BitWarden(ref mut core) => {
+                BitWardenCore::download_cli(&config, &main_bar, &progress_bar).await?;
                 core.prune(&config, &progress_bar)?;
-                core.export(&config, main_bar, &progress_bar).await?;
+                core.export(&config, &main_bar, &progress_bar).await?;
             }
             Backend::OnePassword(ref mut core) => {
+                OnePasswordCore::download_cli(&config, &main_bar, &progress_bar).await?;
                 core.prune(&config, &progress_bar)?;
-                core.export(&config, main_bar, &progress_bar).await?;
+                core.export(&config, &main_bar, &progress_bar).await?;
             }
         }
 

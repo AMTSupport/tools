@@ -44,6 +44,22 @@ impl BitWardenCore {
     fn _backup_dir(config: &RuntimeConfig, org_name: &str) -> PathBuf {
         Self::base_dir(&config).join(PathBuf::from(format!(r"backup-{org_name}")))
     }
+
+    fn command(&self, config: &RuntimeConfig) -> Command {
+        let mut cmd = Self::base_command(config);
+        cmd.env(Self::BW_DIRECTORY, &self.data_dir(config));
+        cmd.env(Self::BW_SESSION, &self.session_id);
+        cmd
+    }
+}
+
+impl Downloader for BitWardenCore {
+    const BINARY: &'static str = if cfg!(windows) { "bw.exe" } else { "bw" };
+    const URL: &'static str = formatcp!(
+        "https://github.com/bitwarden/clients/releases/download/cli-v{version}/bw-{os}-{version}.zip",
+        version = "2023.5.0",
+        os = env::consts::OS,
+    );
 }
 
 impl Prune for BitWardenCore {
@@ -67,7 +83,7 @@ impl Exporter for BitWardenCore {
         let username = inquire::Text::new("BitWarden Username").prompt()?;
         let data_dir = Self::_data_dir(&config, &username);
         let login_status = serde_json::from_slice::<LoginStatus>(
-            cli(&data_dir).arg("status").output()?.stdout.as_slice(),
+            cli(&data_dir).arg("status").output().context("Get login status")?.stdout.as_slice(),
         )
         .context("Parse BitWarden status")?;
 
@@ -83,7 +99,8 @@ impl Exporter for BitWardenCore {
                 .arg("--code")
                 .arg(two_fa)
                 .arg("--raw")
-                .output()?;
+                .output()
+                .context("Login to bitwarden")?;
 
             match cmd {
                 out if out.status.success() => {
@@ -110,7 +127,8 @@ impl Exporter for BitWardenCore {
             .arg("organizations")
             .arg("--session")
             .arg(&session_id)
-            .output()?
+            .output()
+            .context("Get possible organisations")?
             .stdout;
 
         let organisations = serde_json::from_slice::<Vec<Organisation>>(organisations.as_slice())
@@ -149,22 +167,28 @@ impl Exporter for BitWardenCore {
         Ok(organisations)
     }
 
-    async fn export(&mut self, config: &RuntimeConfig, main_bar: &ProgressBar, progress_bar: &MultiProgress) -> Result<()> {
+    async fn export(
+        &mut self,
+        config: &RuntimeConfig,
+        _main_bar: &ProgressBar,
+        _progress_bar: &MultiProgress,
+    ) -> Result<()> {
         let output_file = self.backup_dir(&config).join(format!(
             "{org_id}_{date}.json",
             org_id = &self.org_id,
-            date = chrono::Local::now().format("%Y-%m-%d")
+            date = chrono::Local::now().format("%Y-%m-%dT%H:%M:%SZ%z")
         ));
 
-        let cmd = cli(&self.data_dir(&config))
-            .env(Self::BW_SESSION, &self.session_id)
+        let output_file = normalise_path(output_file);
+
+        let cmd = self
+            .command(&config)
             .arg("export")
             .args(["--organizationid", &self.org_id])
             .args(["--format", "csv"])
             .args(["--output", output_file.to_str().unwrap()])
-            .output()?;
-
-        debug!("BitWarden export command: {:?}", &cmd);
+            .output()
+            .context("Run BitWarden export command")?;
 
         if !cmd.stderr.is_empty() {
             let string = String::from_utf8(cmd.stderr)?;

@@ -62,5 +62,14 @@ pub fn init(named: &str, cli: &Flags) -> anyhow::Result<()> {
         .with_extra_fields(vec![("VERSION", env!("CARGO_PKG_VERSION"))])
         .with_syslog_identifier(named.to_string());
 
+    tracing_subscriber::FmtSubscriber::builder()
+        .with_max_level(tracing::Level::TRACE)
+        .pretty()
+        .with_thread_ids(true)
+        .with_line_number(true)
+        .with_file(true)
+        .with_level(true)
+        .finish();
+
     Ok(())
 }

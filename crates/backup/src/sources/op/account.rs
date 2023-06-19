@@ -1,4 +1,6 @@
 use crate::config::runtime::RuntimeConfig;
+use crate::sources::downloader::Downloader;
+use crate::sources::exporter::Exporter;
 use crate::sources::interactive::Interactive;
 use crate::sources::op::cli;
 use crate::sources::op::core::OnePasswordCore;

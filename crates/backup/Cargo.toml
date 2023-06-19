@@ -10,7 +10,6 @@ lib = { path = "../lib" }
 filetime = "0.2"
 glob = "0.3.1"
 indicatif = { version = "0.17.4" }
-rayon = "1.7"
 serde_json = "1.0.96"
 async-trait = "0.1.68"
 futures = "0.3.28" # Needed by opendal
@@ -19,9 +18,16 @@ futures-util = "0.3.28"
 const_format = "0.2.31"
 
 # For downloading the required cli
-zip = { version = "0.6.6", default-features = true }
 bytes = "1.4.0"
 rand = "0.8.5"
+
+tracing = "0.1.37"
+tracing-subscriber = "0.3.17"
+
+[dependencies.zip]
+version = "0.6.6"
+default-features = false
+features = ["zstd","bzip2","deflate","deflate-zlib"]
 
 [dependencies.reqwest]
 version = "0.11.18"
@@ -35,8 +41,8 @@ features = ["serde"]
 
 [dependencies.tokio]
 version = "1.28.1"
-default-features = true
-features = ["rt-multi-thread", "macros", "full"]
+default-features = false
+features = ["rt-multi-thread", "macros"]
 
 [dependencies.opendal]
 version = "0.37.0"
@@ -53,11 +59,19 @@ version = "4.2.7"
 default-features = false
 features = ["derive", "std", "help", "usage", "suggestions", "color"]
 
+#[dependencies.inquire]
+#version = "0.6.2"
+#default-features = false
+#features = ["crossterm"]
+
+#[patch.crates-io.inquire]
+#git = "https://github.com/anwarhahjjeffersongeorge/inquire-filepath/"
+#branch = "filepath-select"
+
 [dependencies.inquire]
-git = "https://github.com/anwarhahjjeffersongeorge/inquire-filepath/"
-branch = "filepath-select"
+version = "0.6.2"
 default-features = false
-features = ["path","crossterm"]
+features = ["default"]
 
 [dependencies.value-bag]
 version = "1.4.0"

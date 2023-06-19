@@ -37,56 +37,6 @@ impl OnePasswordCore {
     pub fn data_dir(config: &RuntimeConfig) -> PathBuf {
         Self::base_dir(&config).join("data")
     }
-
-    async fn download_cli(config: &RuntimeConfig) -> Result<String> {
-        let target = Self::binary(&config);
-        // TODO :: Check for correct version, platform & arch
-        if target.exists() && target.is_file() {
-            trace!("Using existing CLI binary: {}", target.to_str().unwrap());
-            return Ok(target.to_str().unwrap().to_string());
-        }
-
-        debug!("Downloading CLI binary from {} to {}", Self::URL, &target.display());
-        let response = reqwest::Client::new().get(Self::URL).send().await?;
-        if !response.status().is_success() {
-            return Err(lib::anyhow::anyhow!("Failed to download CLI: {}", response.status()));
-        }
-
-        let total_size = response.content_length().unwrap();
-        let stream = response.bytes_stream().boxed();
-        let download = download(total_size, stream).await?;
-        let file = fs::File::open(&download).context("Open Download File")?;
-        let mut archive = zip::ZipArchive::new(file).context("Open Zip Archive")?;
-        let mut found = false;
-
-        // TODO :: Generic function for finding file in archive
-        for i in 0..archive.len() {
-            let mut file = archive.by_index(i).context("Get file by index")?;
-            if file.is_file() && file.name() == target.file_name().unwrap() {
-                fs::create_dir_all(&target.parent().unwrap()).context("Create parent directory for CLI binary")?;
-
-                let mut out = fs::File::create(&target).context("Create file for CLI binary")?;
-                std::io::copy(&mut file, &mut out).context("Copy CLI binary from archive to file")?;
-
-                found = true;
-                break;
-            }
-        }
-
-        if !found {
-            return Err(lib::anyhow::anyhow!("Failed to find CLI binary in archive"));
-        }
-
-        // TODO :: Windows permissions
-        #[cfg(unix)]
-        let mut permissions = fs::metadata(&target).context("Get metadata for CLI binary")?.permissions();
-        #[cfg(unix)]
-        permissions.set_mode(0o755);
-        #[cfg(unix)]
-        fs::set_permissions(&target, permissions).context("Set permissions for CLI binary")?;
-
-        Ok(target.to_str().unwrap().to_string())
-    }
 }
 
 #[derive(Debug)]
@@ -106,12 +56,27 @@ impl Display for AccountType {
     }
 }
 
+impl Downloader for OnePasswordCore {
+    const BINARY: &'static str = if cfg!(windows) { "op.exe" } else { "op" };
+    const URL: &'static str = formatcp!(
+        "https://cache.agilebits.com/dist/1P/op2/pkg/{version}/op_{os}_{arch}_{version}.zip",
+        version = "v2.18.0",
+        os = env::consts::OS,
+        arch = if cfg!(target_arch = "x86") {
+            "386"
+        } else if cfg!(target_arch = "x86_64") {
+            "amd64"
+        } else {
+            panic!("Unsupported arch")
+        }
+    );
+}
+
 #[async_trait]
 impl Exporter for OnePasswordCore {
     const DIRECTORY: &'static str = "1Password";
 
     async fn interactive(config: &RuntimeConfig) -> Result<Vec<Backend>> {
-        OnePasswordCore::download_cli(&config).await?;
         let account_type = Select::new(
             "Which type of Account Accessor do you want to setup.",
             vec![AccountType::Personal, AccountType::Service]
@@ -148,8 +113,10 @@ impl Exporter for OnePasswordCore {
 }
 
 impl Prune for OnePasswordCore {
-    // TODO
-    fn files(&self, _config: &RuntimeConfig) -> Vec<PathBuf> {
-        vec![]
+    fn files(&self, config: &RuntimeConfig) -> Vec<PathBuf> {
+        let dir = self.account.get().directory(&config).join("export_*.zip");
+        let dir = normalise_path(dir);
+        let glob = glob::glob(dir.to_str().unwrap()).unwrap();
+        glob.flatten().collect()
     }
 }

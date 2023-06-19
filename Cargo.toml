@@ -1,27 +1,10 @@
-[package]
-name = "tools"
-version = "0.1.0"
-edition = "2021"
-readme = "README.md"
-license = "MIT"
-authors = ["Racci <me@racci.dev>"]
-
 [workspace]
 members = ["crates/*"]
 
-[dependencies]
-lib = { path = "crates/lib" }
-cleaner = { path = "crates/cleaner" }
-clap = { version = "4.2.7", features = ["derive", "std"] }
-tokio = { version = "1.28.1", features = ["rt-multi-thread"] }
-anyhow = { version = "1.0.71", default-features = false }
-
-
 [profile.release]
-opt-level = "s" # Optimize for size
-#strip = "debuginfo"
-strip = true
+opt-level= 3
 lto = true
+strip = true
 panic = "abort"
 
 # build with `cargo build --profile profiling`
