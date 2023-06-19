@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/*"]
+members = ["crates/lib","crates/backup","crates/cleaner","crates/rest"]
 
 [profile.release]
 opt-level= 3

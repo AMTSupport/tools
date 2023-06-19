@@ -46,8 +46,8 @@ async fn query<H: Hudu, N: NAble>(hudu: H, nable: N) -> anyhow::Result<()> {
         trace!("Trying to match client: {name}", name = name);
 
         let mut scores = HashMap::new();
-        // let mut companies = companies.values();
-        while Some(company) = hudu_companies.values().next() {
+        let mut companies = companies.values();
+        while let Some(company) = hudu_companies.values().next() {
             let company_name = company.name.to_lowercase();
             let score = match matcher.fuzzy_match(name, company_name.as_str()) {
                 None => company
