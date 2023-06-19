@@ -83,11 +83,13 @@ impl RuntimeConfig {
     pub(crate) async fn modify(cli: &Cli, directory: &PathBuf) -> Result<Self> {
         let mut config = Self::load(cli, directory).await?;
 
+        // TODO :: Show current values
         if inquire::Confirm::new("Do you want to modify the rules?").with_default(true).prompt()? {
             config.config.rules = Self::new_rules()?;
             config.mutated = true;
         }
 
+        // TODO :: Allow removal of existing exporters
         if inquire::Confirm::new("Do you want to modify the exporters?")
             .with_default(true)
             .prompt()?
@@ -99,6 +101,7 @@ impl RuntimeConfig {
             }
         }
 
+        config.clone().save()?;
         Ok(config)
     }
 
@@ -120,7 +123,7 @@ impl RuntimeConfig {
         if destination.exists() {
             let overwrite =
                 inquire::Confirm::new("Do you want to overwrite the existing settings?")
-                    .with_default(false)
+                    .with_default(true)
                     .prompt()
                     .context("Prompt for if we should overwrite settings.")?;
 
