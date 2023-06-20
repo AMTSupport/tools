@@ -1,48 +1,91 @@
-use super::cli;
-use crate::config::runtime::RuntimeConfig;
-use crate::sources::op::account::AccountCommon;
-use lib::anyhow::Result;
-use lib::simplelog::debug;
-use serde::{Deserialize, Serialize};
-
 /// Zip format
 /// export.data is the main archive file
 /// export.attributes is the metadata for the archive
 /// files.* are the files in the archive
 /// Kind of shitty but still relevant info at https://support.1password.com/1pux-format/
 
+/// The 1PUX version which is targeted for compatibility.
 pub const ONE_PUX_VERSION: u8 = 3;
 
-pub async fn create_export(account: &dyn AccountCommon, config: &RuntimeConfig) -> Result<Export> {
-    let pairs = cli::vault::Vault::parse(&account, config)
-        .into_iter()
-        .map(|vault| {
-            (
-                vault.clone(),
-                cli::item::Item::parse(vault, &account, config),
-            )
-        })
-        .collect::<Vec<(cli::vault::Vault, Vec<cli::item::Item>)>>();
+pub mod export {
+    use crate::config::runtime::RuntimeConfig;
+    use crate::sources::op::cli;
+    use chrono::Local;
+    use lib::anyhow::Result;
+    use serde::{Deserialize, Serialize};
 
-    debug!("pairs: {:#?}", pairs);
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct Data {
+        pub accounts: Vec<super::account::Account>,
+    }
 
-    Ok(Export {
-        accounts: vec![account::Account {
-            attrs: account.account().clone().into(),
-            vaults: pairs
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct Export {
+        pub data: Data,
+        pub attributes: super::attributes::Attributes,
+        pub files: Vec<super::file::File>,
+        pub name: String,
+    }
+
+    impl Export {
+        pub fn from(
+            value: &dyn super::super::account::AccountCommon,
+            config: &RuntimeConfig,
+        ) -> Result<Self> {
+            let pairs = cli::vault::Vault::parse(&value, config)
                 .into_iter()
-                .map(|(vault, items)| vault::Vault {
-                    attrs: vault.into(),
-                    items: items.into_iter().map(|item| item.into()).collect(),
-                })
-                .collect(),
-        }],
-    })
+                .map(|vault| (vault.clone(), cli::item::Item::parse(vault, &value, config)))
+                .collect::<Vec<(cli::vault::Vault, Vec<cli::item::Item>)>>();
+
+            let data = vec![super::account::Account {
+                attrs: value.account().clone().into(),
+                vaults: pairs
+                    .into_iter()
+                    .map(|(vault, items)| super::vault::Vault {
+                        attrs: vault.into(),
+                        items: items.into_iter().map(|item| item.into()).collect(),
+                    })
+                    .collect(),
+            }];
+
+            let name = format!(
+                "1PasswordExport-{uuid}-{time}.1pux",
+                uuid = value.account().long.id,
+                time = Local::now().format("%Y%m%d-%H%M%S")
+            );
+
+            Ok(Export {
+                name,
+                data: Data { accounts: data },
+                attributes: super::attributes::Attributes::default(),
+                files: vec![], // TODO
+            })
+        }
+    }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Export {
-    pub accounts: Vec<account::Account>,
+pub mod file {
+    use serde::{Deserialize, Serialize};
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct File {
+        pub name: String,
+        pub data: Vec<u8>,
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct Detail {
+        /// The name of the file which is stored within the archive
+        /// This name is not a path and is only the name of the file.
+        /// You will find these files at `/files/{file_id}`.
+        pub file_id: String,
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct Icon {
+        pub detail: Detail,
+    }
 }
 
 pub mod attributes {
@@ -58,7 +101,7 @@ pub mod attributes {
         /// The description of the export
         pub description: String,
         /// The unix epoch timestamp of when the export was created
-        pub created: i64,
+        pub timestamp: i64,
     }
 
     impl Default for Attributes {
@@ -66,7 +109,7 @@ pub mod attributes {
             Self {
                 version: super::ONE_PUX_VERSION,
                 description: String::from("1Password Unencrypted Export"),
-                created: chrono::Utc::now().timestamp(),
+                timestamp: chrono::Utc::now().timestamp(),
             }
         }
     }
@@ -87,7 +130,7 @@ pub mod account {
     pub struct Attrs {
         pub account_name: String, // TODO :: Org name or just account name i think.
         pub name: String,
-        pub avatar: String,
+        pub avatar: String, // TODO :: References a file in the zip archive
         pub email: String,
         pub uuid: String,
         pub domain: String,
@@ -116,7 +159,7 @@ pub mod vault {
         #[serde(default)]
         pub desc: String, // TODO
         #[serde(default)]
-        pub avatar: String, // TODO
+        pub avatar: String, // TODO -> References a file in the zip archive
         pub name: String,
         #[serde(rename = "type")]
         pub vault_type: Type,
@@ -302,11 +345,11 @@ pub mod item {
     }
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[serde(rename_all = "camelCase")]
     pub struct Field {
         pub value: String,
         pub id: String,
         pub name: String,
-        #[serde(rename = "type")]
         pub field_type: FieldType,
         #[serde(skip_serializing_if = "FieldDesignation::is_none")]
         pub designation: FieldDesignation,
@@ -319,35 +362,81 @@ pub mod item {
         pub mode: String, // TODO :: Enum
     }
 
+    /// TODO -> I Don't think this is something i can get from the CLI
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct WatchTowerExclusions {
+        pub compromised: bool,
+        pub vulnerable: bool,
+        pub reused: bool,
+        pub weak: bool,
+        pub unsecured: bool,
+        pub inactive_mfa: bool,
+        pub expiring: bool,
+        pub lastpass: bool,
+        pub wrong_account: bool,
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct PasswordDetails {
+        /// A password strength score for the item between 0 and 100.
+        #[serde(default, rename = "ps")]
+        pub password_strength: usize,
+        #[serde(default, rename = "pbe")]
+        pub password_base_entropy: f64,
+        /// If this item was generated by the 1Password password generator.
+        #[serde(default, rename = "pgrng")]
+        pub password_generated: bool,
+    }
+
     #[derive(Debug, Clone, Serialize, Deserialize)]
     #[serde(rename_all = "camelCase")]
     pub struct Overview {
+        /// ??
         pub subtitle: String,
+        /// The user defined icon for the item.
         #[serde(default)]
+        pub icons: Option<super::file::Icon>, // TODO -> Can't seem to get from CLI
+        /// A list of URLs related to this item.
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
         pub urls: Vec<UrlObject>,
+        /// The user defined tags for the item.
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        pub tags: Vec<String>,
+        /// The title of the item.
         pub title: String,
-        pub url: String, // TODO :: Primary URL from urls array
-        #[serde(skip_serializing_if = "Option::is_none")]
-        pub tags: Option<Vec<String>>, // TODO Skip if none
+        /// The URL of the primary url associated with this item.
+        pub url: String,
 
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        pub icons: Option<String>, // ? // Can't seem to get from CLI
+        pub password_details: Option<PasswordDetails>,
+
         #[serde(default)]
-        pub ps: i64, // ?
-        #[serde(default)]
-        pub pbe: f64, // ?
-        #[serde(default)]
-        pub pgrng: bool, // ??
-        #[serde(default)]
-        pub watchtower_exclusions: Option<bool>, // ??
+        pub watchtower_exclusions: Option<WatchTowerExclusions>,
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct DocumentAttributes {
+        pub file_name: String,
+        pub document_id: String,
+        pub decrypted_size: usize,
     }
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
     #[serde(rename_all = "camelCase")]
     pub struct Details {
         pub login_fields: Vec<Field>,
-        pub notes_plain: String,
+
+        /// The notes for the item.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pub notes_plain: Option<String>,
+
         pub sections: Vec<AdditionalSection>,
+
         pub password_history: Vec<PasswordHistory>,
+
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pub document_attributes: Option<DocumentAttributes>,
     }
 }

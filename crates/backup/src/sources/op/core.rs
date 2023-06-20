@@ -1,18 +1,14 @@
+use crate::config::backend::Backend;
+use crate::config::backend::Backend::OnePassword;
+use crate::config::runtime::RuntimeConfig;
+use crate::sources::auto_prune::Prune;
 use crate::sources::downloader::Downloader;
-use crate::{
-    config::{
-        backend::{Backend, Backend::OnePassword},
-        runtime::RuntimeConfig,
-    },
-    sources::{
-        auto_prune::Prune,
-        exporter::Exporter,
-        interactive::Interactive,
-        op::{account, account::OnePasswordAccount, one_pux},
-    },
-};
+use crate::sources::exporter::Exporter;
+use crate::sources::interactive::Interactive;
+use crate::sources::op::account;
+use crate::sources::op::account::OnePasswordAccount;
+use crate::sources::op::one_pux;
 use async_trait::async_trait;
-use chrono::Local;
 use const_format::formatcp;
 use indicatif::{MultiProgress, ProgressBar};
 use inquire::Select;
@@ -24,6 +20,7 @@ use serde_json::to_string_pretty;
 use std::fmt::{Display, Formatter};
 use std::io::Write;
 use std::path::PathBuf;
+use std::process::Command;
 use std::{env, fs};
 use zip::write::FileOptions;
 
@@ -70,6 +67,15 @@ impl Downloader for OnePasswordCore {
             panic!("Unsupported arch")
         }
     );
+
+    fn base_command(config: &RuntimeConfig) -> Command {
+        let mut command = Command::new(Self::binary(config));
+        command
+            .arg("--cache")
+            .args(["--config", Self::data_dir(config).display().to_string().as_str()]);
+
+        command
+    }
 }
 
 #[async_trait]
@@ -96,29 +102,40 @@ impl Exporter for OnePasswordCore {
 
     // TODO :: Export of extra stuff like logos in the zip
     // TODO :: I'm unsure if that's even possible though.
+    /// Creates a 1PUX compatible export,
+    ///
+    /// The name of this file is in format of "1Password-{uuid of the account exporting it}-{%Y%m%d-%H%M%S}.1pux"
     async fn export(
         &mut self,
         config: &RuntimeConfig,
         _main_bar: &ProgressBar,
         _progress_bar: &MultiProgress,
     ) -> Result<()> {
-        let export = one_pux::create_export(self.account.get(), config);
+        let account = self.account.get();
+        let export = one_pux::export::Export::from(account, config)?;
 
-        let file = format!("export_{}.zip", Local::now().format("%Y-%m-%dT%H:%M:%SZ%z"));
-        let file = self.account.get().directory(config).join(file);
+        let file = self.account.get().directory(config).join(export.name);
         let file = normalise_path(file);
+
+        account.ensure_directory(config)?;
+
         let file = fs::File::create_new(file).context("Create export file")?;
         let mut zip = zip::ZipWriter::new(file);
 
         let options = FileOptions::default();
-        let attributes = one_pux::attributes::Attributes::default();
-        let serialised = to_string_pretty(&attributes).context("Serialise to 1PUX")?;
+        let serialised = to_string_pretty(&export.attributes).context("Serialise to 1PUX")?;
         zip.start_file("export.attributes", options).context("Start writer for attrs.")?;
         zip.write_all(serialised.as_bytes()).context("Write attrs to zip file.")?;
 
-        let serialised = to_string_pretty(&export.await?).context("Serialise to 1PUX")?;
+        let serialised = to_string_pretty(&export.data).context("Serialise to 1PUX")?;
         zip.start_file("export.data", options)?;
         zip.write_all(serialised.as_bytes())?;
+
+        zip.add_directory("files", options).context("Create file directory")?;
+        for file in export.files {
+            zip.start_file(format!("files/{}", file.name), options)?;
+            zip.write_all(&file.data)?;
+        }
 
         zip.finish().context("Finish export file")?;
 
