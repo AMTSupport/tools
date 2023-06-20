@@ -1,7 +1,7 @@
 use crate::config::runtime::RuntimeConfig;
 use indicatif::MultiProgress;
 use lib::anyhow::Result;
-use lib::simplelog::debug;
+use tracing::debug;
 use std::path::PathBuf;
 
 // TODO :: Implement logic from cleaner crate to handle this!

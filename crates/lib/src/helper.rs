@@ -1,4 +1,4 @@
-use simplelog::error;
+use tracing::error;
 use sysexits::ExitCode;
 
 const ERROR_MESSAGE: &str = "Failed to elevate privileges";

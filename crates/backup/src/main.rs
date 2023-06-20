@@ -3,12 +3,12 @@
 use backup::application;
 use lib::anyhow::{Context, Result};
 use lib::clap::Parser;
-use lib::simplelog::{error, trace};
+use tracing::{error, trace};
 use std::env;
 use std::env::VarError;
 use std::path::PathBuf;
 
-#[tokio::main]
+#[tokio::main(flavor = "multi_thread")]
 pub async fn main() -> Result<()> {
     let cli = application::Cli::try_parse()?;
     lib::log::init("backup-interactive", &cli.flags)?;

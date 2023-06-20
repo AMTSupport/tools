@@ -48,9 +48,9 @@
               CARGO_BUILD_TARGET = target;
             }) // args // {
               nativeBuildInputs = with pkgs; [
-                fenix.complete.cargo
-                fenix.complete.clippy-preview
-                fenix.complete.rustfmt-preview
+#                fenix.complete.cargo
+#                fenix.complete.clippy-preview
+#                fenix.complete.rustfmt-preview
               ] ++ nativeBuildInputs;
             }
           );

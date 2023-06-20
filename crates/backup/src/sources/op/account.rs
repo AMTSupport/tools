@@ -10,7 +10,6 @@ use inquire::validator::Validation;
 use inquire::{MultiSelect, Text};
 use lib::anyhow::{anyhow, Context, Result};
 use lib::fs::normalise_path;
-use lib::simplelog::info;
 use serde::{Deserialize, Serialize};
 use serde_json::from_slice;
 use std::fmt::{Debug, Display, Formatter};

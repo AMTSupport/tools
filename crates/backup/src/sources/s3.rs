@@ -13,7 +13,7 @@ use inquire::validator::Validation;
 use lib::anyhow::{Context, Result};
 use lib::fs::normalise_path;
 use lib::progress::{download, spinner};
-use lib::simplelog::{debug, error, info, trace};
+use tracing::{debug, error, info, trace};
 use opendal::layers::LoggingLayer;
 use opendal::services::S3;
 use opendal::{Builder, Operator, OperatorBuilder};

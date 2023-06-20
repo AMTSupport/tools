@@ -6,11 +6,13 @@ edition = "2021"
 [dependencies]
 clap = { version = "4.2.7", features = ["derive", "std"], default-features = false }
 anyhow = { version = "1.0.71" }
-simplelog = { version = "0.12.1", features = ["paris"] }
 exitcode = "1.1.2"
 sysexits = "0.6.0"
 indicatif = { version = "0.17.4" }
 tracing = "0.1.37"
+tracing-appender = "0.2.2"
+tracing-journald = "0.3.0"
+tracing-error = "0.2.0"
 tracing-subscriber = "0.3.17"
 
 [target.'cfg(unix)'.dependencies]

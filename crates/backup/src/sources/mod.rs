@@ -5,7 +5,7 @@ use indicatif::ProgressBar;
 use lib::anyhow;
 use lib::anyhow::{anyhow, Context};
 use lib::fs::{create_parents, normalise_path};
-use lib::simplelog::debug;
+use tracing::debug;
 use rand::RngCore;
 use std::cmp::min;
 use std::error::Error;

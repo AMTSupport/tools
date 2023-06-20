@@ -5,7 +5,7 @@ use lib::anyhow::{anyhow, Result};
 use lib::cli::Flags;
 use lib::progress;
 use lib::progress::spinner;
-use lib::simplelog::error;
+use tracing::error;
 use std::fmt::Debug;
 use std::path::PathBuf;
 use std::sync::Arc;

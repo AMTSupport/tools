@@ -16,7 +16,7 @@ extern crate core;
 
 use inquire::validator::StringValidator;
 use lib::anyhow::{anyhow, Context, Result};
-use lib::simplelog::{trace, warn};
+use tracing::{trace, warn};
 
 pub mod application;
 pub mod config;

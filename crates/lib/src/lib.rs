@@ -12,7 +12,6 @@ pub mod windows;
 
 pub use anyhow;
 pub use clap;
-pub use simplelog;
 pub use sysexits;
 
 #[cfg(unix)]

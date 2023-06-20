@@ -7,7 +7,7 @@ use crate::sources::exporter::ExporterSource;
 use clap::ValueEnum;
 use inquire::validator::Validation;
 use lib::anyhow::{anyhow, Context, Result};
-use lib::simplelog::{error, info, trace};
+use tracing::{error, info, trace};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 

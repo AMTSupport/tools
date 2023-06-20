@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use futures_util::StreamExt;
 use lib::anyhow::{anyhow, Context, Result};
 use lib::fs::create_parents;
-use lib::simplelog::{debug, trace};
+use tracing::{debug, trace};
 use lib::{anyhow, progress};
 use std::fs::{metadata, set_permissions, File};
 use std::io::copy;

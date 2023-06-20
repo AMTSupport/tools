@@ -10,7 +10,7 @@ use indicatif::{MultiProgress, ProgressBar};
 use lib::anyhow;
 use lib::anyhow::{anyhow, Context};
 use lib::fs::normalise_path;
-use lib::simplelog::{error, info};
+use tracing::{error, info};
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::fmt::{Display, Formatter};
