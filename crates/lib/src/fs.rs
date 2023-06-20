@@ -57,7 +57,8 @@ pub fn normalise_path(path: PathBuf) -> PathBuf {
             path = p
         )
     } else {
-        p.collect::<Vec<&str>>().join(PATH_SEPARATOR.to_string().as_str())
+        let p = p.collect::<Vec<&str>>().join(PATH_SEPARATOR.to_string().as_str());
+        format!("/{p}")
     };
 
     // Append trailing back if input path is ends-with `/`.
