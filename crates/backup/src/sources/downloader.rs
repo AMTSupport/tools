@@ -3,18 +3,21 @@ use crate::sources::download;
 use crate::sources::exporter::Exporter;
 use async_trait::async_trait;
 use futures_util::StreamExt;
+use indicatif::{MultiProgress, ProgressBar};
 use lib::anyhow::{anyhow, Context, Result};
 use lib::fs::create_parents;
-use tracing::{debug, trace};
 use lib::{anyhow, progress};
-use std::fs::{metadata, set_permissions, File};
+use std::fs::File;
 use std::io::copy;
 use std::path::PathBuf;
 use std::process::Command;
+use tracing::{debug, trace};
 
-use indicatif::{MultiProgress, ProgressBar};
 #[cfg(unix)]
-use std::os::unix::fs::PermissionsExt;
+use {
+    std::fs::{metadata, set_permissions},
+    std::os::unix::fs::PermissionsExt,
+};
 
 #[async_trait]
 pub trait Downloader: Exporter {

@@ -4,7 +4,7 @@ use clap::Parser;
 use indicatif::ParallelProgressIterator;
 use lib::cli::Flags;
 use rayon::prelude::*;
-use simplelog::info;
+use tracing::info;
 use std::sync::{Arc, Mutex};
 
 #[derive(Parser, Debug)]

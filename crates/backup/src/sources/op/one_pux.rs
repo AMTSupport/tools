@@ -169,24 +169,54 @@ pub mod vault {
 pub mod section {
     use serde::{Deserialize, Serialize};
 
-    #[derive(Debug, Clone, Serialize, Deserialize)]
-    pub struct Attrs {
-        pub title: String,
-        #[serde(default)]
-        pub name: Option<String>,
-        pub fields: Vec<Field>,
-    }
-
+    // TODO :: Merge with loginField?
     #[derive(Debug, Clone, Serialize, Deserialize)]
     #[serde(rename_all = "camelCase")]
     pub struct Field {
+        /// The user-facing title of the field
         pub title: String,
+
+        /// The internal identifier of the field
         pub id: String,
+
+        /// The value of the field
+        #[serde(skip_serializing_if = "Value::should_skip_serializing")]
         pub value: Value,
-        pub guarded: bool, // ?
+
+        // TODO -> I think this has to do with default fields of a type, so fields that can't be deleted but can be left empty?
+        pub guarded: bool,
+
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pub clipboard_filter: Option<String>,
+
+        // TODO -> Seems to be a set based on the id of the field
         pub multiline: bool,
+
+        // TODO
         pub dont_generate: bool,
+
+        // TODO -> Only place i've found it is in `medical record` fields
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pub placeholder: Option<String>,
+
+        // TODO
         pub input_traits: InputTraits,
+    }
+
+    impl Default for Field {
+        fn default() -> Self {
+            Self {
+                title: String::new(),
+                id: String::new(),
+                value: Value::String(String::new()),
+                guarded: false,
+                clipboard_filter: None,
+                multiline: false,
+                dont_generate: false,
+                placeholder: None,
+                input_traits: InputTraits::default(),
+            }
+        }
     }
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -209,12 +239,22 @@ pub mod section {
     #[serde(rename_all = "camelCase")]
     pub enum Value {
         String(String),
-        TOTP(String),
         Concealed(String),
+        #[serde(rename = "totp")]
+        TOTP(String),
         Menu(String),
         Phone(String),
-        MonthYear(String),
+        Url(String),
+        MonthYear(Option<usize>),
+        Date(Option<usize>),
         CreditCardNumber(String),
+        Address {
+            street: String,
+            city: String,
+            country: String,
+            zip: String,
+            state: String,
+        },
         Email {
             email_address: String,
             #[serde(default)]
@@ -226,29 +266,28 @@ pub mod section {
         },
         SshKey {
             private_key: String,
-            metadata: SshKeyMetadata,
+            metadata: SshKeyMetadata, // TODO :: From other fields
         },
     }
 
+    // TODO :: Seems to be based off the id of the field, eg `name` -> `capitalization == words`
     #[derive(Default, Debug, Clone, Serialize, Deserialize)]
     pub struct InputTraits {
-        keyboard: Keyboard,
-        correction: Correction,
-        capitalization: Capitalization,
+        pub keyboard: Keyboard,
+        pub correction: Correction,
+        pub capitalization: Capitalization,
     }
 
-    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[derive(Default, Debug, Clone, Serialize, Deserialize)]
     #[serde(rename_all = "lowercase")]
-    #[derive(Default)]
     pub enum Correction {
         #[default]
         Default,
         No,
     }
 
-    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[derive(Default, Debug, Clone, Serialize, Deserialize)]
     #[serde(rename_all = "camelCase")]
-    #[derive(Default)]
     pub enum Keyboard {
         #[default]
         Default,
@@ -259,9 +298,8 @@ pub mod section {
         URL,
     }
 
-    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[derive(Default, Debug, Clone, Serialize, Deserialize)]
     #[serde(rename_all = "camelCase")]
-    #[derive(Default)]
     pub enum Capitalization {
         #[default]
         Default,
@@ -269,6 +307,16 @@ pub mod section {
         None,
         Sentences,
         AllCharacters,
+    }
+
+    impl Value {
+        // TODO :: Use to hide sshkey fields
+        fn should_skip_serializing(&self) -> bool {
+            match self {
+                // Value::Date(None) | Value::MonthYear(None) => true,
+                _ => false,
+            }
+        }
     }
 }
 
@@ -295,7 +343,7 @@ pub mod item {
         pub created_at: i64,
         /// Unix timestamp in seconds
         pub updated_at: i64,
-        pub state: String, // enum? // Only present if archived, default to active
+        pub state: String, // TODO :: enum? // Only present if archived, default to active
         pub category_uuid: String,
     }
 
@@ -317,12 +365,13 @@ pub mod item {
         Telephone,
     }
 
-    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[derive(Default, Debug, Clone, Serialize, Deserialize)]
     #[serde(rename_all = "camelCase")]
     pub enum FieldDesignation {
+        #[default]
+        None,
         Username,
         Password,
-        None,
     }
 
     impl FieldDesignation {
@@ -334,8 +383,14 @@ pub mod item {
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct AdditionalSection {
         pub title: String,
+
+        #[serde(default, skip_serializing_if = "String::is_empty")]
         pub name: String,
+
         pub fields: Vec<super::section::Field>,
+
+        #[serde(default, skip_serializing_if = "super::is_default")]
+        pub hide_add_another_field: bool,
     }
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -408,7 +463,7 @@ pub mod item {
         /// The URL of the primary url associated with this item.
         pub url: String,
 
-        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[serde(flatten, default, skip_serializing_if = "Option::is_none")]
         pub password_details: Option<PasswordDetails>,
 
         #[serde(default)]
@@ -439,4 +494,8 @@ pub mod item {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         pub document_attributes: Option<DocumentAttributes>,
     }
+}
+
+fn is_default<T: Default + PartialEq>(t: &T) -> bool {
+    t == &T::default()
 }

@@ -7,7 +7,7 @@ use indicatif::{ParallelProgressIterator, ProgressBar, ProgressIterator};
 use lib::cli::Flags;
 use once_cell::sync::Lazy;
 use rayon::prelude::*;
-use simplelog::{debug, error, trace, warn};
+use tracing::{debug, error, trace, warn};
 use std::collections::HashSet;
 use std::ops::Not;
 use std::path::{Path, PathBuf};

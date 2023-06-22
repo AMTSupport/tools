@@ -2,7 +2,7 @@ use crate::{globbed, CleanablePath, PathCollections};
 use anyhow::{anyhow, Context};
 use chrono::Duration;
 use once_cell::sync::Lazy;
-use simplelog::trace;
+use tracing::trace;
 use std::{path::PathBuf, slice::Iter};
 
 #[derive(Debug, Clone)]

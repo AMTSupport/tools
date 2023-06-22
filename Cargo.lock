@@ -354,6 +354,7 @@ dependencies = [
  "lib",
  "opendal",
  "rand",
+ "rayon",
  "reqwest",
  "serde",
  "serde_json",
@@ -677,8 +678,8 @@ dependencies = [
  "once_cell",
  "permissions",
  "rayon",
- "simplelog",
  "tokio",
+ "tracing",
 ]
 
 [[package]]

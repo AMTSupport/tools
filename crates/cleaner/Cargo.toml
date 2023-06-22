@@ -17,7 +17,7 @@ glob = "0.3.1"
 inquire = "0.6.2"
 indicatif = { version = "0.17.4", features = ["rayon"] }
 rayon = "1.7"
-simplelog = { version = "0.12.1" }
+tracing = "0.1.37"
 
 [target.'cfg(unix)'.dependencies]
 permissions = "0.4.1"

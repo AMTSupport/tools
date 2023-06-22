@@ -242,9 +242,9 @@ pub mod account {
 }
 
 pub mod file {
+    use crate::sources::op::one_pux;
     use chrono::{DateTime, FixedOffset};
     use serde::{Deserialize, Serialize};
-    use crate::sources::op::one_pux;
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct Reference {
@@ -303,6 +303,8 @@ pub mod item {
     use crate::sources::op::account::AccountCommon;
     use chrono::{DateTime, FixedOffset};
     use clap::ValueEnum;
+    use lib::anyhow::Context;
+    use rayon::prelude::*;
     use serde::{Deserialize, Serialize};
     use serde_json::from_slice;
     use std::fmt::{Display, Formatter};
@@ -337,6 +339,7 @@ pub mod item {
             #[serde(flatten)]
             attrs: Attrs,
 
+            #[serde(default)]
             files: Vec<super::file::Reference>,
         },
         /// Additional is the value of the field `product_version`
@@ -491,7 +494,7 @@ pub mod item {
                 fav_index: attrs.favorite.into(),
                 created_at: attrs.created_at.timestamp(),
                 updated_at: attrs.updated_at.timestamp(),
-                state: attrs.state.to_string(),
+                state: attrs.state.to_string().to_lowercase(),
                 category_uuid: val.get_category_id(),
             }
         }
@@ -502,6 +505,7 @@ pub mod item {
             let attrs = value.get_attrs();
             let field = attrs
                 .fields
+                .clone()
                 .into_iter()
                 .filter_map(|f| match f {
                     super::field::Field::Concealed {
@@ -532,7 +536,7 @@ pub mod item {
             one_pux::item::Overview {
                 subtitle: attrs.additional_information.unwrap_or_default(),
                 icons: None, // TODO
-                urls: attrs.urls.into_iter().map(super::url::Url::into).collect(),
+                urls: attrs.urls.clone().into_iter().map(super::url::Url::into).collect(),
                 tags: attrs.tags,
                 title: attrs.title,
                 url: attrs.urls.into_iter().find(|u| u.primary).map(|u| u.href).unwrap_or_default(),
@@ -544,15 +548,16 @@ pub mod item {
 
     impl From<Item> for one_pux::item::Details {
         fn from(value: Item) -> one_pux::item::Details {
-            let fields = value.get_attrs().fields.clone();
+            let mut fields = value.get_attrs().fields.clone();
 
             let mut password_history = None;
-
+            let mut removed = 0usize;
             let login_fields = fields
                 .clone()
                 .into_iter()
-                .filter(|f| f.is_login_field())
-                .inspect(|f| match f {
+                .enumerate()
+                .filter(|(_, f)| f.is_login_field())
+                .inspect(|(_, f)| match f {
                     // This is a bit of a hack, but it works for now
                     super::field::Field::Concealed {
                         password_details, ..
@@ -564,6 +569,11 @@ pub mod item {
                     }
                     _ => (),
                 })
+                .map(|(i, _)| {
+                    let field = fields.remove(i - removed);
+                    removed += 1;
+                    field
+                })
                 .map(|f| f.into())
                 .map(|mut f: one_pux::item::Field| {
                     f.id = "".to_string(); // Login Fields have their Id's empty.
@@ -571,31 +581,72 @@ pub mod item {
                 })
                 .collect::<Vec<one_pux::item::Field>>();
 
+            removed = 0usize;
             let notes_plain = fields
                 .clone()
                 .into_iter()
-                .find(|f| f.is_notes_field())
-                .and_then(|f| f.get_attrs().value);
+                .enumerate()
+                .find(|(_, f)| f.is_notes_field())
+                .map(|(i, _)| {
+                    let field = fields.remove(i - removed);
+                    removed += 1;
+                    field
+                })
+                .and_then(|f| f.get_attrs().value.clone());
 
-            let sections = value
+            // TODO -> This is a bit of a hack, but it works for now
+            // TODO -> Sections aren't in the right order, but that's not a big deal
+            let mut sections = value
                 .get_attrs()
                 .sections
+                .clone()
                 .into_iter()
-                .map(|s| s.into(fields.clone()))
+                .map(|s| s.into())
                 .collect::<Vec<one_pux::item::AdditionalSection>>();
+            for field in fields {
+                let attrs = (&field).get_attrs();
+
+                if attrs.section.as_ref().is_none() {
+                    if sections.is_empty()
+                        || sections
+                            .iter()
+                            .find(|s| s.title.is_empty() && s.name.is_empty())
+                            .is_none()
+                    {
+                        sections.insert(
+                            0,
+                            one_pux::item::AdditionalSection {
+                                name: "".to_string(),
+                                title: "".to_string(),
+                                fields: vec![],
+                                hide_add_another_field: false,
+                            },
+                        )
+                    }
+
+                    sections.first_mut().unwrap().fields.push(field.into());
+                    continue;
+                }
+
+                sections
+                    .iter_mut()
+                    .find(|s| s.name == attrs.section.as_ref().unwrap().id)
+                    .map(|s| s.fields.push(field.into()));
+            }
 
             let document_attributes = match value {
-                Item::Document { files, .. } => {
-                    Some(files.first().map(|f| f.clone().into()))
-                },
+                Item::Document { files, .. } => Some(files.first().map(|f| f.clone().into())),
                 _ => None,
-            }.flatten();
+            }
+            .flatten();
 
             one_pux::item::Details {
                 login_fields,
                 notes_plain,
                 sections,
-                password_history: password_history.unwrap_or_default(),
+                password_history: password_history
+                    .context("Unwrap password history")
+                    .unwrap_or_default(),
                 document_attributes,
             }
         }
@@ -671,6 +722,7 @@ pub mod item {
                 .args(["item", "list"])
                 .args(["--vault", vault_id, "--format=json"])
                 .output()
+                .context("Unwrap vault list")
                 .unwrap()
                 .stdout
         }
@@ -680,6 +732,7 @@ pub mod item {
                 .args(["item", "get", item_id])
                 .args(["--vault", vault_id, "--format=json"])
                 .output()
+                .context("Unwrap vault item")
                 .unwrap()
                 .stdout
         }
@@ -693,12 +746,18 @@ pub mod item {
             trace!("Requesting Items from {vault}");
 
             let raw = Self::raw(&vault.reference.id, account.command(config));
-            let parsed = from_slice::<Vec<Item>>(&raw).unwrap();
+            let parsed = from_slice::<Vec<Item>>(&raw).context("Deserialize items list").unwrap();
             parsed
-                .into_iter()
-                .map(|item| Self::raw_long(&vault.reference.id, &item.get_attrs().id, account.command(config)))
-                .map(|raw| from_slice::<Item>(&raw).unwrap())
-                .collect()
+                .into_par_iter()
+                .map(|item| {
+                    Self::raw_long(
+                        &vault.reference.id,
+                        &item.get_attrs().id,
+                        account.command(config),
+                    )
+                })
+                .map(|raw| from_slice::<Item>(&raw).context("Deserialize item").unwrap())
+                .collect() // TODO :: Sort by creation date?
         }
     }
 }
@@ -710,6 +769,7 @@ pub mod vault {
     use crate::sources::op::one_pux;
     use async_trait::async_trait;
     use chrono::{DateTime, FixedOffset};
+    use lib::anyhow::Context;
     use serde::{Deserialize, Serialize};
     use serde_json::from_slice;
     use std::fmt::Display;
@@ -791,7 +851,12 @@ pub mod vault {
 
     impl Vault {
         fn raw(vault_id: &String, mut command: Command) -> Vec<u8> {
-            command.args(["vault", "get", vault_id, "--format=json"]).output().unwrap().stdout
+            command
+                .args(["vault", "get", vault_id, "--format=json"])
+                .output()
+                .context("Unwrap vault get")
+                .unwrap()
+                .stdout
         }
 
         pub fn parse(account: &&dyn AccountCommon, config: &RuntimeConfig) -> Vec<Vault> {
@@ -801,7 +866,9 @@ pub mod vault {
                 .inspect(|vault| trace!("Requesting Vault {vault}",))
                 .map(|reference| Self::raw(&reference.id, account.command(config)))
                 .inspect(|output| trace!("Parsing Vault JSON {}", String::from_utf8_lossy(output)))
-                .map(|output| from_slice::<Vault>(output.as_slice()).unwrap())
+                .map(|output| {
+                    from_slice::<Vault>(output.as_slice()).context("Deserialise vault").unwrap()
+                })
                 .collect()
         }
     }
@@ -856,7 +923,7 @@ pub mod url {
         fn from(val: Url) -> Self {
             one_pux::item::UrlObject {
                 url: val.href,
-                label: val.label.unwrap_or("".to_string()),
+                label: val.label.unwrap_or_default(),
                 mode: "default".to_string(), // Unable to get from CLI
             }
         }
@@ -868,6 +935,7 @@ pub mod field {
     use serde::de::{SeqAccess, Visitor};
     use serde::{Deserialize, Deserializer, Serialize};
     use std::fmt;
+    use std::str::FromStr;
     use tracing::debug;
 
     #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
@@ -888,6 +956,7 @@ pub mod field {
     #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
     pub struct PasswordDetails {
         // TODO -> Might be deprecated due to root root level entropy field
+        #[serde(default)]
         pub entropy: usize,
         #[serde(default)]
         pub generated: bool, // TODO -> Serialise only if true
@@ -923,7 +992,7 @@ pub mod field {
     }
 
     #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
-    #[serde(rename_all = "UPPERCASE", tag = "type")]
+    #[serde(rename_all = "SCREAMING_SNAKE_CASE", tag = "type")]
     pub enum Field {
         /// Represents a string field, such as a username or notes.
         String {
@@ -934,8 +1003,16 @@ pub mod field {
         Concealed {
             #[serde(flatten)]
             attrs: Attrs,
-            #[serde(default)]
+            #[serde(default, skip_serializing_if = "Option::is_none")]
             password_details: Option<PasswordDetails>,
+        },
+        Otp {
+            #[serde(flatten)]
+            attrs: Attrs,
+        },
+        CreditCardNumber {
+            #[serde(flatten)]
+            attrs: Attrs,
         },
         /// Shows a dropdown menu of pre-defined values for the field based of `attrs.id`
         Menu {
@@ -989,13 +1066,14 @@ pub mod field {
             };
 
             attrs.section.is_none()
-                && attrs.purpose.is_some_and(|p| Self::LOGIN_PURPOSES.contains(&p))
+                && attrs.purpose.as_ref().is_some_and(|p| Self::LOGIN_PURPOSES.contains(&p))
         }
 
         pub fn is_notes_field(&self) -> bool {
             match self {
                 Field::String { attrs, .. } => {
-                    attrs.section.is_none() && attrs.purpose.is_some_and(|p| p == Purpose::Notes)
+                    attrs.section.is_none()
+                        && attrs.purpose.as_ref().is_some_and(|p| p == &Purpose::Notes)
                 }
                 _ => false,
             }
@@ -1005,6 +1083,8 @@ pub mod field {
             match self {
                 Field::String { attrs, .. } => attrs,
                 Field::Concealed { attrs, .. } => attrs,
+                Field::Otp { attrs, .. } => attrs,
+                Field::CreditCardNumber { attrs, .. } => attrs,
                 Field::Menu { attrs, .. } => attrs,
                 Field::Date { attrs, .. } => attrs,
                 Field::MonthYear { attrs, .. } => attrs,
@@ -1017,41 +1097,6 @@ pub mod field {
         }
     }
 
-    // /// Currently if the field doesn't have a purpose it is ignored,
-    // /// This only affects secondary usernames and passwords but it still needs to be fixed
-    // #[derive(Debug, Clone)]
-    // // #[serde(tag = "purpose", rename_all = "UPPERCASE")]
-    // pub enum Field {
-    //     Username {
-    //         // #[serde(flatten)]
-    //         common: CommonField,
-    //     },
-    //     Password {
-    //         // #[serde(flatten)]
-    //         common: CommonField,
-    //         password_details: PasswordDetails, // ??
-    //     },
-    //     Notes {
-    //         // #[serde(flatten)]
-    //         common: CommonField,
-    //     },
-    //     TOTP {
-    //         // #[serde(flatten)]
-    //         common: CommonField,
-    //     },
-    // }
-    //
-    // impl Field {
-    //     pub fn get(&self) -> &CommonField {
-    //         match self {
-    //             Field::Username { common } => common,
-    //             Field::Password { common, .. } => common,
-    //             Field::Notes { common } => common,
-    //             Field::TOTP { common } => common,
-    //         }
-    //     }
-    // }
-
     impl From<PasswordStrength> for usize {
         fn from(val: PasswordStrength) -> Self {
             match val {
@@ -1061,14 +1106,12 @@ pub mod field {
         }
     }
 
-    impl From<Type> for one_pux::item::FieldType {
-        fn from(val: Type) -> Self {
+    impl From<Field> for one_pux::item::FieldType {
+        fn from(val: Field) -> Self {
             match val {
-                Type::String => one_pux::item::FieldType::Text,
-                Type::Concealed => one_pux::item::FieldType::Password,
-                Type::SshKey => one_pux::item::FieldType::Text, // TODO
-                Type::Email => one_pux::item::FieldType::Email, // TODO
-                Type::OTP => one_pux::item::FieldType::Text,    // TODO // Is this right?
+                Field::String { .. } => one_pux::item::FieldType::Text,
+                Field::Concealed { .. } => one_pux::item::FieldType::Password,
+                field => panic!("Unsupported field type: {:?}", field),
             }
         }
     }
@@ -1085,16 +1128,17 @@ pub mod field {
 
     impl From<Field> for one_pux::item::Field {
         fn from(val: Field) -> Self {
-            let common = val.attrs;
+            let attrs = val.get_attrs().clone();
             one_pux::item::Field {
-                id: common.id,
-                name: common.label,
-                value: common.value.unwrap_or("".to_string()),
-                designation: common
-                    .purpose
-                    .map(|p| p.into())
-                    .unwrap_or(one_pux::item::FieldDesignation::None),
-                field_type: common.field_type.into(),
+                id: match &attrs.label {
+                    l if l == &attrs.label => "",
+                    l => l,
+                }
+                .to_string(), // TODO :: Clear if same as name i think, needs checking
+                name: attrs.label,
+                value: attrs.value.unwrap_or_default(),
+                designation: attrs.purpose.map(|p| p.into()).unwrap_or_default(),
+                field_type: val.into(),
             }
         }
     }
@@ -1114,37 +1158,155 @@ pub mod field {
     // TODO :: SSHKey support
     impl From<Field> for one_pux::section::Field {
         fn from(val: Field) -> Self {
-            let common = val.attrs;
+            let multiline = val.get_attrs().value.clone().is_some_and(|v| v.contains('\n'));
 
-            one_pux::section::Field {
-                title: common.label,
-                id: common.id,
-                value: match common.field_type {
-                    Type::String => {
-                        one_pux::section::Value::String(common.value.unwrap_or_default())
+            match val {
+                Field::String { attrs } => one_pux::section::Field {
+                    title: attrs.label,
+                    id: attrs.id,
+                    value: one_pux::section::Value::String(attrs.value.unwrap_or_default()),
+                    multiline,
+                    ..Default::default()
+                },
+                Field::Concealed { attrs, .. } => one_pux::section::Field {
+                    title: attrs.label,
+                    id: attrs.id,
+                    value: one_pux::section::Value::Concealed(attrs.value.unwrap_or_default()),
+                    multiline,
+                    ..Default::default()
+                },
+                Field::Otp { attrs } => one_pux::section::Field {
+                    title: attrs.label,
+                    id: attrs.id,
+                    value: one_pux::section::Value::TOTP(attrs.value.unwrap_or_default()),
+                    multiline,
+                    input_traits: one_pux::section::InputTraits {
+                        correction: one_pux::section::Correction::No,
+                        capitalization: one_pux::section::Capitalization::None,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                Field::CreditCardNumber { attrs } => one_pux::section::Field {
+                    title: attrs.label,
+                    id: attrs.id,
+                    value: one_pux::section::Value::CreditCardNumber(
+                        attrs.value.unwrap_or_default(),
+                    ),
+                    guarded: true,
+                    multiline,
+                    clipboard_filter: Some("0123456789".to_string()),
+                    input_traits: one_pux::section::InputTraits {
+                        keyboard: one_pux::section::Keyboard::NumberPad,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                Field::Menu { attrs } => one_pux::section::Field {
+                    title: attrs.label,
+                    id: attrs.id,
+                    value: one_pux::section::Value::Menu(attrs.value.unwrap_or_default()),
+                    multiline,
+                    ..Default::default()
+                },
+                Field::Date { attrs } => one_pux::section::Field {
+                    title: attrs.label,
+                    id: attrs.id,
+                    value: one_pux::section::Value::Date(
+                        attrs.value.map(|v| usize::from_str(&v).unwrap()),
+                    ),
+                    multiline,
+                    ..Default::default()
+                },
+                Field::MonthYear { attrs } => one_pux::section::Field {
+                    title: attrs.label,
+                    id: attrs.id,
+                    value: one_pux::section::Value::MonthYear(
+                        attrs.value.map(|v| usize::from_str(&v).unwrap()),
+                    ),
+                    multiline,
+                    ..Default::default()
+                },
+                Field::Url { attrs } => one_pux::section::Field {
+                    title: attrs.label,
+                    id: attrs.id,
+                    value: one_pux::section::Value::Url(attrs.value.unwrap_or_default()),
+                    multiline,
+                    input_traits: one_pux::section::InputTraits {
+                        keyboard: one_pux::section::Keyboard::URL,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                Field::Phone { attrs } => one_pux::section::Field {
+                    title: attrs.label,
+                    id: attrs.id,
+                    value: one_pux::section::Value::Phone(attrs.value.unwrap_or_default()),
+                    multiline,
+                    input_traits: one_pux::section::InputTraits {
+                        keyboard: one_pux::section::Keyboard::NamePhonePad,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                Field::Address { attrs } => {
+                    let value = attrs.value.unwrap();
+                    let mut split = value.split(", ").collect::<Vec<&str>>();
+                    let mut next = || -> String {
+                        let value = split.remove(0);
+                        if value == "<nil>" {
+                            return String::new();
+                        }
+
+                        value.to_string()
+                    };
+
+                    one_pux::section::Field {
+                        title: attrs.label,
+                        id: attrs.id,
+                        value: one_pux::section::Value::Address {
+                            street: next(),
+                            city: next(),
+                            state: next(),
+                            zip: next(),
+                            country: next(),
+                        },
+                        multiline,
+                        ..Default::default()
                     }
-                    Type::Concealed => {
-                        one_pux::section::Value::Concealed(common.value.unwrap_or_default())
-                    }
-                    Type::SshKey => one_pux::section::Value::SshKey {
-                        private_key: "".to_string(),
+                }
+                Field::Email { attrs } => one_pux::section::Field {
+                    title: attrs.label,
+                    id: attrs.id,
+                    value: one_pux::section::Value::Email {
+                        email_address: attrs.value.unwrap_or_default(),
+                        provider: None, // TODO
+                    },
+                    guarded: true,
+                    multiline,
+                    input_traits: one_pux::section::InputTraits {
+                        keyboard: one_pux::section::Keyboard::EmailAddress,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                Field::SshKey { attrs } => one_pux::section::Field {
+                    title: attrs.label,
+                    id: attrs.id,
+                    value: one_pux::section::Value::SshKey {
+                        private_key: attrs.value.clone().unwrap_or_default(),
                         metadata: one_pux::section::SshKeyMetadata {
-                            private_key: "".to_string(),
-                            public_key: "".to_string(),
-                            fingerprint: "".to_string(),
-                            key_type: "".to_string(),
+                            private_key: attrs.value.unwrap_or_default(),
+                            // These values are all their own individual fields
+                            public_key: "".to_string(),  // TODO
+                            fingerprint: "".to_string(), // TODO
+                            key_type: "".to_string(),    // TODO
                         },
                     },
-                    Type::Email => one_pux::section::Value::Email {
-                        email_address: common.value.unwrap_or_default(),
-                        provider: None,
-                    },
-                    Type::OTP => one_pux::section::Value::TOTP(common.value.unwrap_or_default()),
+                    guarded: true,
+                    multiline,
+                    ..Default::default()
                 },
-                guarded: false,
-                multiline: false,
-                dont_generate: false,
-                input_traits: one_pux::section::InputTraits::default(),
             }
         }
     }
@@ -1179,19 +1341,6 @@ pub mod field {
 
                 Ok(fields)
             }
-
-            // fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
-            //     where
-            //         A: MapAccess<'de>,
-            // {
-            //     info!("Visiting map");
-            //     while let Some(key) = map.next_key::<String>()? {
-            //         info!("Visiting key: {}", key);
-            //         info!("Visiting value: {}", map.next_value::<String>()?);
-            //     }
-            //
-            //     Err(Error::custom("Not implemented map"))
-            // }
         }
 
         deserializer.deserialize_any(FieldVisitor)
@@ -1209,15 +1358,12 @@ pub mod section {
     }
 
     impl Section {
-        pub fn into(self, fields: Vec<super::field::Field>) -> one_pux::item::AdditionalSection {
+        pub fn into(self) -> one_pux::item::AdditionalSection {
             one_pux::item::AdditionalSection {
-                title: self.id.clone(),
-                name: self.label.unwrap_or_default(),
-                fields: fields
-                    .into_iter()
-                    .filter(|f| f.attrs.section.clone().is_some_and(|s| s.id == self.id))
-                    .map(|f| f.into())
-                    .collect(),
+                title: self.label.unwrap_or_default(),
+                name: self.id.clone(),
+                fields: vec![],
+                hide_add_another_field: false,
             }
         }
     }
