@@ -1,6 +1,7 @@
 use crate::config::backend::Backend;
 use crate::config::runtime::RuntimeConfig;
 use crate::sources::bitwarden::BitWardenCore;
+use crate::sources::downloader::Downloader;
 use crate::sources::op::core::OnePasswordCore;
 use crate::sources::s3::S3Core;
 use async_trait::async_trait;
@@ -54,8 +55,24 @@ impl ExporterSource {
     pub async fn create(&self, config: &RuntimeConfig) -> Result<Vec<Backend>> {
         match self {
             Self::S3 => S3Core::interactive(config).await,
-            Self::BitWarden => BitWardenCore::interactive(config).await,
-            Self::OnePassword => OnePasswordCore::interactive(config).await,
+            Self::BitWarden => {
+                let bars = MultiProgress::new();
+                let main_bar = bars.add(ProgressBar::new_spinner());
+                main_bar.set_message("Setting up BitWarden CLI");
+                BitWardenCore::download_cli(config, &main_bar, &bars).await?;
+                main_bar.finish_and_clear();
+
+                BitWardenCore::interactive(config).await
+            }
+            Self::OnePassword => {
+                let bars = MultiProgress::new();
+                let main_bar = bars.add(ProgressBar::new_spinner());
+                main_bar.set_message("Setting up 1Password CLI");
+                OnePasswordCore::download_cli(config, &main_bar, &bars).await?;
+                main_bar.finish_and_clear();
+
+                OnePasswordCore::interactive(config).await
+            }
         }
     }
 }

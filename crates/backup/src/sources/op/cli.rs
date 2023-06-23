@@ -1,110 +1,208 @@
-#![allow(dead_code)]
+pub mod identifier {
+    use std::fmt::{Display, Formatter};
 
-use crate::config::runtime::RuntimeConfig;
-use crate::sources::downloader::Downloader;
-use crate::sources::op::core::OnePasswordCore;
-use async_trait::async_trait;
-use lib::anyhow::Result;
-use std::process::Command;
+    #[derive(Default, Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+    pub struct Identifier {
+        // TODO :: Seems like its an enum with the rename_all of camelCase
+        /// The internal identifier for this entity.
+        #[serde(default, skip_serializing_if = "String::is_empty")]
+        pub id: String,
 
-#[async_trait]
-pub(super) trait CliGetter<T> {
-    async fn get(config: &RuntimeConfig, envs: &[(&str, &str)], args: &[&str]) -> Result<T>;
+        /// The user facing & modifiable name for this entity.
+        #[serde(default, skip_serializing_if = "String::is_empty")]
+        pub label: String,
+    }
 
-    fn prepared(config: &RuntimeConfig, envs: &[(&str, &str)], args: &[&str]) -> Command {
-        let mut command = OnePasswordCore::base_command(config);
-        envs.into_iter().for_each(|(key, value)| {
-            command.env(key, value);
-        });
-        command.args(args);
-        command
+    impl Display for Identifier {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+            write!(f, "{label}-{id}", label = &self.label, id = &self.id)
+        }
     }
 }
 
-pub mod user {
-    use crate::config::runtime::RuntimeConfig;
-    use crate::sources::op::cli::CliGetter;
-    use async_trait::async_trait;
-    use chrono::{DateTime, FixedOffset};
-    use lib::anyhow::{anyhow, Context, Result};
+pub mod state {
     use serde::{Deserialize, Serialize};
-    use serde_json::from_slice;
-    use tracing::trace;
+    use std::fmt::{Display, Formatter};
 
-    // TODO :: Add more types
-    #[derive(Debug, Clone, Serialize, Deserialize)]
-    #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-    pub enum Type {
-        Member,
-        ServiceAccount,
-    }
-
-    // TODO :: Add more states
-    #[derive(Default, Debug, Clone, Serialize, Deserialize)]
+    // TODO -> Are there any other states?
+    #[derive(Default, Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
     #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
     pub enum State {
         #[default]
         Active,
+        Archived,
+    }
+
+    impl Display for State {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+            write!(f, "{self:?}")
+        }
+    }
+}
+
+pub mod dated {
+    use chrono::{DateTime, Utc};
+    use serde::{Deserialize, Serialize};
+    use std::fmt::{Display, Formatter};
+
+    #[derive(Default, Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+    pub struct Dated {
+        pub created_at: DateTime<Utc>,
+        pub updated_at: DateTime<Utc>,
+    }
+
+    impl Display for Dated {
+        // TODO -> Relative time?
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+            write!(
+                f,
+                "[C@{created_at} - U@{updated_at}]",
+                created_at = &self.created_at.format("%Y-%m-%d"),
+                updated_at = &self.updated_at.format("%Y-%m-%d")
+            )
+        }
+    }
+}
+
+pub mod user {
+    use crate::sources::getter::CliGetter;
+    use crate::sources::op::core::OnePasswordCore;
+    use async_trait::async_trait;
+    use chrono::{DateTime, FixedOffset, Utc};
+
+    use serde::{Deserialize, Serialize};
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct Attrs {
+        /// The internal user identifier.
+        pub id: String,
+
+        /// The users name.
+        pub name: String,
+
+        /// The users email address.
+        pub email: String,
+
+        /// The account state of the user.
+        pub state: super::state::State,
+
+        /// The date information for the user.
+        #[serde(flatten)]
+        pub dated: super::dated::Dated,
+
+        /// When this user was last authenticated with the cli.
+        pub last_auth_at: DateTime<Utc>,
     }
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
-    pub struct User {
-        pub id: String,
-        pub name: String,
-        pub email: String,
-        #[serde(rename = "type")]
-        pub user_type: Type,
-        pub state: State,
-        pub created_at: DateTime<FixedOffset>,
-        pub updated_at: DateTime<FixedOffset>,
-        pub last_auth_at: DateTime<FixedOffset>,
+    #[serde(rename_all = "SCREAMING_SNAKE_CASE", tag = "type")]
+    pub enum User {
+        Member {
+            #[serde(flatten)]
+            attrs: Attrs,
+        },
+        ServiceAccount {
+            #[serde(flatten)]
+            attrs: Attrs,
+        },
     }
 
     #[async_trait]
-    impl CliGetter<User> for User {
-        async fn get(config: &RuntimeConfig, envs: &[(&str, &str)], args: &[&str]) -> Result<User> {
-            let mut command = Self::prepared(config, envs, args);
-            command.args(args).args(["user", "get", "--me", "--format=json"]);
-            trace!("Running command: {:?}", command);
-            let output = command.output().context("Failed to get user from cli")?;
+    impl CliGetter<OnePasswordCore, User, [&'static str; 3]> for User {
+        const ARGS: [&'static str; 3] = ["user", "get", "--me"];
+    }
 
-            match output.status.success() {
-                false => Err(anyhow!(
-                    "Failed to get user from cli: {}",
-                    String::from_utf8_lossy(&output.stderr)
-                )),
-                true => from_slice(&output.stdout)
-                    .map_err(|e| anyhow!("Failed to parse user from cli: {}", e)),
+    // TODO -> macro for this?
+    impl User {
+        const fn attrs(&self) -> &Attrs {
+            match self {
+                User::Member { attrs } => attrs,
+                User::ServiceAccount { attrs } => attrs,
             }
         }
+
+        pub fn id(&self) -> &str {
+            &self.attrs().id
+        }
+
+        pub fn name(&self) -> &str {
+            &self.attrs().name
+        }
+
+        pub fn email(&self) -> &str {
+            &self.attrs().email
+        }
+
+        pub fn state(&self) -> &super::state::State {
+            &self.attrs().state
+        }
+
+        pub fn dated(&self) -> &super::dated::Dated {
+            &self.attrs().dated
+        }
+
+        pub fn last_auth_at(&self) -> &DateTime<Utc> {
+            &self.attrs().last_auth_at
+        }
+    }
+
+    #[test]
+    fn test_serialisation() {
+        let json = r#"
+{
+  "type": "MEMBER",
+  "id": "LAIQMSG1PWNMCA9LAS5KLSDURN",
+  "name": "Test Name",
+  "email": "test@gmail.com",
+  "state": "ACTIVE",
+  "created_at": "2023-01-28T06:14:27Z",
+  "updated_at": "2023-01-28T06:15:18Z",
+  "last_auth_at": "2023-06-23T08:14:56Z"
+}
+        "#
+        .trim();
+
+        let user = serde_json::from_str::<User>(json).unwrap();
+        let serialised = serde_json::to_string_pretty(&user).unwrap();
+
+        assert_eq!(json, serialised, "Serialisation should be the same");
+    }
+}
+
+pub mod whoami {
+    use crate::sources::getter::CliGetter;
+    use crate::sources::op::core::OnePasswordCore;
+    use serde::{Deserialize, Serialize};
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+    pub enum WhoAmI {
+        User {
+            #[serde(flatten)]
+            short: super::account::Short,
+        },
+        ServiceAccount {
+            #[serde(rename = "URL")]
+            url: String,
+            #[serde(rename_all = "camelCase")]
+            service_account_type: String, // TODO -> Enum?
+        },
+    }
+
+    impl CliGetter<OnePasswordCore, WhoAmI, [&'static str; 1]> for WhoAmI {
+        const ARGS: [&'static str; 1] = ["whoami"];
     }
 }
 
 pub mod account {
     use crate::config::runtime::RuntimeConfig;
-    use crate::sources::op::cli::CliGetter;
+    use crate::sources::getter::CliGetter;
+    use crate::sources::op::core::OnePasswordCore;
     use crate::sources::op::one_pux;
     use async_trait::async_trait;
-    use chrono::{DateTime, FixedOffset};
-    use lib::anyhow::{anyhow, Context, Result};
+    use chrono::{DateTime, FixedOffset, Utc};
+    use lib::anyhow::Result;
     use serde::{Deserialize, Serialize};
-    use serde_json::from_slice;
-    use tracing::trace;
-
-    #[derive(Debug, Clone, Serialize, Deserialize)]
-    #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-    pub enum Type {
-        Individual,
-        Business,
-    }
-
-    // TODO :: Add more states
-    #[derive(Default, Debug, Clone, Serialize, Deserialize)]
-    #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-    pub enum State {
-        #[default]
-        Active,
-    }
 
     /// This comes from the list of account gotten with `op list accounts`
     #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -116,127 +214,123 @@ pub mod account {
     }
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
-    #[serde(rename_all = "PascalCase")]
-    pub struct WhoAmI {
-        #[serde(rename = "URL")]
-        pub url: String,
-        pub service_account_type: String,
-    }
-
-    /// A long detailed account gotten with `op account get`
-    #[derive(Debug, Clone, Serialize, Deserialize)]
-    pub struct Account {
+    pub struct Attrs {
+        /// The internal unique identifier for the account.
         pub id: String,
+
+        /// The account owners name
         pub name: String,
-        #[serde(rename = "type")]
-        pub account_type: Type,
-        pub state: State,
-        pub created_at: DateTime<FixedOffset>,
+
+        /// The 1password domain for this account
+        /// ### This is only the subdomain and not the entire url.
+        pub domain: String,
+
+        /// The accounts current state.
+        pub state: super::state::State,
+
+        /// When this account was created.
+        pub created_at: DateTime<Utc>,
     }
 
-    /// A struct containing both the short and long account info
     #[derive(Debug, Clone, Serialize, Deserialize)]
-    pub struct Fused {
-        pub whoami: WhoAmI,
-        pub long: Account,
+    #[serde(rename_all = "SCREAMING_SNAKE_CASE", tag = "type")]
+    pub enum Account {
+        Individual {
+            #[serde(flatten)]
+            attrs: Attrs,
+
+            #[serde(default, skip)]
+            short: Option<Short>,
+        },
+        Business {
+            #[serde(flatten)]
+            attrs: Attrs,
+
+            #[serde(default, skip)]
+            short: Option<Short>,
+        },
     }
 
-    #[async_trait]
-    impl CliGetter<Vec<Short>> for Short {
-        async fn get(
-            config: &RuntimeConfig,
-            envs: &[(&str, &str)],
-            args: &[&str],
-        ) -> Result<Vec<Short>> {
-            let mut command = Self::prepared(config, envs, args);
-            command.args(args).args(["account", "list", "--format=json"]);
-            trace!("Running command: {:?}", command);
-            let output = command.output().context("Failed to get accounts list from cli")?;
+    impl CliGetter<OnePasswordCore, Vec<Short>, [&'static str; 2]> for Short {
+        const ARGS: [&'static str; 2] = ["account", "list"];
+    }
 
-            match output.status.success() {
-                false => Err(anyhow!(
-                    "Failed to get accounts list from cli output: {}",
-                    String::from_utf8_lossy(&output.stderr)
-                )),
-                true => from_slice(&output.stdout)
-                    .map_err(|e| anyhow!("Failed to parse accounts list from cli output: {}", e)),
+    impl CliGetter<OnePasswordCore, Account, [&'static str; 2]> for Account {
+        const ARGS: [&'static str; 2] = ["account", "get"];
+    }
+
+    impl Account {
+        fn get_attrs(&self) -> &Attrs {
+            match self {
+                Account::Individual { attrs, .. } => attrs,
+                Account::Business { attrs, .. } => attrs,
             }
         }
-    }
 
-    #[async_trait]
-    impl CliGetter<WhoAmI> for WhoAmI {
-        async fn get(
-            config: &RuntimeConfig,
-            envs: &[(&str, &str)],
-            args: &[&str],
-        ) -> Result<WhoAmI> {
-            let mut command = Self::prepared(config, envs, args);
-            command.args(["whoami", "--format=json"]);
-            trace!("Running command: {:?}", command);
-            let output = command.output().context("Failed to get whoami from cli")?;
-
-            match output.status.success() {
-                false => Err(anyhow!(
-                    "Failed to get whoami from cli output: {}",
-                    String::from_utf8_lossy(&output.stderr)
-                )),
-                true => from_slice(&output.stdout)
-                    .map_err(|e| anyhow!("Failed to parse whoami from cli output: {}", e)),
+        fn get_short(&self) -> Option<&Short> {
+            match self {
+                Account::Individual { short, .. } => short,
+                Account::Business { short, .. } => short,
             }
+            .as_ref()
         }
     }
 
-    #[async_trait]
-    impl CliGetter<Account> for Account {
-        async fn get(
-            config: &RuntimeConfig,
-            envs: &[(&str, &str)],
-            args: &[&str],
-        ) -> Result<Account> {
-            let mut command = Self::prepared(config, envs, args);
-            command.args(["account", "get", "--format=json"]);
-            trace!("Running command: {:?}", command);
-            let output = command.output().context("Failed to get account from cli")?;
+    impl From<Account> for one_pux::account::Attrs {
+        fn from(value: Account) -> one_pux::account::Attrs {
+            let attrs = value.get_attrs().to_owned();
+            let short = value.get_short();
 
-            match output.status.success() {
-                false => Err(anyhow!(
-                    "Failed to get account from cli output: {}",
-                    String::from_utf8_lossy(&output.stderr)
-                )),
-                true => from_slice(&output.stdout)
-                    .map_err(|e| anyhow!("Failed to parse account from cli output: {}", e)),
-            }
-        }
-    }
-
-    #[async_trait]
-    impl CliGetter<Fused> for Fused {
-        async fn get(
-            config: &RuntimeConfig,
-            envs: &[(&str, &str)],
-            args: &[&str],
-        ) -> Result<Fused> {
-            let long = Account::get(config, envs, args);
-            let whoami = WhoAmI::get(config, envs, args);
-
-            Ok(Fused {
-                whoami: whoami.await?,
-                long: long.await?,
-            })
-        }
-    }
-
-    impl From<Fused> for one_pux::account::Attrs {
-        fn from(value: Fused) -> one_pux::account::Attrs {
             one_pux::account::Attrs {
-                account_name: value.long.name.clone(),
-                name: value.long.name,
+                account_name: attrs.name.clone(),
+                name: attrs.name,
                 avatar: "".to_string(), // TODO -> Unsure if this is available // Is a filename from the archive
-                email: "".to_string(),  // TODO -> Unsure if this is available
-                uuid: value.long.id,
-                domain: format!("https://{}/", value.whoami.url),
+                email: short.map(|s| s.email).unwrap_or_default(),
+                uuid: attrs.id,
+                domain: format!("https://{}.1password.com/", value.get_attrs().domain),
             }
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+
+        #[test]
+        fn test_short() {
+            let json = r#"
+{
+  "url": "teamamt.1password.com",
+  "email": "tangentmoons@gmail.com",
+  "user_uuid": "MNNFSRC5WNAJLO4KMQ4EHVLQWA",
+  "account_uuid": "OJMGKJBNAJHSRHRO6YY4DVWE6Y"
+}
+"#
+            .trim();
+
+            let short = serde_json::from_str::<super::Short>(json).unwrap();
+            let serialised = serde_json::to_string_pretty(&short).unwrap();
+
+            assert_eq!(json, serialised, "Serialisation should be the same");
+        }
+
+        #[test]
+        fn test_account() {
+            let json = r#"
+{
+  "type": "INDIVIDUAL",
+  "id": "LAIQMSG1PWNMCA9LAS5KLSDURN",
+  "name": "Test Name",
+  "domain": "my",
+  "state": "ARCHIVED",
+  "created_at": "2023-02-05T05:07:29Z"
+}
+"#
+            .trim();
+
+            let account = serde_json::from_str::<super::Account>(json).unwrap();
+            let serialised = serde_json::to_string_pretty(&account).unwrap();
+
+            assert_eq!(json, serialised, "Serialisation should be the same");
         }
     }
 }
@@ -303,19 +397,25 @@ pub mod item {
     use crate::sources::op::account::AccountCommon;
     use chrono::{DateTime, FixedOffset};
     use clap::ValueEnum;
-    use lib::anyhow::Context;
+    use indicatif::{MultiProgress, ParallelProgressIterator, ProgressBar};
+    use lib::{anyhow, anyhow::Context, anyhow::Result};
     use rayon::prelude::*;
     use serde::{Deserialize, Serialize};
     use serde_json::from_slice;
     use std::fmt::{Display, Formatter};
     use std::process::Command;
-    use tracing::{instrument, trace};
+    use tracing::{error, instrument, trace};
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
     #[serde(rename_all = "SCREAMING_SNAKE_CASE", tag = "category")]
     pub enum Item {
         /// Additional is the value of the field `username`
         Login {
+            #[serde(flatten)]
+            attrs: Attrs,
+        },
+        /// An explicit password without a username, why the fuck does this exist???????
+        Password {
             #[serde(flatten)]
             attrs: Attrs,
         },
@@ -403,6 +503,7 @@ pub mod item {
             #[serde(flatten)]
             attrs: Attrs,
         },
+        // TODO -> Very much broken currently, will block import
         /// Represents an ssh-key.
         /// Additional is the value of the field `public_key`
         SshKey {
@@ -417,14 +518,6 @@ pub mod item {
             /// The unique value which identifies this item type.
             category_id: String,
         },
-    }
-
-    #[derive(Default, Debug, Clone, Serialize, Deserialize, ValueEnum)]
-    #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-    pub enum State {
-        #[default]
-        Active,
-        Archived,
     }
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -449,7 +542,7 @@ pub mod item {
 
         /// The state of the item, either active or archived.
         #[serde(default)]
-        state: State,
+        state: super::state::State,
 
         /// A reference to the vault which owns this item.
         vault: super::vault::Reference,
@@ -457,11 +550,8 @@ pub mod item {
         /// The UUID of the User which last edited this item
         last_edited_by: String,
 
-        /// The time at which this item was created.
-        created_at: DateTime<FixedOffset>,
-
-        /// The time at which this item was last updated.
-        updated_at: DateTime<FixedOffset>,
+        #[flatten]
+        dated: super::dated::Dated,
 
         // TODO :: Seems to be category specific
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -480,15 +570,10 @@ pub mod item {
         fields: Vec<super::field::Field>,
     }
 
-    impl Display for State {
-        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-            write!(f, "{self:?}")
-        }
-    }
-
     impl From<Item> for one_pux::item::Attrs {
         fn from(val: Item) -> Self {
             let attrs = val.get_attrs().clone();
+
             one_pux::item::Attrs {
                 uuid: attrs.id,
                 fav_index: attrs.favorite.into(),
@@ -519,7 +604,7 @@ pub mod item {
             match field {
                 None => None,
                 Some(details) => Some(one_pux::item::PasswordDetails {
-                    password_strength: details.strength.into(),
+                    password_strength: details.strength.map(|s| s.into()).unwrap_or_default(),
                     password_base_entropy: details.entropy as f64,
                     password_generated: details.generated,
                 }),
@@ -546,8 +631,10 @@ pub mod item {
         }
     }
 
-    impl From<Item> for one_pux::item::Details {
-        fn from(value: Item) -> one_pux::item::Details {
+    impl TryFrom<Item> for one_pux::item::Details {
+        type Error = anyhow::Error; // TODO -> ThisError
+
+        fn try_from(value: Item) -> Result<one_pux::item::Details> {
             let mut fields = value.get_attrs().fields.clone();
 
             let mut password_history = None;
@@ -563,7 +650,10 @@ pub mod item {
                         password_details, ..
                     } => {
                         if password_details.is_some() {
-                            let into = password_details.clone().unwrap().into();
+                            let into = password_details
+                                .clone() // TODO -> Better error handling
+                                .expect(&*format!("Get password details of {value}"))
+                                .into();
                             let _ = password_history.insert(into);
                         }
                     }
@@ -613,24 +703,27 @@ pub mod item {
                             .find(|s| s.title.is_empty() && s.name.is_empty())
                             .is_none()
                     {
-                        sections.insert(
-                            0,
-                            one_pux::item::AdditionalSection {
-                                name: "".to_string(),
-                                title: "".to_string(),
-                                fields: vec![],
-                                hide_add_another_field: false,
-                            },
-                        )
+                        sections.insert(0, one_pux::item::AdditionalSection::default())
                     }
 
-                    sections.first_mut().unwrap().fields.push(field.into());
+                    sections
+                        .first_mut()
+                        .context("Get empty section for fields.")?
+                        .fields
+                        .push(field.into());
                     continue;
                 }
 
+                let section_ref = attrs.section.as_ref().with_context(|| {
+                    format!(
+                        "Get section for field {} of item {value}.",
+                        attrs.identifier,
+                    )
+                })?;
+
                 sections
                     .iter_mut()
-                    .find(|s| s.name == attrs.section.as_ref().unwrap().id)
+                    .find(|s| s.name == section_ref.identifier.id)
                     .map(|s| s.fields.push(field.into()));
             }
 
@@ -640,7 +733,7 @@ pub mod item {
             }
             .flatten();
 
-            one_pux::item::Details {
+            Ok(one_pux::item::Details {
                 login_fields,
                 notes_plain,
                 sections,
@@ -648,22 +741,24 @@ pub mod item {
                     .context("Unwrap password history")
                     .unwrap_or_default(),
                 document_attributes,
-            }
+            })
         }
     }
 
-    impl From<Item> for one_pux::item::Item {
+    impl TryFrom<Item> for one_pux::item::Item {
+        type Error = anyhow::Error; // TODO -> ThisError
+
         // TODO -> Don't clone twice
-        fn from(value: Item) -> one_pux::item::Item {
+        fn try_from(value: Item) -> Result<one_pux::item::Item> {
             let attrs = value.clone().into();
             let overview = value.clone().into();
-            let details = value.into();
+            let details = value.try_into()?;
 
-            one_pux::item::Item {
+            Ok(one_pux::item::Item {
                 attrs,
                 overview,
                 details,
-            }
+            })
         }
     }
 
@@ -674,6 +769,7 @@ pub mod item {
                 Item::CreditCard { .. } => "002",
                 Item::SecureNote { .. } => "003",
                 Item::Identity { .. } => "004",
+                Item::Password { .. } => "005", // TODO -> Double check this is correct
                 Item::Document { .. } => "006",
                 Item::SoftwareLicense { .. } => "100",
                 Item::Database { .. } => "102",
@@ -699,6 +795,7 @@ pub mod item {
                 Item::CreditCard { attrs, .. } => attrs,
                 Item::SecureNote { attrs, .. } => attrs,
                 Item::Identity { attrs, .. } => attrs,
+                Item::Password { attrs, .. } => attrs,
                 Item::Document { attrs, .. } => attrs,
                 Item::SoftwareLicense { attrs, .. } => attrs,
                 Item::Database { attrs, .. } => attrs,
@@ -717,24 +814,40 @@ pub mod item {
             }
         }
 
-        fn raw(vault_id: &String, mut command: Command) -> Vec<u8> {
+        fn raw(vault_id: &String, mut command: Command) -> Result<Vec<u8>> {
             command
                 .args(["item", "list"])
-                .args(["--vault", vault_id, "--format=json"])
+                .args([/*"--include-archive",*/ "--vault", vault_id, "--format=json"]) // TODO -> Add archive support
                 .output()
-                .context("Unwrap vault list")
-                .unwrap()
-                .stdout
+                .with_context(|| format!("Get item list from vault {vault_id}."))
+                .inspect(|o| {
+                    if !o.status.success() {
+                        error!("Failed to get item list from vault {vault_id}.");
+                        error!("stdout: {}", String::from_utf8_lossy(&o.stdout));
+                        error!("stderr: {}", String::from_utf8_lossy(&o.stderr));
+                    }
+                })
+                .map(|o| o.stdout)
         }
 
-        fn raw_long(vault_id: &String, item_id: &String, mut command: Command) -> Vec<u8> {
+        fn raw_long(
+            vault: &super::vault::Reference,
+            item: Item,
+            mut command: Command,
+        ) -> Result<Vec<u8>> {
             command
-                .args(["item", "get", item_id])
-                .args(["--vault", vault_id, "--format=json"])
+                .args(["item", "get", &item.get_attrs().id])
+                .args(["--vault", &vault.id, "--format=json"])
                 .output()
-                .context("Unwrap vault item")
-                .unwrap()
-                .stdout
+                .with_context(|| format!("Get item {item} from vault {vault}."))
+                .inspect(|o| {
+                    if !o.status.success() {
+                        error!("Failed to get long item {item} from vault {vault}.");
+                        error!("stdout: {}", String::from_utf8_lossy(&o.stdout));
+                        error!("stderr: {}", String::from_utf8_lossy(&o.stderr));
+                    }
+                })
+                .map(|o| o.stdout)
         }
 
         #[instrument]
@@ -742,39 +855,64 @@ pub mod item {
             vault: super::vault::Vault,
             account: &&dyn AccountCommon,
             config: &RuntimeConfig,
-        ) -> Vec<Item> {
+            bars: (&ProgressBar, &MultiProgress),
+        ) -> Result<Vec<Item>> {
             trace!("Requesting Items from {vault}");
+            let bar = bars.1.insert_after(bars.0, lib::progress::spinner_with_count());
 
-            let raw = Self::raw(&vault.reference.id, account.command(config));
-            let parsed = from_slice::<Vec<Item>>(&raw).context("Deserialize items list").unwrap();
-            parsed
+            bar.set_message(format!("Requesting items from `{vault}` vault...",));
+
+            let items = Self::raw(&vault.reference.id, account.command(config))
+                .and_then(|raw| from_slice::<Vec<Item>>(&raw).context("Deserialize items list"))?;
+
+            bar.set_length(items.len() as u64);
+            bar.set_message(format!("Requesting items details from `{vault}` vault...",));
+
+            let items = items
                 .into_par_iter()
-                .map(|item| {
-                    Self::raw_long(
-                        &vault.reference.id,
-                        &item.get_attrs().id,
-                        account.command(config),
-                    )
+                .progress_with(bar)
+                .map(|item| Self::raw_long(&vault.reference, item, account.command(config)))
+                .map(|r| {
+                    if r.is_err() {
+                        return Err(r.err().unwrap());
+                    }
+
+                    let vec = r.unwrap();
+                    from_slice::<Item>(vec.as_slice()).context("Deserialize item")
                 })
-                .map(|raw| from_slice::<Item>(&raw).context("Deserialize item").unwrap())
-                .collect() // TODO :: Sort by creation date?
+                .collect::<Vec<Result<Item>>>();
+
+            let mut fin = vec![];
+            for item in items {
+                fin.push(item?)
+            }
+
+            Ok(fin)
+        }
+    }
+
+    impl Display for Item {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+            write!(f, "{}-{}", self.get_attrs().id, self.get_attrs().title)
         }
     }
 }
 
 pub mod vault {
     use crate::config::runtime::RuntimeConfig;
+    use crate::sources::getter::CliGetter;
     use crate::sources::op::account::AccountCommon;
-    use crate::sources::op::cli::CliGetter;
+    use crate::sources::op::core::OnePasswordCore;
     use crate::sources::op::one_pux;
-    use async_trait::async_trait;
+
     use chrono::{DateTime, FixedOffset};
-    use lib::anyhow::Context;
+    use lib::anyhow::{Context, Result};
     use serde::{Deserialize, Serialize};
     use serde_json::from_slice;
+
     use std::fmt::Display;
     use std::process::Command;
-    use tracing::trace;
+    use tracing::{error, trace};
 
     // TODO -> Possible to merge cli & 1pux types?
     #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -817,59 +955,42 @@ pub mod vault {
         }
     }
 
-    #[async_trait]
-    impl CliGetter<Vec<Reference>> for Reference {
-        async fn get(
-            config: &RuntimeConfig,
-            envs: &[(&str, &str)],
-            args: &[&str],
-        ) -> lib::anyhow::Result<Vec<Reference>>
-        where
-            Self: Sized,
-        {
-            let mut command = Self::prepared(config, envs, args);
-            command.args(["vault", "list", "--format=json"]);
-            trace!("Running command {:?}", command);
-
-            let output = command.output()?;
-            let stdout = output.stdout;
-            let stderr = output.stderr;
-
-            if !output.status.success() {
-                return Err(lib::anyhow::anyhow!(
-                    "Command {:?} failed with status {:?} and stderr {:?}",
-                    command,
-                    output.status,
-                    String::from_utf8_lossy(&stderr)
-                ));
-            }
-
-            let parsed = from_slice::<Vec<Reference>>(&stdout)?;
-            Ok(parsed)
-        }
+    impl CliGetter<OnePasswordCore, Vec<Reference>, [&'static str; 2]> for Reference {
+        const ARGS: [&'static str; 2] = ["vault", "list"];
     }
 
     impl Vault {
-        fn raw(vault_id: &String, mut command: Command) -> Vec<u8> {
+        fn raw(vault_id: &String, mut command: Command) -> Result<Vec<u8>> {
             command
                 .args(["vault", "get", vault_id, "--format=json"])
                 .output()
-                .context("Unwrap vault get")
-                .unwrap()
-                .stdout
+                .with_context(|| format!("Get vault {vault_id}."))
+                .inspect(|o| {
+                    if !o.status.success() {
+                        error!("Failed to get item list from vault {vault_id}.");
+                        error!("stdout: {}", String::from_utf8_lossy(&o.stdout));
+                        error!("stderr: {}", String::from_utf8_lossy(&o.stderr));
+                    }
+                })
+                .map(|o| o.stdout)
         }
 
-        pub fn parse(account: &&dyn AccountCommon, config: &RuntimeConfig) -> Vec<Vault> {
-            account
-                .vaults()
-                .into_iter()
-                .inspect(|vault| trace!("Requesting Vault {vault}",))
-                .map(|reference| Self::raw(&reference.id, account.command(config)))
-                .inspect(|output| trace!("Parsing Vault JSON {}", String::from_utf8_lossy(output)))
-                .map(|output| {
-                    from_slice::<Vault>(output.as_slice()).context("Deserialise vault").unwrap()
-                })
-                .collect()
+        pub fn parse(account: &&dyn AccountCommon, config: &RuntimeConfig) -> Result<Vec<Vault>> {
+            let vaults = account.vaults();
+
+            let mut final_vaults = vec![];
+            for vault in vaults {
+                trace!("Requesting Vault {vault}",);
+                let raw = Self::raw(&vault.id, account.command(config))?;
+                let parsed = from_slice::<Vault>(raw.as_slice()).with_context(|| {
+                    format!("Deserialise vault from {}", String::from_utf8_lossy(&raw))
+                })?;
+                trace!("Parsed Vault {parsed}");
+
+                final_vaults.push(parsed);
+            }
+
+            Ok(final_vaults)
         }
     }
 
@@ -899,27 +1020,34 @@ pub mod vault {
 pub mod url {
     use super::super::one_pux;
     use serde::{Deserialize, Serialize};
+    use tracing::instrument;
 
-    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[derive(Default, Debug, Clone, Serialize, Deserialize)]
     pub struct Url {
+        /// The user defined & editable label for the url.
         #[serde(default)]
         pub label: Option<String>,
+
+        /// Whether this is the primary url.
         #[serde(default)]
         pub primary: bool,
+
+        /// The url itself.
         pub href: String,
     }
 
-    impl Default for Url {
-        fn default() -> Self {
-            Url {
-                label: None,
-                primary: false,
-                href: "".to_string(),
-            }
+    pub trait UrlsExt {
+        fn get_primary(&self) -> Option<&Url>;
+    }
+
+    impl UrlsExt for Vec<Url> {
+        fn get_primary(&self) -> Option<&Url> {
+            self.iter().find(|u| u.primary)
         }
     }
 
     impl From<Url> for one_pux::item::UrlObject {
+        #[instrument(name = "Url -> UrlObject")]
         fn from(val: Url) -> Self {
             one_pux::item::UrlObject {
                 url: val.href,
@@ -932,6 +1060,7 @@ pub mod url {
 
 pub mod field {
     use super::super::one_pux;
+
     use serde::de::{SeqAccess, Visitor};
     use serde::{Deserialize, Deserializer, Serialize};
     use std::fmt;
@@ -939,7 +1068,7 @@ pub mod field {
     use tracing::debug;
 
     #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
-    #[serde(rename_all = "UPPERCASE")]
+    #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
     pub enum Purpose {
         Username,
         Password,
@@ -947,40 +1076,50 @@ pub mod field {
     }
 
     #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
-    #[serde(rename_all = "UPPERCASE")]
+    #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
     pub enum PasswordStrength {
+        /// Represents 0-30
         Terrible,
+        /// Represents 31-45
+        Weak,
+        /// Represents 46-55
+        Fair,
+        /// Represents 56-60
         Good,
+        /// From 61-75
+        VeryGood,
+        /// From 76-80
+        Excellent,
+        /// From 81-100
+        Fantastic,
     }
 
     #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+    #[serde(rename_all = "camelCase")]
     pub struct PasswordDetails {
         // TODO -> Might be deprecated due to root root level entropy field
         #[serde(default)]
         pub entropy: usize,
-        #[serde(default)]
-        pub generated: bool, // TODO -> Serialise only if true
-        pub strength: PasswordStrength,
-        #[serde(default)]
+        #[serde(default, skip_serializing_if = "one_pux::not_default")]
+        pub generated: bool,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pub strength: Option<PasswordStrength>,
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
         pub history: Vec<String>,
     }
 
     #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
     pub struct Attrs {
-        // TODO :: Seems like its an enum with the rename_all of camelCase
-        /// An internal identifier for the field, not shown to user.
-        pub id: String,
+        #[serde(flatten)]
+        pub identifier: super::identifier::Identifier,
 
         /// If present references the additional section the field belongs to.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         pub section: Option<super::section::Section>,
 
-        // TODO -> docs
+        /// Defines that this field is a special field with a specific purpose.
         #[serde(default)]
         pub purpose: Option<Purpose>,
-
-        /// The user visible and editable label for the field.
-        pub label: String,
 
         /// The value/data of the field if present.
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1009,6 +1148,10 @@ pub mod field {
         Otp {
             #[serde(flatten)]
             attrs: Attrs,
+
+            /// The currently active OTP code for the field.
+            #[serde(default, skip_serializing_if = "Option::is_none")]
+            totp: Option<String>,
         },
         CreditCardNumber {
             #[serde(flatten)]
@@ -1053,6 +1196,19 @@ pub mod field {
             #[serde(flatten)]
             attrs: Attrs,
         },
+        /// Defines a reference to another item;
+        /// This item can be within the same vault or another vault.
+        Reference {
+            #[serde(flatten)]
+            attrs: Attrs,
+        },
+        // TODO: Investigate further
+        /// Seems to be a fallback for the cli to handle fields it hasn't updated to support yet.
+        /// I've only seen this happen with the sso field type.
+        Unknown {
+            #[serde(flatten)]
+            attrs: Attrs,
+        },
     }
 
     impl Field {
@@ -1093,15 +1249,25 @@ pub mod field {
                 Field::Address { attrs, .. } => attrs,
                 Field::Email { attrs, .. } => attrs,
                 Field::SshKey { attrs, .. } => attrs,
+                Field::Reference { attrs, .. } => attrs,
+                Field::Unknown { attrs, .. } => attrs,
             }
         }
     }
 
     impl From<PasswordStrength> for usize {
+        /// Converts a password strength to a percentage.
+        /// Since we can't extract the exact number from the cli,
+        /// we'll just use the lower bound of the range.
         fn from(val: PasswordStrength) -> Self {
             match val {
-                PasswordStrength::Terrible => 20,
-                PasswordStrength::Good => 40,
+                PasswordStrength::Terrible => 0,
+                PasswordStrength::Weak => 31,
+                PasswordStrength::Fair => 46,
+                PasswordStrength::Good => 56,
+                PasswordStrength::VeryGood => 61,
+                PasswordStrength::Excellent => 76,
+                PasswordStrength::Fantastic => 81,
             }
         }
     }
@@ -1130,12 +1296,12 @@ pub mod field {
         fn from(val: Field) -> Self {
             let attrs = val.get_attrs().clone();
             one_pux::item::Field {
-                id: match &attrs.label {
-                    l if l == &attrs.label => "",
+                id: match &attrs.identifier.label {
+                    l if l == &attrs.identifier.label => "",
                     l => l,
                 }
                 .to_string(), // TODO :: Clear if same as name i think, needs checking
-                name: attrs.label,
+                name: attrs.identifier.label,
                 value: attrs.value.unwrap_or_default(),
                 designation: attrs.purpose.map(|p| p.into()).unwrap_or_default(),
                 field_type: val.into(),
@@ -1158,28 +1324,17 @@ pub mod field {
     // TODO :: SSHKey support
     impl From<Field> for one_pux::section::Field {
         fn from(val: Field) -> Self {
-            let multiline = val.get_attrs().value.clone().is_some_and(|v| v.contains('\n'));
-
-            match val {
+            let mut field = match val {
                 Field::String { attrs } => one_pux::section::Field {
-                    title: attrs.label,
-                    id: attrs.id,
                     value: one_pux::section::Value::String(attrs.value.unwrap_or_default()),
-                    multiline,
                     ..Default::default()
                 },
                 Field::Concealed { attrs, .. } => one_pux::section::Field {
-                    title: attrs.label,
-                    id: attrs.id,
                     value: one_pux::section::Value::Concealed(attrs.value.unwrap_or_default()),
-                    multiline,
                     ..Default::default()
                 },
-                Field::Otp { attrs } => one_pux::section::Field {
-                    title: attrs.label,
-                    id: attrs.id,
+                Field::Otp { attrs, .. } => one_pux::section::Field {
                     value: one_pux::section::Value::TOTP(attrs.value.unwrap_or_default()),
-                    multiline,
                     input_traits: one_pux::section::InputTraits {
                         correction: one_pux::section::Correction::No,
                         capitalization: one_pux::section::Capitalization::None,
@@ -1188,13 +1343,10 @@ pub mod field {
                     ..Default::default()
                 },
                 Field::CreditCardNumber { attrs } => one_pux::section::Field {
-                    title: attrs.label,
-                    id: attrs.id,
                     value: one_pux::section::Value::CreditCardNumber(
                         attrs.value.unwrap_or_default(),
                     ),
                     guarded: true,
-                    multiline,
                     clipboard_filter: Some("0123456789".to_string()),
                     input_traits: one_pux::section::InputTraits {
                         keyboard: one_pux::section::Keyboard::NumberPad,
@@ -1203,35 +1355,23 @@ pub mod field {
                     ..Default::default()
                 },
                 Field::Menu { attrs } => one_pux::section::Field {
-                    title: attrs.label,
-                    id: attrs.id,
                     value: one_pux::section::Value::Menu(attrs.value.unwrap_or_default()),
-                    multiline,
                     ..Default::default()
                 },
                 Field::Date { attrs } => one_pux::section::Field {
-                    title: attrs.label,
-                    id: attrs.id,
                     value: one_pux::section::Value::Date(
                         attrs.value.map(|v| usize::from_str(&v).unwrap()),
                     ),
-                    multiline,
                     ..Default::default()
                 },
                 Field::MonthYear { attrs } => one_pux::section::Field {
-                    title: attrs.label,
-                    id: attrs.id,
                     value: one_pux::section::Value::MonthYear(
                         attrs.value.map(|v| usize::from_str(&v).unwrap()),
                     ),
-                    multiline,
                     ..Default::default()
                 },
                 Field::Url { attrs } => one_pux::section::Field {
-                    title: attrs.label,
-                    id: attrs.id,
                     value: one_pux::section::Value::Url(attrs.value.unwrap_or_default()),
-                    multiline,
                     input_traits: one_pux::section::InputTraits {
                         keyboard: one_pux::section::Keyboard::URL,
                         ..Default::default()
@@ -1239,8 +1379,6 @@ pub mod field {
                     ..Default::default()
                 },
                 Field::Phone { attrs } => one_pux::section::Field {
-                    title: attrs.label,
-                    id: attrs.id,
                     value: one_pux::section::Value::Phone(attrs.value.unwrap_or_default()),
                     multiline,
                     input_traits: one_pux::section::InputTraits {
@@ -1250,9 +1388,13 @@ pub mod field {
                     ..Default::default()
                 },
                 Field::Address { attrs } => {
-                    let value = attrs.value.unwrap();
+                    let value = attrs.value.unwrap_or_default();
                     let mut split = value.split(", ").collect::<Vec<&str>>();
                     let mut next = || -> String {
+                        if split.is_empty() {
+                            return String::new();
+                        }
+
                         let value = split.remove(0);
                         if value == "<nil>" {
                             return String::new();
@@ -1262,8 +1404,6 @@ pub mod field {
                     };
 
                     one_pux::section::Field {
-                        title: attrs.label,
-                        id: attrs.id,
                         value: one_pux::section::Value::Address {
                             street: next(),
                             city: next(),
@@ -1271,19 +1411,15 @@ pub mod field {
                             zip: next(),
                             country: next(),
                         },
-                        multiline,
                         ..Default::default()
                     }
                 }
                 Field::Email { attrs } => one_pux::section::Field {
-                    title: attrs.label,
-                    id: attrs.id,
                     value: one_pux::section::Value::Email {
                         email_address: attrs.value.unwrap_or_default(),
                         provider: None, // TODO
                     },
                     guarded: true,
-                    multiline,
                     input_traits: one_pux::section::InputTraits {
                         keyboard: one_pux::section::Keyboard::EmailAddress,
                         ..Default::default()
@@ -1291,8 +1427,6 @@ pub mod field {
                     ..Default::default()
                 },
                 Field::SshKey { attrs } => one_pux::section::Field {
-                    title: attrs.label,
-                    id: attrs.id,
                     value: one_pux::section::Value::SshKey {
                         private_key: attrs.value.clone().unwrap_or_default(),
                         metadata: one_pux::section::SshKeyMetadata {
@@ -1304,10 +1438,24 @@ pub mod field {
                         },
                     },
                     guarded: true,
-                    multiline,
                     ..Default::default()
                 },
-            }
+                Field::Reference { attrs, .. } => one_pux::section::Field {
+                    value: one_pux::section::Value::Reference(attrs.value.unwrap_or_default()),
+                    ..Default::default()
+                },
+                Field::Unknown { attrs } => one_pux::section::Field {
+                    value: one_pux::section::Value::String(attrs.value.unwrap_or_default()),
+                    ..Default::default()
+                },
+            };
+
+            let attrs = val.get_attrs().clone();
+            field.title = attrs.identifier.label;
+            field.id = attrs.identifier.id;
+            // TODO -> This is a bit hacky but it works for some items, if the field doesn't have a nl we can't know that it should be multiline
+            field.multiline = attrs.value.as_ref().is_some_and(|v| v.contains('\n'));
+            field
         }
     }
 
@@ -1353,17 +1501,16 @@ pub mod section {
 
     #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
     pub struct Section {
-        pub id: String,
-        pub label: Option<String>,
+        #[serde(flatten)]
+        pub identifier: super::identifier::Identifier,
     }
 
-    impl Section {
-        pub fn into(self) -> one_pux::item::AdditionalSection {
-            one_pux::item::AdditionalSection {
-                title: self.label.unwrap_or_default(),
-                name: self.id.clone(),
-                fields: vec![],
-                hide_add_another_field: false,
+    impl From<Section> for one_pux::item::AdditionalSection {
+        fn from(value: Section) -> Self {
+            Self {
+                title: value.identifier.label,
+                name: value.identifier.id,
+                ..Default::default()
             }
         }
     }

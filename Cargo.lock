@@ -340,6 +340,7 @@ dependencies = [
 name = "backup"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "async-trait",
  "bytes",
  "chrono",
@@ -358,10 +359,11 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
+ "serde_test",
+ "thiserror",
  "tokio",
  "tokio-util",
  "tracing",
- "tracing-subscriber",
  "value-bag",
  "zip",
 ]
@@ -1647,7 +1649,9 @@ dependencies = [
  "number_prefix",
  "portable-atomic",
  "rayon",
+ "unicode-segmentation",
  "unicode-width",
+ "vt100",
 ]
 
 [[package]]
@@ -3061,6 +3065,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_test"
+version = "1.0.164"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "797c38160e2546a56e1e3439496439597e938669673ffd8af02a12f070da648f"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "serde_urlencoded"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3842,6 +3855,18 @@ name = "version_check"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
+
+[[package]]
+name = "vt100"
+version = "0.15.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "84cd863bf0db7e392ba3bd04994be3473491b31e66340672af5d11943c6274de"
+dependencies = [
+ "itoa",
+ "log",
+ "unicode-width",
+ "vte",
+]
 
 [[package]]
 name = "vte"

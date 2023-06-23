@@ -63,7 +63,7 @@ pub async fn main(destination: PathBuf, cli: Cli, is_interactive: bool) -> Resul
             let mut handles = vec![];
             for exporter in config.config.exporters.clone() {
                 let passed_progress = multi_bar.add(spinner());
-                passed_progress.set_message(format!("Running exporter: {}", exporter));
+                passed_progress.set_message(format!("Running exporter: {exporter}"));
 
                 let total_progress = total_progress.clone();
                 let config = config.clone();

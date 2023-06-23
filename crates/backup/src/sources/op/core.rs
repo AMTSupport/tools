@@ -12,7 +12,7 @@ use async_trait::async_trait;
 use const_format::formatcp;
 use indicatif::{MultiProgress, ProgressBar};
 use inquire::Select;
-use lib::anyhow::Context;
+use lib::anyhow::{anyhow, Context};
 use lib::anyhow::Result;
 use lib::fs::normalise_path;
 use serde::{Deserialize, Serialize};
@@ -108,11 +108,11 @@ impl Exporter for OnePasswordCore {
     async fn export(
         &mut self,
         config: &RuntimeConfig,
-        _main_bar: &ProgressBar,
-        _progress_bar: &MultiProgress,
+        main_bar: &ProgressBar,
+        progress_bar: &MultiProgress,
     ) -> Result<()> {
         let account = self.account.get();
-        let export = one_pux::export::Export::from(account, config)?;
+        let (export, errors) = one_pux::export::Export::from(account, config, (main_bar, progress_bar))?;
 
         let file = self.account.get().directory(config).join(export.name);
         let file = normalise_path(file);
@@ -138,6 +138,10 @@ impl Exporter for OnePasswordCore {
         }
 
         zip.finish().context("Finish export file")?;
+
+        if errors.len() > 0 {
+            return Err(anyhow!("Errors occurred during export: {:?}", errors));
+        }
 
         return Ok(());
     }

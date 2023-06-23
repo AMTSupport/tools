@@ -11,8 +11,11 @@ pub mod export {
     use crate::config::runtime::RuntimeConfig;
     use crate::sources::op::cli;
     use chrono::Local;
-    use lib::anyhow::Result;
+    use indicatif::{MultiProgress, ProgressBar};
+    use lib::anyhow::{anyhow, Result};
     use serde::{Deserialize, Serialize};
+    use tracing::{error, warn};
+    use lib::anyhow;
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct Data {
@@ -28,24 +31,58 @@ pub mod export {
     }
 
     impl Export {
+        // TODO -> Better error handling
         pub fn from(
             value: &dyn super::super::account::AccountCommon,
             config: &RuntimeConfig,
-        ) -> Result<Self> {
-            let pairs = cli::vault::Vault::parse(&value, config)
-                .into_iter()
-                .map(|vault| (vault.clone(), cli::item::Item::parse(vault, &value, config)))
-                .collect::<Vec<(cli::vault::Vault, Vec<cli::item::Item>)>>();
+            bars: (&ProgressBar, &MultiProgress),
+        ) -> Result<(Self, Vec<anyhow::Error>)> {
+            let vaults = cli::vault::Vault::parse(&value, config)?;
+            if vaults.is_empty() {
+                return Err(anyhow!("No vaults found in account {}", value));
+            }
+
+            let mut errors = vec![];
+            let mut finished = vec![];
+            for vault in vaults {
+                let attrs = vault.clone().into();
+
+                let items = match cli::item::Item::parse(vault.clone(), &value, config, bars) {
+                    Ok(items) => items,
+                    Err(e) => {
+                        error!("Failed to parse items for vault {vault}: {e}");
+                        errors.push(e);
+                        continue;
+                    }
+                };
+
+                if items.is_empty() {
+                    warn!("No items found in vault {vault}");
+                }
+
+                let mut parsed = vec![];
+                for item in items {
+                    let item: super::item::Item = match item.try_into() {
+                        Ok(item) => item,
+                        Err(e) => {
+                            error!("Failed to parse item : {e}");
+                            errors.push(e);
+                            continue;
+                        }
+                    };
+
+                    parsed.push(item);
+                }
+
+                finished.push(super::vault::Vault {
+                    attrs,
+                    items: parsed,
+                })
+            }
 
             let data = vec![super::account::Account {
                 attrs: value.account().clone().into(),
-                vaults: pairs
-                    .into_iter()
-                    .map(|(vault, items)| super::vault::Vault {
-                        attrs: vault.into(),
-                        items: items.into_iter().map(|item| item.into()).collect(),
-                    })
-                    .collect(),
+                vaults: finished,
             }];
 
             let name = format!(
@@ -54,13 +91,25 @@ pub mod export {
                 time = Local::now().format("%Y%m%d-%H%M%S")
             );
 
-            Ok(Export {
+            let export = Export {
                 name,
                 data: Data { accounts: data },
                 attributes: super::attributes::Attributes::default(),
                 files: vec![], // TODO
-            })
+            };
+
+            Ok((export, errors))
         }
+    }
+}
+
+pub mod identifier {
+    use serde::{Deserialize, Serialize};
+
+    #[derive(Default, Debug, Clone, Serialize, Deserialize)]
+    pub struct Identifier {
+        pub id: String,
+        pub title: String,
     }
 }
 
@@ -170,7 +219,7 @@ pub mod section {
     use serde::{Deserialize, Serialize};
 
     // TODO :: Merge with loginField?
-    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[derive(Default, Debug, Clone, Serialize, Deserialize)]
     #[serde(rename_all = "camelCase")]
     pub struct Field {
         /// The user-facing title of the field
@@ -203,30 +252,14 @@ pub mod section {
         pub input_traits: InputTraits,
     }
 
-    impl Default for Field {
-        fn default() -> Self {
-            Self {
-                title: String::new(),
-                id: String::new(),
-                value: Value::String(String::new()),
-                guarded: false,
-                clipboard_filter: None,
-                multiline: false,
-                dont_generate: false,
-                placeholder: None,
-                input_traits: InputTraits::default(),
-            }
-        }
-    }
-
-    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[derive(Default, Debug, Clone, Serialize, Deserialize)]
     #[serde(rename_all = "camelCase")]
     pub struct SsoItem {
         pub vault_uuid: String,
         pub vault_name: String,
     }
 
-    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[derive(Default, Debug, Clone, Serialize, Deserialize)]
     #[serde(rename_all = "camelCase")]
     pub struct SshKeyMetadata {
         pub private_key: String,
@@ -248,6 +281,7 @@ pub mod section {
         MonthYear(Option<usize>),
         Date(Option<usize>),
         CreditCardNumber(String),
+        Reference(String),
         Address {
             street: String,
             city: String,
@@ -307,6 +341,12 @@ pub mod section {
         None,
         Sentences,
         AllCharacters,
+    }
+
+    impl Default for Value {
+        fn default() -> Self {
+            Value::String(String::new())
+        }
     }
 
     impl Value {
@@ -380,7 +420,7 @@ pub mod item {
         }
     }
 
-    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[derive(Default, Debug, Clone, Serialize, Deserialize)]
     pub struct AdditionalSection {
         pub title: String,
 
@@ -496,6 +536,10 @@ pub mod item {
     }
 }
 
-fn is_default<T: Default + PartialEq>(t: &T) -> bool {
+pub(crate) fn is_default<T: Default + PartialEq>(t: &T) -> bool {
     t == &T::default()
+}
+
+pub(crate) fn not_default<T: Default + PartialEq>(t: &T) -> bool {
+    t != &T::default()
 }

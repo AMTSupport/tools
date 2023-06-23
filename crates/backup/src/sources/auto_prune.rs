@@ -1,8 +1,8 @@
 use crate::config::runtime::RuntimeConfig;
 use indicatif::MultiProgress;
 use lib::anyhow::Result;
-use tracing::debug;
 use std::path::PathBuf;
+use tracing::debug;
 
 // TODO :: Implement logic from cleaner crate to handle this!
 pub trait Prune {
@@ -19,6 +19,24 @@ pub trait Prune {
     /// # Returns
     /// A `Result` with the `Vec<PathBuf>` of the files which were removed.
     fn prune(&self, config: &RuntimeConfig, _progress_bar: &MultiProgress) -> Result<Vec<PathBuf>> {
+        // let files = self.files(config).sort_by(|a, b| {
+        //     fn chrono(path: &PathBuf) -> Result<DateTime<FixedOffset>> {
+        //         let meta = path.metadata().context("Get meta for comparing times")?;
+        //         let mtime = meta.modified().context("Get modified time for comparing times")?;
+        //
+        //         let now = SystemTime::now();
+        //         let age = now.duration_since(mtime).context("Get duration since modified time")?;
+        //         match Duration::from_std(age) {
+        //             Ok(d) => Ok(d)
+        //             Err(_) => {}
+        //         }
+        //         context("Convert std to chrono")
+        //     }
+        //
+        //     let a = a.metadata();
+        //     let b = b.metadata();
+        //     a.metadata()
+        // });
         let files = self.files(config);
         let mut files = files.iter();
         let mut removed_files = vec![];

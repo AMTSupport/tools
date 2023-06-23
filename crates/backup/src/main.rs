@@ -12,6 +12,7 @@ use std::path::PathBuf;
 pub async fn main() -> Result<()> {
     let cli = application::Cli::try_parse()?;
     lib::log::init("backup-interactive", &cli.flags)?;
+    rayon::ThreadPoolBuilder::new().num_threads(22).build_global().unwrap();
     application::main(select_location()?, cli, true).await
 
     // TODO :: Verify writable

@@ -234,10 +234,10 @@ impl Exporter for S3Core {
                 && backup_len > config.config.rules.auto_prune.keep_latest
             {
                 let since_mtime = Utc::now() - meta.last_modified().unwrap();
-                if since_mtime.num_days() > config.config.rules.auto_prune.keep_for as i64 {
+                if since_mtime.num_days() > config.config.rules.auto_prune.days as i64 {
                     debug!(
                         "File is older than {}, skipping.",
-                        &config.config.rules.auto_prune.keep_for
+                        &config.config.rules.auto_prune.days
                     );
                     progress_state.inc(1);
                     continue;

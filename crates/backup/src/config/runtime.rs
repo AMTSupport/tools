@@ -160,7 +160,7 @@ impl RuntimeConfig {
             };
 
             if let Ok(days) = inquire::Text::new("How long do you want to retain backups for?")
-                .with_default(&prune.keep_for.to_string())
+                .with_default(&prune.days.to_string())
                 .with_validator(|v: &_| match usize::from_str(v).is_ok() {
                     true => Ok(Validation::Valid),
                     false => Ok(Validation::Invalid(
@@ -169,7 +169,7 @@ impl RuntimeConfig {
                 })
                 .prompt()
             {
-                prune.keep_for = usize::from_str(&days)?;
+                prune.days = usize::from_str(&days)?;
             }
 
             if let Ok(minimum) = inquire::Text::new(

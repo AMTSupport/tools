@@ -14,6 +14,14 @@ pub fn spinner() -> ProgressBar {
     spinner
 }
 
+pub fn spinner_with_count() -> ProgressBar {
+    let spinner = ProgressBar::new_spinner().with_style(
+        style_spinner().template("{spinner:.green} {msg:.cyan/blue} {pos}/{len}").unwrap(),
+    );
+    spinner.enable_steady_tick(Duration::from_millis(50));
+    spinner
+}
+
 pub fn bar(len: u64) -> ProgressBar {
     let bar = ProgressBar::new(len).with_style(style_bar());
     bar.enable_steady_tick(Duration::from_millis(50));
@@ -39,7 +47,6 @@ pub fn style_bar() -> ProgressStyle {
         .tick_chars(TICK_CHARS)
         .progress_chars(PROGRESS_CHARS)
         .template(BAR_TEMPLATE)
-        // .template("{spinner:.green} {pos}/{len} [{wide_bar:.cyan/blue}]")
         .unwrap()
 }
 
@@ -49,5 +56,4 @@ pub fn download_style() -> ProgressStyle {
         .progress_chars(PROGRESS_CHARS)
         .template(DOWNLOAD_TEMPLATE)
         .unwrap()
-    // .template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})").unwrap()
 }

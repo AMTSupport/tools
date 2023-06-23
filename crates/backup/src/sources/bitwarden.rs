@@ -10,12 +10,12 @@ use indicatif::{MultiProgress, ProgressBar};
 use lib::anyhow;
 use lib::anyhow::{anyhow, Context};
 use lib::fs::normalise_path;
-use tracing::{error, info};
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::fmt::{Display, Formatter};
 use std::path::PathBuf;
 use std::process::Command;
+use tracing::{error, info};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BitWardenCore {
@@ -184,29 +184,36 @@ impl Exporter for BitWardenCore {
         _main_bar: &ProgressBar,
         _progress_bar: &MultiProgress,
     ) -> Result<()> {
-        let output_file = self.backup_dir(config).join(format!(
-            "{org_id}_{date}.json",
-            org_id = &self.org_id,
-            date = chrono::Local::now().format("%Y-%m-%dT%H:%M:%SZ%z")
-        ));
+        let export = |format: &str, ext: &str| -> Result<()> {
+            let output_file = normalise_path(self.backup_dir(config).join(format!(
+                "{org_id}_{date}-{format}.{ext}",
+                org_id = &self.org_id,
+                date = chrono::Local::now().format("%Y-%m-%dT%H:%M:%SZ%z")
+            )));
 
-        let output_file = normalise_path(output_file);
+            let cmd = self
+                .command(config)
+                .arg("export")
+                .args(["--organizationid", &self.org_id])
+                .args(["--format", format])
+                .args(["--output", output_file.to_str().unwrap()])
+                .output()
+                .context(format!("Create bitwarden export for {}", &self.org_name))?;
 
-        let cmd = self
-            .command(config)
-            .arg("export")
-            .args(["--organizationid", &self.org_id])
-            .args(["--format", "csv"])
-            .args(["--output", output_file.to_str().unwrap()])
-            .output()
-            .context("Run BitWarden export command")?;
+            if !cmd.stderr.is_empty() {
+                let string = String::from_utf8(cmd.stderr)?;
+                return Err(anyhow!(
+                    "BitWarden export for {} failed: {string}",
+                    &self.org_name
+                ));
+            }
 
-        if !cmd.stderr.is_empty() {
-            let string = String::from_utf8(cmd.stderr)?;
-            return Err(anyhow!("BitWarden export failed: {string}"));
-        }
+            Ok(())
+        };
 
-        Ok(())
+        export("encrypted_json", "json")?;
+        export("json", "json")?;
+        export("csv", "csv")
     }
 }
 
