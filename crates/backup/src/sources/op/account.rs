@@ -1,13 +1,14 @@
 use crate::config::runtime::RuntimeConfig;
 use crate::sources::downloader::Downloader;
 use crate::sources::exporter::Exporter;
+use crate::sources::getter::{CliGetter, CommandFiller};
 use crate::sources::interactive::Interactive;
 use crate::sources::op::cli;
-use crate::sources::op::cli::CliGetter;
 use crate::sources::op::core::OnePasswordCore;
 use async_trait::async_trait;
+use futures_util::TryFutureExt;
 use inquire::list_option::ListOption;
-use inquire::validator::Validation;
+use inquire::validator::{StringValidator, Validation};
 use inquire::{MultiSelect, Text};
 use lib::anyhow::{anyhow, Context, Result};
 use lib::fs::normalise_path;
@@ -16,47 +17,125 @@ use std::fmt::{Debug, Display, Formatter};
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
+use tracing::warn;
 
-#[cfg(unix)]
-use std::os::unix::prelude::PermissionsExt;
-use futures_util::TryFutureExt;
+#[derive(Debug, Clone)]
+pub struct Attrs {
+    pub user: cli::user::User,
+    pub account: cli::account::Account,
+    pub vaults: Vec<cli::vault::Reference>,
+}
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub enum OnePasswordAccount {
-    Service(ServiceAccount),
-    Personal(PersonalAccount),
+    Personal { attrs: Attrs },
+    Service { attrs: Attrs, token: String },
 }
 
 impl OnePasswordAccount {
-    pub fn get(&self) -> &dyn AccountCommon {
+    fn new_personal(attrs: Attrs) -> Self {
+        Self::Personal { attrs }
+    }
+
+    fn new_service(attrs: Attrs, token: String) -> Self {
+        Self::Service { attrs, token }
+    }
+
+    pub fn get_attrs(&self) -> &Attrs {
         match self {
-            Self::Service(account) => account,
-            Self::Personal(account) => account,
+            Self::Personal { attrs, .. } => attrs,
+            Self::Service { attrs, .. } => attrs,
         }
+    }
+
+    /// Creates a new command with the required environment variables & arguments for the account.
+    pub(crate) fn command(&self, config: &RuntimeConfig) -> Command {
+        let mut command = OnePasswordCore::base_command(config);
+        let (fill_args, fill_envs) = self.fill();
+        command.args(fill_args);
+        command.envs(fill_envs);
+        command
+    }
+
+    /// Returns the directory where the account's data is stored.
+    /// This will be within the root 1Password directory with a unique name to identity the account.
+    pub(crate) fn directory(&self, config: &RuntimeConfig) -> Result<PathBuf> {
+        let directory = normalise_path(OnePasswordCore::data_dir(config).join(format!("{self}")));
+        if !directory.exists() {
+            fs::create_dir_all(&directory).with_context(|| {
+                format!(
+                    "Failed to create directories for dir of: {}",
+                    directory.display()
+                )
+            })?;
+
+            #[cfg(unix)]
+            use std::os::unix::prelude::PermissionsExt;
+            #[cfg(unix)]
+            fs::set_permissions(&directory, fs::Permissions::from_mode(0o700)).with_context(
+                || {
+                    format!(
+                        "Failed to set required permissions on directory: {}",
+                        directory.display()
+                    )
+                },
+            )?;
+        }
+
+        Ok(directory)
     }
 }
 
 impl Display for OnePasswordAccount {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Service(account) => write!(f, "Service Account: {account}"),
-            Self::Personal(account) => write!(f, "Personal Account: {account}"),
-        }
+        let attrs = self.get_attrs();
+        let attrs = attrs.account.get_attrs();
+
+        write!(
+            f,
+            "{name}@{domain}.1password",
+            name = attrs.identifier,
+            domain = attrs.domain
+        )
     }
+}
+
+impl CommandFiller for OnePasswordAccount {
+    fn fill(&self) -> (Vec<&str>, Vec<(&str, &str)>) {
+        let mut envs = vec![];
+        let mut args = vec![];
+        match self {
+            Self::Service { token, .. } => {
+                envs.push(("OP_SERVICE_ACCOUNT_TOKEN", token.as_str()));
+            }
+            Self::Personal { attrs } => {
+                args.extend(["--account", attrs.account.get_attrs().identifier.id()]);
+            }
+        };
+
+        (args, envs)
+    }
+}
+
+impl Interactive<OnePasswordAccount> for OnePasswordAccount {
+    async fn interactive(config: &RuntimeConfig) -> Result<OnePasswordAccount> {
+        todo!()
+    }
+}
+
+fn prompt_input<T: StringValidator>(message: &str, validator: Option<T>) -> Result<String> {
+    use inquire::{validator::Validation, Text};
+
+    let prompt = Text::new();
+
+    Text::new(message).with_validator(validator).prompt().context("Prompt for input")
 }
 
 #[async_trait]
 pub trait AccountCommon
 where
-    Self: Display + Debug + Send + Sync + 'static,
+    Self: Send + Sync + 'static,
 {
-    /// Creates a new command with the required environment variables & arguments for the account.
-    fn command(&self, config: &RuntimeConfig) -> Command;
-
-    /// Returns the directory where the account's data is stored.
-    /// This will be within the root 1Password directory with a unique name to identity the account.
-    fn directory(&self, config: &RuntimeConfig) -> PathBuf;
-
     /// Ensures that the directory exists and has the correct permissions wanted by 1Password.
     /// 1Password requires that directories have 700 permissions. (Only the owner can read, write, and execute)
     fn ensure_directory(&self, config: &RuntimeConfig) -> Result<()> {
@@ -72,7 +151,7 @@ where
 
     fn vaults(&self) -> &[cli::vault::Reference];
 
-    fn account(&self) -> &cli::account::Fused;
+    fn account(&self) -> &cli::account::Account;
 
     fn user(&self) -> &cli::user::User;
 }
@@ -80,7 +159,7 @@ where
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServiceAccount {
     pub user: cli::user::User,
-    pub account: cli::account::Fused,
+    pub account: cli::account::Account,
     pub token: String,
     pub vaults: Vec<cli::vault::Reference>,
 }
@@ -88,7 +167,7 @@ pub struct ServiceAccount {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PersonalAccount {
     pub user: cli::user::User,
-    pub account: cli::account::Fused,
+    pub account: cli::account::Account,
     pub vaults: Vec<cli::vault::Reference>,
 }
 
@@ -104,22 +183,45 @@ impl Interactive<OnePasswordAccount> for ServiceAccount {
 
         let envs: [(&str, &str); 1] = [("OP_SERVICE_ACCOUNT_TOKEN", &token)];
 
-        let user = cli::user::User::get(config, &envs, &[]);
-        let account = cli::account::Fused::get(config, &envs, &[]);
+        let user = cli::user::User::_get(config, &envs, &[]);
+        let short = cli::account::Short::_get(config, &envs, &[]);
+        let account = cli::account::Account::_get(config, &envs, &[]).and_then(|a| async move {
+            let attrs = a.get_attrs();
+            let short = match short.await {
+                Ok(short) => Some(short),
+                Err(e) => {
+                    warn!("Failed to get short account: {}", e);
+                    None
+                }
+            }
+            .and_then(|s| s.into_iter().find(|s| s.account_uuid == attrs.identifier.id()));
 
-        let vaults = cli::vault::Reference::get(config, &envs, &[]).and_then(|v| async move {
+            match short {
+                None => Ok(a),
+                some => match a {
+                    cli::account::Account::Business { attrs, .. } => {
+                        Ok(cli::account::Account::Business { attrs, short: some })
+                    }
+                    cli::account::Account::Individual { attrs, .. } => {
+                        Ok(cli::account::Account::Individual { attrs, short: some })
+                    }
+                },
+            }
+        });
+
+        let vaults = cli::vault::Reference::_get(config, &envs, &[]).and_then(|v| async {
             match v.len() {
                 0 => Err(anyhow!("No vaults found for this account.")),
                 1 => Ok(v),
                 _ => MultiSelect::new("Select the vaults you want to use", v)
-                    .with_validator(
-                        |selections: &[ListOption<&cli::vault::Reference>]| match selections.len() {
+                    .with_validator(|selections: &[ListOption<&cli::vault::Reference>]| {
+                        match selections.len() {
                             0 => Ok(Validation::Invalid(
                                 "You must select at least one vault.".into(),
                             )),
                             _ => Ok(Validation::Valid),
-                        },
-                    )
+                        }
+                    })
                     .prompt()
                     .context("Get vaults from user selection"),
             }
@@ -219,87 +321,22 @@ impl Interactive<OnePasswordAccount> for PersonalAccount {
     }
 }
 
-#[async_trait]
-impl AccountCommon for ServiceAccount {
-    fn command(&self, config: &RuntimeConfig) -> Command {
-        let mut command = OnePasswordCore::base_command(config);
-        command.env("OP_SERVICE_ACCOUNT_TOKEN", &self.token);
-        command
-    }
-
-    fn directory(&self, config: &RuntimeConfig) -> PathBuf {
-        let dir = OnePasswordCore::base_dir(config).join(format!("{self}"));
-        normalise_path(dir)
-    }
-
-    fn vaults(&self) -> &[cli::vault::Reference] {
-        &self.vaults
-    }
-
-    fn account(&self) -> &cli::account::Fused {
-        &self.account
-    }
-
-    fn user(&self) -> &cli::user::User {
-        &self.user
-    }
-}
-
-#[async_trait]
-impl AccountCommon for PersonalAccount {
-    fn command(&self, config: &RuntimeConfig) -> Command {
-        let mut command = OnePasswordCore::base_command(config);
-        command.args(["--account", &self.account.long.id]);
-        command
-    }
-
-    // TODO :: Ensure this is a valid directory name on windows
-    fn directory(&self, config: &RuntimeConfig) -> PathBuf {
-        let dir = OnePasswordCore::base_dir(config).join(format!("{self}"));
-        normalise_path(dir)
-    }
-
-    fn vaults(&self) -> &[cli::vault::Reference] {
-        &self.vaults
-    }
-
-    fn account(&self) -> &cli::account::Fused {
-        &self.account
-    }
-
-    fn user(&self) -> &cli::user::User {
-        &self.user
-    }
-}
-
 impl Display for ServiceAccount {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{name}@{domain}",
-            name = self.user.name,
-            domain = self
-                .account
-                .whoami
-                .url
-                .strip_prefix("https://")
-                .unwrap_or(&self.account.whoami.url)
-        )
+        account_display(self, f)
     }
 }
 
 impl Display for PersonalAccount {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{name}@{domain}",
-            name = &self.user.name,
-            domain = self
-                .account
-                .whoami
-                .url
-                .strip_prefix("https://")
-                .unwrap_or(&self.account.whoami.url)
-        )
+        account_display(self, f)
     }
+}
+
+fn account_display<A: AccountCommon>(account: &A, f: &mut Formatter<'_>) -> std::fmt::Result {
+    let attrs = account.account().get_attrs();
+    let domain = &attrs.domain;
+    let name = &attrs.identifier.named();
+
+    write!(f, "{name}@{domain}.1password")
 }

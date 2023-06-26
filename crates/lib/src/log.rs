@@ -3,7 +3,7 @@ use anyhow::Context;
 use tracing::debug;
 use tracing_subscriber::fmt;
 
-pub fn init(named: &str, cli: &Flags) -> anyhow::Result<()> {
+pub fn init(_named: &str, cli: &Flags) -> anyhow::Result<()> {
     let level = match cli.verbose {
         0 => tracing::Level::INFO,
         1 => tracing::Level::DEBUG,

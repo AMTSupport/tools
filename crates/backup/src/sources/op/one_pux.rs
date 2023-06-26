@@ -16,6 +16,7 @@ pub mod export {
     use serde::{Deserialize, Serialize};
     use tracing::{error, warn};
     use lib::anyhow;
+    use crate::sources::getter::CommandFiller;
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct Data {
@@ -32,12 +33,12 @@ pub mod export {
 
     impl Export {
         // TODO -> Better error handling
-        pub fn from(
-            value: &dyn super::super::account::AccountCommon,
+        pub async fn from<A: super::super::account::AccountCommon + CommandFiller>(
+            value: &A,
             config: &RuntimeConfig,
             bars: (&ProgressBar, &MultiProgress),
         ) -> Result<(Self, Vec<anyhow::Error>)> {
-            let vaults = cli::vault::Vault::parse(&value, config)?;
+            let vaults = cli::vault::Vault::parse(value, config).await?;
             if vaults.is_empty() {
                 return Err(anyhow!("No vaults found in account {}", value));
             }
@@ -47,7 +48,7 @@ pub mod export {
             for vault in vaults {
                 let attrs = vault.clone().into();
 
-                let items = match cli::item::Item::parse(vault.clone(), &value, config, bars) {
+                let items = match cli::item::Item::parse(vault.clone(), value, config, bars) {
                     Ok(items) => items,
                     Err(e) => {
                         error!("Failed to parse items for vault {vault}: {e}");
@@ -87,7 +88,7 @@ pub mod export {
 
             let name = format!(
                 "1PasswordExport-{uuid}-{time}.1pux",
-                uuid = value.account().long.id,
+                uuid = value.account().get_attrs().identifier.id(),
                 time = Local::now().format("%Y%m%d-%H%M%S")
             );
 

@@ -111,8 +111,8 @@ impl Exporter for OnePasswordCore {
         main_bar: &ProgressBar,
         progress_bar: &MultiProgress,
     ) -> Result<()> {
-        let account = self.account.get();
-        let (export, errors) = one_pux::export::Export::from(account, config, (main_bar, progress_bar))?;
+        let account = &self.account;
+        let (export, errors) = one_pux::export::Export::from(account, config, (main_bar, progress_bar)).await?;
 
         let file = self.account.get().directory(config).join(export.name);
         let file = normalise_path(file);

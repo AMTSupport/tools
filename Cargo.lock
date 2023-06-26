@@ -346,6 +346,8 @@ dependencies = [
  "chrono",
  "clap 4.3.4",
  "const_format",
+ "downcast-rs",
+ "fake",
  "filetime",
  "futures",
  "futures-util",
@@ -359,7 +361,6 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
- "serde_test",
  "thiserror",
  "tokio",
  "tokio-util",
@@ -522,7 +523,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e10ca87c81aaa3a949dbbe2b5e6c2c45dbc94ba4897e45ea31ff9ec5087be3dc"
 dependencies = [
  "cached_proc_macro_types",
- "darling",
+ "darling 0.14.4",
  "proc-macro2",
  "quote",
  "syn 1.0.109",
@@ -908,8 +909,18 @@ version = "0.14.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7b750cb3417fd1b327431a470f388520309479ab0bf5e323505daf0290cd3850"
 dependencies = [
- "darling_core",
- "darling_macro",
+ "darling_core 0.14.4",
+ "darling_macro 0.14.4",
+]
+
+[[package]]
+name = "darling"
+version = "0.20.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0558d22a7b463ed0241e993f76f09f30b126687447751a8638587b864e4b3944"
+dependencies = [
+ "darling_core 0.20.1",
+ "darling_macro 0.20.1",
 ]
 
 [[package]]
@@ -927,14 +938,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "darling_core"
+version = "0.20.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ab8bfa2e259f8ee1ce5e97824a3c55ec4404a0d772ca7fa96bf19f0752a046eb"
+dependencies = [
+ "fnv",
+ "ident_case",
+ "proc-macro2",
+ "quote",
+ "strsim",
+ "syn 2.0.18",
+]
+
+[[package]]
 name = "darling_macro"
 version = "0.14.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a4aab4dbc9f7611d8b55048a3a16d2d010c2c8334e46304b40ac1cc14bf3b48e"
 dependencies = [
- "darling_core",
+ "darling_core 0.14.4",
  "quote",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "darling_macro"
+version = "0.20.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "29a358ff9f12ec09c3e61fef9b5a9902623a695a46a917b07f269bff1445611a"
+dependencies = [
+ "darling_core 0.20.1",
+ "quote",
+ "syn 2.0.18",
 ]
 
 [[package]]
@@ -973,7 +1009,7 @@ version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f91d4cfa921f1c05904dc3c57b4a32c38aed3340cce209f3a6fd1478babafc4"
 dependencies = [
- "darling",
+ "darling 0.14.4",
  "proc-macro2",
  "quote",
  "syn 1.0.109",
@@ -1050,6 +1086,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d529fd73d344663edfd598ccb3f344e46034db51ebd103518eae34338248ad73"
 dependencies = [
  "const-random",
+]
+
+[[package]]
+name = "downcast-rs"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9ea835d29036a4087793836fa931b08837ad5e957da9e23886b29586fb9b6650"
+
+[[package]]
+name = "dummy"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8da904daa6ce71bb51e03fd0529b08bad4b18bae89e176873c7bae9eb91a19ce"
+dependencies = [
+ "darling 0.20.1",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.18",
 ]
 
 [[package]]
@@ -1133,6 +1187,20 @@ name = "exitcode"
 version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "de853764b47027c2e862a995c34978ffa63c1501f2e15f987ba11bd4f9bba193"
+
+[[package]]
+name = "fake"
+version = "2.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0a44c765350db469b774425ff1c833890b16ceb9612fb5d7c4bbdf4a1b55f876"
+dependencies = [
+ "chrono",
+ "dummy",
+ "rand",
+ "rand_core",
+ "serde_json",
+ "unidecode",
+]
 
 [[package]]
 name = "fastrand"
@@ -3065,15 +3133,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "serde_test"
-version = "1.0.164"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "797c38160e2546a56e1e3439496439597e938669673ffd8af02a12f070da648f"
-dependencies = [
- "serde",
-]
-
-[[package]]
 name = "serde_urlencoded"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3797,6 +3856,12 @@ name = "unicode-xid"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f962df74c8c05a667b5ee8bcf162993134c104e96440b663c8daa176dc772d8c"
+
+[[package]]
+name = "unidecode"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "402bb19d8e03f1d1a7450e2bd613980869438e0666331be3e073089124aa1adc"
 
 [[package]]
 name = "untrusted"

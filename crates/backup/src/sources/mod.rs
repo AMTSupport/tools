@@ -20,6 +20,7 @@ pub mod exporter;
 pub(crate) mod interactive;
 pub mod op;
 pub mod s3;
+mod getter;
 
 async fn download_to<E: Error>(
     total_size: u64,
