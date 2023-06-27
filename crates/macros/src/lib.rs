@@ -16,10 +16,13 @@
 
 #![feature(proc_macro_diagnostic)]
 
+use proc_macro::Level::Error;
 use proc_macro::{Diagnostic, Level, Span, TokenStream};
-use quote::quote;
+use quote::__private::ext::RepToTokensExt;
+use quote::{quote, ToTokens};
+use std::path::PathBuf;
 use syn::spanned::Spanned;
-use syn::{parse_macro_input, Data, DeriveInput, Fields, Ident, Type};
+use syn::{parse_macro_input, Data, DeriveInput, Fields, Ident, Meta, Type};
 
 #[proc_macro_derive(CommonFields)]
 pub fn conditional_fields_macro(input: TokenStream) -> TokenStream {
@@ -96,6 +99,113 @@ pub fn conditional_fields_macro(input: TokenStream) -> TokenStream {
     // Convert the generated code back into tokens and return them
     output.into()
 }
+
+// #[proc_macro_derive(FromCommand, attributes(command))]
+// pub fn from_command(input: TokenStream) -> TokenStream {
+//     let input = parse_macro_input!(input as DeriveInput);
+//     let struct_name = &input.ident;
+//     let struct_data = match input.data {
+//         Data::Struct(data) => data,
+//         _ => panic!("FromCommand can only be derived for structs"),
+//     };
+//
+//     let fields = match struct_data.fields {
+//         Fields::Named(fields) => fields,
+//         _ => {
+//             return syn::Error::new(
+//                 struct_name.span(),
+//                 "FromCommand can only be derived for structs with named fields",
+//             )
+//             .to_compile_error()
+//             .into()
+//         }
+//     };
+//
+//     let attributes = &input.attrs;
+//     let binary: PathBuf = parse_attribute_path(&attributes, "binary");
+//     let args: Vec<String> = parse_attribute_vec(&attributes, "args");
+//     let env: Vec<String> = parse_attribute_tuples(&attributes, "env");
+// }
+//
+// // Helper functions to parse attribute values
+//
+// fn parse_attribute_path<T>(attributes: &[syn::Attribute], name: &str) -> Option<T>
+// where
+//     T: syn::parse::Parse,
+// {
+//     for attr in attributes {
+//         let meta_list = match &attr.meta {
+//             Meta::List(m) => m,
+//             _ => continue,
+//         };
+//
+//         let result: Option<T> = None;
+//         meta_list.parse_nested_meta(|m| match m {
+//             Meta::NameValue(value) => {
+//                 if result.is_some() {
+//                     return Ok(()); // continue
+//                 }
+//
+//                 if !value.path.is_ident(name) {
+//                     return Ok(()); // continue
+//                 }
+//
+//                 if let syn::Expr::Path(path) = value.value {
+//                     let parsed = path.parse::<T>();
+//                     parsed.map_err(|e| {
+//                         Diagnostic::spanned(value.span(), Error, e.to_string()).emit();
+//                     });
+//                 }
+//
+//                 Ok(())
+//             }
+//             _ => Ok(()),
+//         })?;
+//
+//         result;
+//     }
+//
+//     None
+// }
+//
+// fn parse_attribute_vec(attributes: &[syn::Attribute], name: &str) -> Vec<String> {
+//     for attr in attributes {
+//         if let Ok(syn::Meta::List(meta_list)) = attr.parse_meta() {
+//             if meta_list.path.is_ident(name) {
+//                 if let Some(syn::NestedMeta::Lit(syn::Lit::Str(lit))) = meta_list.nested.first() {
+//                     return lit.value().split(',').map(|s| s.trim().to_string()).collect();
+//                 }
+//             }
+//         }
+//     }
+//
+//     Vec::new()
+// }
+//
+// fn parse_attribute_tuples(attributes: &[syn::Attribute], name: &str) -> Vec<(String, String)> {
+//     for attr in attributes {
+//         if let Ok(syn::Meta::List(meta_list)) = attr.parse_meta() {
+//             if meta_list.path.is_ident(name) {
+//                 return meta_list
+//                     .nested
+//                     .iter()
+//                     .filter_map(|meta| {
+//                         if let syn::NestedMeta::Meta(syn::Meta::NameValue(value)) = meta {
+//                             if let (syn::Lit::Str(key), syn::Lit::Str(val)) =
+//                                 (&value.path.segments.last().unwrap().ident, &value.lit)
+//                             {
+//                                 return Some((key.to_string(), val.value()));
+//                             }
+//                         }
+//                         None
+//                     })
+//                     .collect();
+//             }
+//         }
+//     }
+//
+//     Vec::new()
+// }
 
 // #[proc_macro_derive(Pathed, attributes(pathed))]
 // pub fn pathed_macro(input: TokenStream) -> TokenStream {

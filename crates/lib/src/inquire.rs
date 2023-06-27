@@ -14,23 +14,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#![feature(lazy_cell)]
-#![feature(const_for)]
-#![feature(const_option)]
+use inquire::ui::{Color, RenderConfig, StyleSheet, Styled};
 
-pub mod cli;
-pub mod fs;
-pub mod helper;
-pub mod log;
-pub mod progress;
-#[cfg(windows)]
-pub mod windows;
-pub mod pathed;
-pub mod inquire;
-
-pub use anyhow;
-pub use clap;
-pub use sysexits;
-
-#[cfg(unix)]
-pub use nix;
+pub fn inquire_style() -> RenderConfig {
+    RenderConfig::default_colored()
+        .with_selected_option(Some(StyleSheet::empty().with_fg(Color::White)))
+        .with_highlighted_option_prefix(Styled::new("-> ").with_fg(Color::LightCyan))
+}

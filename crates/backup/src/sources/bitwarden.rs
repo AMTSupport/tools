@@ -19,19 +19,32 @@ use crate::config::runtime::RuntimeConfig;
 use crate::sources::auto_prune::Prune;
 use crate::sources::downloader::Downloader;
 use crate::sources::exporter::Exporter;
+use crate::sources::exporter::ExporterSource::BitWarden;
+use crate::sources::getter::CliGetter;
+use crate::sources::op::cli::field::Purpose::Password;
 use anyhow::Result;
 use async_trait::async_trait;
 use const_format::formatcp;
 use indicatif::{MultiProgress, ProgressBar};
+use inquire::PasswordDisplayMode;
 use lib::anyhow;
 use lib::anyhow::{anyhow, Context};
 use lib::fs::normalise_path;
+use lib::pathed::Pathed;
+use macros::FromCommand;
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::fmt::{Display, Formatter};
 use std::path::PathBuf;
 use std::process::Command;
-use tracing::{error, info};
+use thiserror::__private::DisplayAsDisplay;
+use tracing::{error, info, trace};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BitwardenUser {
+    pub user: String,
+    session_token: String
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BitWardenCore {
@@ -41,29 +54,27 @@ pub struct BitWardenCore {
     session_id: String,
 }
 
+impl Display for BitWardenCore {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{user}/{org}")
+    }
+}
+
+impl Pathed<RuntimeConfig> for BitWardenCore {
+    const NAME: &'static str = "Bitwarden";
+
+    fn get_unique_name(&self) -> String {
+        self.to_string()
+    }
+}
+
 impl BitWardenCore {
     const BW_SESSION: &'static str = "BW_SESSION";
     const BW_DIRECTORY: &'static str = "BITWARDENCLI_APPDATA_DIR";
 
-    fn data_dir(&self, config: &RuntimeConfig) -> PathBuf {
-        Self::_data_dir(config, &self.user)
-    }
-
-    fn backup_dir(&self, config: &RuntimeConfig) -> PathBuf {
-        Self::_backup_dir(config, &self.org_name)
-    }
-
-    fn _data_dir(config: &RuntimeConfig, user: &str) -> PathBuf {
-        Self::base_dir(config).join(PathBuf::from(format!(r"data-{user}")))
-    }
-
-    fn _backup_dir(config: &RuntimeConfig, org_name: &str) -> PathBuf {
-        Self::base_dir(config).join(PathBuf::from(format!(r"backup-{org_name}")))
-    }
-
     fn command(&self, config: &RuntimeConfig) -> Command {
         let mut cmd = Self::base_command(config);
-        cmd.env(Self::BW_DIRECTORY, &self.data_dir(config));
+        cmd.env(Self::BW_DIRECTORY, &self.unique_dir(config));
         cmd.env(Self::BW_SESSION, &self.session_id);
         cmd
     }
@@ -96,11 +107,20 @@ impl Prune for BitWardenCore {
 
 #[async_trait]
 impl Exporter for BitWardenCore {
-    const DIRECTORY: &'static str = "Bitwarden";
+    const DIRECTORY: &'static str = BitWardenCore::NAME;
 
     async fn interactive(config: &RuntimeConfig) -> Result<Vec<Backend>> {
-        let username = inquire::Text::new("BitWarden Username").prompt()?;
-        let data_dir = Self::_data_dir(config, &username);
+        use inquire::{Password, Text};
+        use lib::inquire::inquire_style;
+
+        let username = Text::new("BitWarden Username")
+            .with_render_config(inquire_style())
+            .with_help_message("The username to use to log into BitWarden")
+            .with_placeholder("username")
+            .prompt()
+            .with_context(|| "Get username for bitwarden user.")?;
+
+        let data_dir = BitWardenCore::base_dir(config)?.join(&username);
 
         let command = || -> Command {
             let mut cmd = BitWardenCore::base_command(config);
@@ -108,46 +128,51 @@ impl Exporter for BitWardenCore {
             cmd
         };
 
-        let login_status = serde_json::from_slice::<LoginStatus>(
-            command().arg("status").output().context("Get login status")?.stdout.as_slice(),
-        )
-        .context("Parse BitWarden status")?;
+        let envs = [(Self::BW_DIRECTORY, &data_dir)];
+        let status = LoginStatus::_get(config, &envs, &[]).await?;
 
-        let session_id = if login_status.status == "unauthenticated" {
-            info!("Not logged into BitWarden, logging in.");
-
-            let password = inquire::Text::new("BitWarden Password").prompt()?;
-            let two_fa = inquire::Text::new("BitWarden 2FA").prompt()?;
-            let cmd = command()
-                .arg("login")
-                .arg(&username)
-                .arg(password)
-                .arg("--code")
-                .arg(two_fa)
-                .arg("--raw")
-                .output()
-                .context("Login to bitwarden")?;
-
-            match cmd {
-                out if out.status.success() => {
-                    info!("Successfully logged into BitWarden");
-                    String::from_utf8(out.stdout)?
-                }
-                _ => {
-                    info!("Failed to log into BitWarden");
-                    return Err(anyhow!("Failed to log into BitWarden"));
-                }
-            }
-        } else {
-            // TODO: Support already logged in.
+        if let LoginStatus::Authenticated(user) = status {
             // TODO -> Prompt to log out?
-            error!("Already logged into BitWarden, but not supported yet.");
-            error!(
-                "Please remove the existing session file at {}, and try again.",
-                &data_dir.display()
-            );
-            return Err(anyhow!("Already logged into BitWarden"));
-        };
+            error!("Already logged into BitWarden as {}", user);
+            error!("Please remove {} and try again.", data_dir.display());
+            return Err(anyhow!("Already logged into BitWarden as {}", user));
+        }
+
+        trace!("Not logged into BitWarden, logging in.");
+
+        let password = Password::new("Bitwarden Password")
+            .with_render_config(inquire_style())
+            .with_help_message("The password to use to log into BitWarden")
+            .without_confirmation()
+            .with_display_mode(PasswordDisplayMode::Masked)
+            .prompt()
+            .with_context(|| "Get password for bitwarden user.")?;
+
+        let two_fa = Text::new("Bitwarden 2FA")
+            .with_render_config(inquire_style())
+            .with_help_message("The 2FA code to use to log into BitWarden")
+            .with_placeholder("123456")
+            .prompt()
+            .with_context(|| "Get 2FA code for bitwarden user.")?;
+
+        let output = command()
+            .args(["login", &username, &password])
+            .args(["--code", &two_fa])
+            .arg("--raw")
+            .output()
+            .with_context(|| "Login to bitwarden")?;
+
+        if !output.status.success() {
+            return Err(anyhow!(
+                "Failed to log into BitWarden -> {}",
+                String::from_utf8_lossy(output.stdout)
+            ));
+        }
+
+        let session_id = String::from_utf8(output.stdout)?;
+        trace!("Successfully logged into BitWarden");
+
+        let account = BitW
 
         let organisations = command()
             .arg("list")
@@ -204,7 +229,7 @@ impl Exporter for BitWardenCore {
         _progress_bar: &MultiProgress,
     ) -> Result<()> {
         let export = |format: &str, ext: &str| -> Result<()> {
-            let output_file = normalise_path(self.backup_dir(config).join(format!(
+            let output_file = normalise_path(self.unique_dir(config).join(format!(
                 "{org_id}_{date}-{format}.{ext}",
                 org_id = &self.org_id,
                 date = chrono::Local::now().format("%Y-%m-%dT%H:%M:%SZ%z")
@@ -236,11 +261,22 @@ impl Exporter for BitWardenCore {
     }
 }
 
-#[derive(Serialize, Deserialize)]
-struct LoginStatus {
-    #[serde(rename = "userEmail", default = "String::new")]
-    user_email: String,
-    status: String,
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase", tag = "status")]
+enum LoginStatus {
+    Unauthenticated,
+    Authenticated(String),
+}
+//
+// #[derive(Serialize, Deserialize)]
+// struct LoginStatus {
+//     #[serde(rename = "userEmail", default = "String::new")]
+//     user_email: String,
+//     status: String,
+// }
+
+impl CliGetter<BitWardenCore, LoginStatus, [&'static str; 1]> for LoginStatus {
+    const ARGS: [&'static str; 1] = ["status"];
 }
 
 #[derive(Serialize, Deserialize)]

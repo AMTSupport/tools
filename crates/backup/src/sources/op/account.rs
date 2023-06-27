@@ -30,6 +30,7 @@ use std::fmt::{Debug, Display, Formatter};
 use std::process::Command;
 use thiserror::Error;
 use tracing::{trace, warn};
+use lib::inquire::inquire_style;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Attrs {
@@ -205,14 +206,6 @@ impl Interactive<OnePasswordAccount> for OnePasswordAccount {
             _ => unreachable!("Invalid account type shouldn't be possible."),
         }
     }
-}
-
-fn inquire_style() -> inquire::ui::RenderConfig {
-    use inquire::ui::{Color, RenderConfig, StyleSheet, Styled};
-
-    RenderConfig::default_colored()
-        .with_selected_option(Some(StyleSheet::empty().with_fg(Color::White)))
-        .with_highlighted_option_prefix(Styled::new("-> ").with_fg(Color::LightCyan))
 }
 
 // #[async_trait]

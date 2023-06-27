@@ -1829,6 +1829,7 @@ dependencies = [
  "clap 4.3.4",
  "exitcode",
  "indicatif",
+ "inquire",
  "is_elevated",
  "nix 0.26.2",
  "sysexits",
