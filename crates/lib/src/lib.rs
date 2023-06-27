@@ -9,6 +9,7 @@ pub mod log;
 pub mod progress;
 #[cfg(windows)]
 pub mod windows;
+pub mod pathed;
 
 pub use anyhow;
 pub use clap;

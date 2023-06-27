@@ -10,13 +10,12 @@ pub const ONE_PUX_VERSION: u8 = 3;
 pub mod export {
     use crate::config::runtime::RuntimeConfig;
     use crate::sources::op::cli;
-    use chrono::Local;
     use indicatif::{MultiProgress, ProgressBar};
     use lib::anyhow::{anyhow, Result};
     use serde::{Deserialize, Serialize};
     use tracing::{error, warn};
     use lib::anyhow;
-    use crate::sources::getter::CommandFiller;
+    use crate::sources::op::account::OnePasswordAccount;
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct Data {
@@ -28,13 +27,12 @@ pub mod export {
         pub data: Data,
         pub attributes: super::attributes::Attributes,
         pub files: Vec<super::file::File>,
-        pub name: String,
     }
 
     impl Export {
         // TODO -> Better error handling
-        pub async fn from<A: super::super::account::AccountCommon + CommandFiller>(
-            value: &A,
+        pub async fn from(
+            value: &OnePasswordAccount,
             config: &RuntimeConfig,
             bars: (&ProgressBar, &MultiProgress),
         ) -> Result<(Self, Vec<anyhow::Error>)> {
@@ -82,18 +80,11 @@ pub mod export {
             }
 
             let data = vec![super::account::Account {
-                attrs: value.account().clone().into(),
+                attrs: value.attrs().account.clone().into(),
                 vaults: finished,
             }];
 
-            let name = format!(
-                "1PasswordExport-{uuid}-{time}.1pux",
-                uuid = value.account().get_attrs().identifier.id(),
-                time = Local::now().format("%Y%m%d-%H%M%S")
-            );
-
             let export = Export {
-                name,
                 data: Data { accounts: data },
                 attributes: super::attributes::Attributes::default(),
                 files: vec![], // TODO

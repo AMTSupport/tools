@@ -2,14 +2,14 @@ use crate::config::runtime::RuntimeConfig;
 use indicatif::MultiProgress;
 use lib::anyhow::Result;
 use std::path::PathBuf;
-use tracing::debug;
+use tracing::{trace};
 
 // TODO :: Implement logic from cleaner crate to handle this!
 pub trait Prune {
     /// The files which should be possible to prune.
     /// The files returned by this method will be parsed,
     /// Against the `AutoPrune` struct to determine if they should be removed.
-    fn files(&self, config: &RuntimeConfig) -> Vec<PathBuf>;
+    fn files(&self, config: &RuntimeConfig) -> Result<Vec<PathBuf>>;
 
     /// The main prune function.
     /// This function has a common implementation for all sources,
@@ -37,19 +37,21 @@ pub trait Prune {
         //     let b = b.metadata();
         //     a.metadata()
         // });
-        let files = self.files(config);
+        let files = self.files(config)?;
         let mut files = files.iter();
         let mut removed_files = vec![];
 
         // TODO :: Add dry run option.
         while let Some(file) = files.next() {
             if !(config.config.rules.auto_prune.should_prune(file, files.len())?) {
-                debug!("Unable to prune file: {}", file.display());
+                trace!("Pruning rules prevented pruning for: {}", file.display());
                 continue;
             }
 
-            debug!("Pruning file: {}", file.display());
-            std::fs::remove_file(file)?;
+            trace!("Pruning file: {}", file.display());
+            if !config.cli.flags.dry_run {
+                std::fs::remove_file(file)?;
+            }
             removed_files.push(file.clone());
         }
 

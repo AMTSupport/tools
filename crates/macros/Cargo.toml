@@ -1,0 +1,15 @@
+[package]
+name = "macros"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "macros"
+path = "src/lib.rs"
+proc-macro = true
+
+[dependencies]
+lib = { path = "../lib" }
+syn = "2.0.22"
+quote = "1.0.28"
+proc-macro2 = "1.0.63"

@@ -5,39 +5,40 @@ pub mod identifier {
     #[cfg(test)]
     use fake::{faker::lorem::en::Word, Dummy};
 
-    #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, Dummy)]
+    #[cfg_attr(test, derive(Dummy))]
+    #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
     pub enum Identifier {
         Label {
             /// The internal identifier for this entity.
             #[serde(default, skip_serializing_if = "String::is_empty")]
-            #[dummy(faker = "26")]
+            #[cfg_attr(test, dummy(faker = "26"))]
             id: String,
 
             /// The user facing & modifiable name for this entity.
             #[serde(default, skip_serializing_if = "String::is_empty")]
-            #[dummy(faker = "Word()")]
+            #[cfg_attr(test, dummy(faker = "Word()"))]
             label: String,
         },
         Name {
             /// The internal identifier for this entity.
             #[serde(default, skip_serializing_if = "String::is_empty")]
-            #[dummy(faker = "26")]
+            #[cfg_attr(test, dummy(faker = "26"))]
             id: String,
 
             /// The user facing & modifiable name for this entity.
             #[serde(default, skip_serializing_if = "String::is_empty")]
-            #[dummy(faker = "Word()")]
+            #[cfg_attr(test, dummy(faker = "Word()"))]
             name: String,
         },
         Title {
             /// The internal identifier for this entity.
             #[serde(default, skip_serializing_if = "String::is_empty")]
-            #[dummy(faker = "26")]
+            #[cfg_attr(test, dummy(faker = "26"))]
             id: String,
 
             /// The user facing & modifiable name for this entity.
             #[serde(default, skip_serializing_if = "String::is_empty")]
-            #[dummy(faker = "Word()")]
+            #[cfg_attr(test, dummy(faker = "Word()"))]
             title: String,
         },
     }
@@ -72,12 +73,15 @@ pub mod identifier {
 }
 
 pub mod state {
-    use fake::Dummy;
     use serde::{Deserialize, Serialize};
     use std::fmt::{Display, Formatter};
 
+    #[cfg(test)]
+    use fake::Dummy;
+
     // TODO -> Are there any other states?
-    #[derive(Default, Debug, Clone, Eq, PartialEq, Serialize, Deserialize, Dummy)]
+    #[cfg_attr(test, derive(Dummy))]
+    #[derive(Default, Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
     #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
     pub enum State {
         #[default]
@@ -103,11 +107,15 @@ pub mod dated {
         std::time::UNIX_EPOCH,
     };
 
-    #[derive(Default, Debug, Clone, Eq, PartialEq, Serialize, Deserialize, Dummy)]
+    #[cfg_attr(test, derive(Dummy))]
+    #[derive(Default, Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
     pub struct Dated {
-        #[dummy(faker = "DateTimeAfter(DateTime::<Utc>::from(UNIX_EPOCH))")]
+        #[cfg_attr(
+            test,
+            dummy(faker = "DateTimeAfter(DateTime::<Utc>::from(UNIX_EPOCH))")
+        )]
         pub created_at: DateTime<Utc>,
-        #[dummy(faker = "DateTimeAfter(created_at)")]
+        #[cfg_attr(test, dummy(faker = "DateTimeAfter(created_at)"))]
         pub updated_at: DateTime<Utc>,
     }
 
@@ -136,14 +144,16 @@ pub mod user {
         faker::{chrono::en::DateTimeBetween, internet::en::FreeEmail},
         Dummy,
     };
+    use macros::CommonFields;
 
-    #[derive(Debug, Clone, Serialize, Deserialize, Dummy)]
+    #[cfg_attr(test, derive(Dummy))]
+    #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct Attrs {
         #[serde(flatten)]
         pub identifier: super::identifier::Identifier,
 
         /// The users email address.
-        #[dummy(faker = "FreeEmail()")]
+        #[cfg_attr(test, dummy(faker = "FreeEmail()"))]
         pub email: String,
 
         /// The account state of the user.
@@ -154,11 +164,14 @@ pub mod user {
         pub dated: super::dated::Dated,
 
         /// When this user was last authenticated with the cli.
-        #[dummy(faker = "DateTimeBetween(dated.created_at, dated.updated_at)")]
+        #[cfg_attr(
+            test,
+            dummy(faker = "DateTimeBetween(dated.created_at, dated.updated_at)")
+        )]
         pub last_auth_at: DateTime<Utc>,
     }
 
-    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[derive(Debug, Clone, Serialize, Deserialize, CommonFields)]
     #[serde(rename_all = "SCREAMING_SNAKE_CASE", tag = "type")]
     pub enum User {
         Member {
@@ -174,16 +187,6 @@ pub mod user {
     #[async_trait]
     impl CliGetter<OnePasswordCore, User, [&'static str; 3]> for User {
         const ARGS: [&'static str; 3] = ["user", "get", "--me"];
-    }
-
-    // TODO -> macro for this?
-    impl User {
-        const fn attrs(&self) -> &Attrs {
-            match self {
-                User::Member { attrs } => attrs,
-                User::ServiceAccount { attrs } => attrs,
-            }
-        }
     }
 
     #[test]
@@ -252,43 +255,50 @@ pub mod account {
         },
         std::time::UNIX_EPOCH,
     };
+    use macros::CommonFields;
 
     /// This comes from the list of account gotten with `op list accounts`
-    #[derive(Debug, Clone, Serialize, Deserialize, Dummy)]
+    #[cfg_attr(test, derive(Dummy))]
+    #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct Short {
-        #[dummy(faker = "DomainSuffix()")]
+        #[cfg_attr(test, dummy(faker = "DomainSuffix()"))]
         pub url: String,
 
-        #[dummy(faker = "FreeEmail()")]
+        #[cfg_attr(test, dummy(faker = "FreeEmail()"))]
         pub email: String,
 
-        #[dummy(faker = "26")]
+        #[cfg_attr(test, dummy(faker = "26"))]
         pub user_uuid: String,
 
-        #[dummy(faker = "26")]
+        #[cfg_attr(test, dummy(faker = "26"))]
         pub account_uuid: String,
     }
 
-    #[derive(Debug, Clone, Serialize, Deserialize, Dummy)]
+    #[cfg_attr(test, derive(Dummy))]
+    #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct Attrs {
         #[serde(flatten)]
         pub identifier: super::identifier::Identifier,
 
         /// The 1password domain for this account
         /// ### This is only the subdomain and not the entire url.
-        #[dummy(faker = "DomainSuffix()")]
+        #[cfg_attr(test, dummy(faker = "DomainSuffix()"))]
         pub domain: String,
 
         /// The accounts current state.
-        #[dummy(faker = "Option::None")]
+        #[cfg_attr(test, dummy(faker = "Option::None"))]
         pub state: super::state::State,
 
         /// When this account was created.
-        #[dummy(faker = "DateTimeAfter(DateTime::<Utc>::from(UNIX_EPOCH))")]
+        #[cfg_attr(
+            test,
+            dummy(faker = "DateTimeAfter(DateTime::<Utc>::from(UNIX_EPOCH))")
+        )]
         pub created_at: DateTime<Utc>,
     }
 
-    #[derive(Debug, Clone, Serialize, Deserialize, Dummy)]
+    #[cfg_attr(test, derive(Dummy))]
+    #[derive(Debug, Clone, Serialize, Deserialize, CommonFields)]
     #[serde(rename_all = "SCREAMING_SNAKE_CASE", tag = "type")]
     pub enum Account {
         Individual {
@@ -315,36 +325,18 @@ pub mod account {
         const ARGS: [&'static str; 2] = ["account", "get"];
     }
 
-    impl Account {
-        pub fn get_attrs(&self) -> &Attrs {
-            match self {
-                Account::Individual { attrs, .. } => attrs,
-                Account::Business { attrs, .. } => attrs,
-            }
-        }
-
-        /// Will return the short of this account if it has already been fetched.
-        pub fn get_short(&self) -> Option<&Short> {
-            match self {
-                Account::Individual { short, .. } => short,
-                Account::Business { short, .. } => short,
-            }
-            .as_ref()
-        }
-    }
-
     impl From<Account> for one_pux::account::Attrs {
         fn from(value: Account) -> one_pux::account::Attrs {
-            let attrs = value.get_attrs().to_owned();
-            let short = value.get_short();
+            let attrs = value.attrs().to_owned();
+            let short = value.short();
 
             one_pux::account::Attrs {
                 account_name: attrs.identifier.named().to_owned(),
                 name: attrs.identifier.named().to_owned(),
                 avatar: "".to_string(), // TODO -> Unsure if this is available // Is a filename from the archive
-                email: short.map(|s| s.email.to_owned()).unwrap_or_default(),
+                email: short.clone().map(|s| s.email.to_owned()).unwrap_or_default(),
                 uuid: attrs.identifier.id().to_owned(),
-                domain: format!("https://{}.1password.com/", value.get_attrs().domain),
+                domain: format!("https://{}.1password.com/", value.attrs().domain),
             }
         }
     }
@@ -389,7 +381,7 @@ pub mod account {
             });
 
             let account = serde_json::from_value::<Account>(json).unwrap();
-            let attrs = account.get_attrs();
+            let attrs = account.attrs();
             assert_eq!(attrs.identifier.id(), "LAIQMSG1PWNMCA9LAS5KLSDURN");
             assert_eq!(attrs.identifier.named(), "Test Name");
             assert_eq!(attrs.domain, "test-domain");
@@ -405,15 +397,17 @@ pub mod account {
 }
 
 pub mod file {
+    use super::identifier::Identifier;
     use crate::sources::op::cli::dated::Dated;
+    use crate::sources::op::cli::vault;
     use crate::sources::op::one_pux;
     use serde::{Deserialize, Serialize};
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct Reference {
-        pub id: String,
-
-        pub name: String,
+        /// Name Identifier.
+        #[serde(flatten)]
+        pub identifier: Identifier,
 
         pub size: usize,
 
@@ -422,17 +416,15 @@ pub mod file {
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct Attrs {
-        /// The id of the item for this file.
-        pub id: String,
-
-        /// The files name.
-        pub title: String,
+        #[serde(flatten)]
+        /// Title identifier.
+        pub identifier: Identifier,
 
         /// The times this file has been modified.
         pub version: String,
 
         /// A reference to the vault which contains this file.
-        pub vault: super::vault::Reference,
+        pub vault: vault::Reference,
 
         /// The file's size in a human readable format.
         #[serde(rename = "overview.ainfo")]
@@ -448,9 +440,46 @@ pub mod file {
     impl From<Reference> for one_pux::item::DocumentAttributes {
         fn from(value: Reference) -> Self {
             one_pux::item::DocumentAttributes {
-                file_name: value.name,
-                document_id: value.id,
+                file_name: value.identifier.named().to_owned(),
+                document_id: value.identifier.id().to_owned(),
                 decrypted_size: value.size,
+            }
+        }
+    }
+
+    impl Reference {
+        pub(crate) fn new(id: &str, name: &str, size: usize, content_path: &str) -> Self {
+            Self {
+                identifier: Identifier::Name {
+                    id: id.to_owned(),
+                    name: name.to_owned(),
+                },
+                size,
+                content_path: content_path.to_owned(),
+            }
+        }
+    }
+
+    impl Attrs {
+        pub(crate) fn new(
+            id: &str,
+            title: &str,
+            version: &str,
+            vault: vault::Reference,
+            info: &str,
+            last_edited_by: &str,
+            dated: Dated,
+        ) -> Self {
+            Self {
+                identifier: Identifier::Title {
+                    id: id.to_owned(),
+                    title: title.to_owned(),
+                },
+                version: version.to_owned(),
+                vault,
+                info: info.to_owned(),
+                last_edited_by: last_edited_by.to_owned(),
+                dated,
             }
         }
     }
@@ -460,7 +489,6 @@ pub mod file {
 pub mod item {
     use super::super::one_pux;
     use crate::config::runtime::RuntimeConfig;
-    use crate::sources::op::account::AccountCommon;
     use indicatif::{MultiProgress, ParallelProgressIterator, ProgressBar};
     use lib::{anyhow, anyhow::Context, anyhow::Result};
     use rayon::prelude::*;
@@ -469,9 +497,10 @@ pub mod item {
     use std::fmt::{Display, Formatter};
     use std::process::Command;
     use tracing::{error, instrument, trace};
-    use crate::sources::getter::CommandFiller;
+    use macros::CommonFields;
+    use crate::sources::op::account::OnePasswordAccount;
 
-    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[derive(Debug, Clone, Serialize, Deserialize, CommonFields)]
     #[serde(rename_all = "SCREAMING_SNAKE_CASE", tag = "category")]
     pub enum Item {
         /// Additional is the value of the field `username`
@@ -634,7 +663,7 @@ pub mod item {
 
     impl From<Item> for one_pux::item::Attrs {
         fn from(val: Item) -> Self {
-            let attrs = val.get_attrs().clone();
+            let attrs = val.attrs().clone();
 
             one_pux::item::Attrs {
                 uuid: attrs.identifier.id().to_owned(),
@@ -649,7 +678,7 @@ pub mod item {
 
     impl From<Item> for Option<one_pux::item::PasswordDetails> {
         fn from(value: Item) -> Option<one_pux::item::PasswordDetails> {
-            let attrs = value.get_attrs();
+            let attrs = value.attrs();
             let field = attrs
                 .fields
                 .clone()
@@ -676,7 +705,7 @@ pub mod item {
 
     impl From<Item> for one_pux::item::Overview {
         fn from(val: Item) -> Self {
-            let attrs = val.get_attrs().clone();
+            let attrs = val.attrs().clone();
             let watchtower_exclusions: Option<one_pux::item::WatchTowerExclusions> = None; // TODO
             let password_details: Option<one_pux::item::PasswordDetails> = val.into();
 
@@ -697,7 +726,7 @@ pub mod item {
         type Error = anyhow::Error; // TODO -> ThisError
 
         fn try_from(value: Item) -> Result<one_pux::item::Details> {
-            let mut fields = value.get_attrs().fields.clone();
+            let mut fields = value.attrs().fields.clone();
 
             let mut password_history = None;
             let mut removed = 0usize;
@@ -744,19 +773,19 @@ pub mod item {
                     removed += 1;
                     field
                 })
-                .and_then(|f| f.get_attrs().value.clone());
+                .and_then(|f| f.attrs().value.clone());
 
             // TODO -> This is a bit of a hack, but it works for now
             // TODO -> Sections aren't in the right order, but that's not a big deal
             let mut sections = value
-                .get_attrs()
+                .attrs()
                 .sections
                 .clone()
                 .into_iter()
                 .map(|s| s.into())
                 .collect::<Vec<one_pux::item::AdditionalSection>>();
             for field in fields {
-                let attrs = (&field).get_attrs();
+                let attrs = (&field).attrs();
 
                 if attrs.section.as_ref().is_none() {
                     if sections.is_empty()
@@ -851,31 +880,6 @@ pub mod item {
             .to_string()
         }
 
-        pub fn get_attrs(&self) -> &Attrs {
-            match self {
-                Item::Login { attrs, .. } => attrs,
-                Item::CreditCard { attrs, .. } => attrs,
-                Item::SecureNote { attrs, .. } => attrs,
-                Item::Identity { attrs, .. } => attrs,
-                Item::Password { attrs, .. } => attrs,
-                Item::Document { attrs, .. } => attrs,
-                Item::SoftwareLicense { attrs, .. } => attrs,
-                Item::Database { attrs, .. } => attrs,
-                Item::DriverLicense { attrs, .. } => attrs,
-                Item::OutdoorLicense { attrs, .. } => attrs,
-                Item::Membership { attrs, .. } => attrs,
-                Item::Passport { attrs, .. } => attrs,
-                Item::RewardProgram { attrs, .. } => attrs,
-                Item::WirelessRouter { attrs, .. } => attrs,
-                Item::Server { attrs, .. } => attrs,
-                Item::EmailAccount { attrs, .. } => attrs,
-                Item::ApiCredential { attrs, .. } => attrs,
-                Item::MedicalRecord { attrs, .. } => attrs,
-                Item::SshKey { attrs, .. } => attrs,
-                Item::Custom { attrs, .. } => attrs,
-            }
-        }
-
         fn raw(vault_id: &str, mut command: Command) -> Result<Vec<u8>> {
             command
                 .args(["item", "list"])
@@ -898,7 +902,7 @@ pub mod item {
             mut command: Command,
         ) -> Result<Vec<u8>> {
             command
-                .args(["item", "get", &item.get_attrs().identifier.id()])
+                .args(["item", "get", &item.attrs().identifier.id()])
                 .args(["--vault", &vault.id(), "--format=json"])
                 .output()
                 .with_context(|| format!("Get item {item} from vault {vault}."))
@@ -913,9 +917,9 @@ pub mod item {
         }
 
         #[instrument]
-        pub fn parse<A: AccountCommon + CommandFiller>(
+        pub fn parse(
             vault: super::vault::Vault,
-            account: &A,
+            account: &OnePasswordAccount,
             config: &RuntimeConfig,
             bars: (&ProgressBar, &MultiProgress),
         ) -> Result<Vec<Item>> {
@@ -924,7 +928,7 @@ pub mod item {
 
             bar.set_message(format!("Requesting items from `{vault}` vault...",));
 
-            let items = Self::raw(&vault.get_attrs().reference.id(), account.command(config))
+            let items = Self::raw(&vault.attrs().reference.id(), account.command(config))
                 .and_then(|raw| from_slice::<Vec<Item>>(&raw).context("Deserialize items list"))?;
 
             bar.set_length(items.len() as u64);
@@ -934,7 +938,7 @@ pub mod item {
                 .into_par_iter()
                 .progress_with(bar)
                 .map(|item| {
-                    Self::raw_long(&vault.get_attrs().reference, item, account.command(config))
+                    Self::raw_long(&vault.attrs().reference, item, account.command(config))
                 })
                 .map(|r| {
                     if r.is_err() {
@@ -960,8 +964,8 @@ pub mod item {
             write!(
                 f,
                 "{}-{}",
-                self.get_attrs().identifier.id(),
-                self.get_attrs().identifier.named()
+                self.attrs().identifier.id(),
+                self.attrs().identifier.named()
             )
         }
     }
@@ -1019,7 +1023,7 @@ pub mod item {
         }
 
         fn json_item(item: Item) -> String {
-            let attrs = item.get_attrs();
+            let attrs = item.attrs();
             json!({
                 "id": attrs.identifier.id(),
                 "title": attrs.identifier.named(),
@@ -1074,18 +1078,18 @@ pub mod item {
             assert!(item.is_ok(), "Item should deserialize without error.");
             let item = item.unwrap();
 
-            assert_eq!(item.get_attrs().identifier.id(), attrs.identifier.id());
+            assert_eq!(item.attrs().identifier.id(), attrs.identifier.id());
             assert_eq!(
-                item.get_attrs().identifier.named(),
+                item.attrs().identifier.named(),
                 attrs.identifier.named()
             );
-            assert_eq!(item.get_attrs().tags, attrs.tags);
-            assert_eq!(item.get_attrs().version, attrs.version);
-            assert_eq!(item.get_attrs().vault.id(), attrs.vault.id());
-            assert_eq!(item.get_attrs().vault.named(), attrs.vault.named());
-            assert_eq!(item.get_attrs().last_edited_by, attrs.last_edited_by);
-            assert_eq!(item.get_attrs().dated.created_at, attrs.dated.created_at);
-            assert_eq!(item.get_attrs().dated.updated_at, attrs.dated.updated_at);
+            assert_eq!(item.attrs().tags, attrs.tags);
+            assert_eq!(item.attrs().version, attrs.version);
+            assert_eq!(item.attrs().vault.id(), attrs.vault.id());
+            assert_eq!(item.attrs().vault.named(), attrs.vault.named());
+            assert_eq!(item.attrs().last_edited_by, attrs.last_edited_by);
+            assert_eq!(item.attrs().dated.created_at, attrs.dated.created_at);
+            assert_eq!(item.attrs().dated.updated_at, attrs.dated.updated_at);
         }
 
         #[test]
@@ -1095,7 +1099,7 @@ pub mod item {
 
             let reference_item = Item::Login {
                 attrs: Attrs {
-                    additional_information: fields[0].get_attrs().clone().value,
+                    additional_information: fields[0].attrs().clone().value,
                     fields: fields.to_vec(),
                     ..attrs
                 },
@@ -1117,22 +1121,25 @@ pub mod item {
 
 pub mod vault {
     use crate::config::runtime::RuntimeConfig;
-    use crate::sources::getter::{CliGetter, CommandFiller};
-    use crate::sources::op::account::AccountCommon;
+    use crate::sources::getter::{CliGetter};
     use crate::sources::op::cli::dated::Dated;
     use crate::sources::op::cli::identifier::Identifier;
     use crate::sources::op::core::OnePasswordCore;
     use crate::sources::op::one_pux;
-    use fake::Dummy;
     use lib::anyhow::Result;
     use serde::{Deserialize, Serialize};
     use std::fmt::Display;
     use tracing::{trace, warn};
 
+    #[cfg(test)]
+    use fake::Dummy;
+    use macros::CommonFields;
+    use crate::sources::op::account::OnePasswordAccount;
+
     pub type Reference = Identifier;
 
     // TODO -> Possible to merge cli & 1pux types?
-    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[derive(Debug, Clone, Serialize, Deserialize, CommonFields)]
     #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
     pub enum Vault {
         Personal {
@@ -1150,7 +1157,8 @@ pub mod vault {
         },
     }
 
-    #[derive(Debug, Clone, Serialize, Deserialize, Dummy)]
+    #[cfg_attr(test, derive(Dummy))]
+    #[derive(Debug, Clone, Serialize, Deserialize)]
     #[serde(rename_all = "camelCase")]
     pub struct Attrs {
         #[serde(flatten)]
@@ -1171,7 +1179,7 @@ pub mod vault {
 
     impl Display for Vault {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            self.get_attrs().reference.fmt(f)
+            self.attrs().reference.fmt(f)
         }
     }
 
@@ -1184,19 +1192,12 @@ pub mod vault {
     }
 
     impl Vault {
-        pub(crate) fn get_attrs(&self) -> &Attrs {
-            match self {
-                Vault::Personal { ref attrs, .. } => attrs,
-                Vault::Shared { ref attrs, .. } => attrs,
-                Vault::UserCreated { ref attrs, .. } => attrs,
-            }
-        }
-
-        pub async fn parse<A: AccountCommon + CommandFiller>(
-            account: &A,
+        pub async fn parse(
+            account: &OnePasswordAccount,
             config: &RuntimeConfig,
         ) -> Result<Vec<Vault>> {
-            let vaults = account.vaults();
+            let attrs = account.attrs();
+            let vaults = &attrs.vaults;
 
             // let vaults = vaults
             //     .into_par_iter()
@@ -1215,7 +1216,7 @@ pub mod vault {
 
                 match vault.await {
                     Ok(vault) => {
-                        trace!("Retrieved vault: {}", vault.get_attrs().reference);
+                        trace!("Retrieved vault: {}", vault.attrs().reference);
                         finished_vaults.push(vault);
                     }
                     Err(e) => {
@@ -1233,7 +1234,7 @@ pub mod vault {
         fn from(val: Vault) -> Self {
             use one_pux::vault::{Attrs, Type};
 
-            let vault = val.get_attrs();
+            let vault = val.attrs();
             Attrs {
                 uuid: vault.reference.id().to_owned(),
                 desc: "".to_string(),   // TODO
@@ -1255,9 +1256,10 @@ pub mod url {
     use tracing::instrument;
 
     #[cfg(test)]
-    use fake::{faker::internet::en::DomainSuffix, Dummy};
+    use fake::{Dummy, faker::internet::en::DomainSuffix};
 
-    #[derive(Default, Debug, Clone, Serialize, Deserialize, Dummy)]
+    #[cfg_attr(test, derive(Dummy))]
+    #[derive(Default, Debug, Clone, Serialize, Deserialize)]
     pub struct Url {
         /// The user defined & editable label for the url.
         #[serde(default)]
@@ -1268,7 +1270,7 @@ pub mod url {
         pub primary: bool,
 
         /// The url itself.
-        #[dummy(faker = "DomainSuffix()")]
+        #[cfg_attr(test, dummy(faker = "DomainSuffix()"))]
         pub href: String,
     }
 
@@ -1352,13 +1354,13 @@ pub mod url {
 
 pub mod field {
     use super::super::one_pux;
-
-    use crate::sources::op::cli::field::test::reference_of;
+    use crate::sources::op::cli::reference_of;
     use serde::de::{SeqAccess, Visitor};
     use serde::{Deserialize, Deserializer, Serialize};
     use std::fmt;
     use std::str::FromStr;
     use tracing::debug;
+    use macros::CommonFields;
 
     #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
     #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -1443,7 +1445,7 @@ pub mod field {
         }
     }
 
-    #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+    #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, CommonFields)]
     #[serde(rename_all = "SCREAMING_SNAKE_CASE", tag = "type")]
     pub enum Field {
         /// Represents a string field, such as a username or notes.
@@ -1547,25 +1549,6 @@ pub mod field {
                 _ => false,
             }
         }
-
-        pub fn get_attrs(&self) -> &Attrs {
-            match self {
-                Field::String { attrs, .. } => attrs,
-                Field::Concealed { attrs, .. } => attrs,
-                Field::Otp { attrs, .. } => attrs,
-                Field::CreditCardNumber { attrs, .. } => attrs,
-                Field::Menu { attrs, .. } => attrs,
-                Field::Date { attrs, .. } => attrs,
-                Field::MonthYear { attrs, .. } => attrs,
-                Field::Url { attrs, .. } => attrs,
-                Field::Phone { attrs, .. } => attrs,
-                Field::Address { attrs, .. } => attrs,
-                Field::Email { attrs, .. } => attrs,
-                Field::SshKey { attrs, .. } => attrs,
-                Field::Reference { attrs, .. } => attrs,
-                Field::Unknown { attrs, .. } => attrs,
-            }
-        }
     }
 
     impl From<PasswordStrength> for usize {
@@ -1607,7 +1590,7 @@ pub mod field {
 
     impl From<Field> for one_pux::item::Field {
         fn from(val: Field) -> Self {
-            let attrs = val.get_attrs().clone();
+            let attrs = val.attrs().clone();
             one_pux::item::Field {
                 id: match &attrs.identifier.named() {
                     l if l == &attrs.identifier.named() => "",
@@ -1766,7 +1749,7 @@ pub mod field {
                 },
             };
 
-            let attrs = val.get_attrs().clone();
+            let attrs = val.attrs().clone();
             field.title = attrs.identifier.named().to_owned();
             field.id = attrs.identifier.id().to_owned();
             // TODO -> This is a bit hacky but it works for some items, if the field doesn't have a nl we can't know that it should be multiline
@@ -1812,7 +1795,6 @@ pub mod field {
 
     #[cfg(test)]
     pub(crate) mod test {
-        use super::super::section::Section;
         use super::*;
         use crate::sources::op::cli::identifier::Identifier;
         use crate::sources::op::cli::item;
@@ -1876,24 +1858,6 @@ pub mod field {
                 ),
             })
         }
-
-        /// Creates a reference string for 1password,
-        /// This is used as a short url to the item.
-        pub(crate) fn reference_of(
-            item: &item::Attrs,
-            section: Option<&Section>,
-            identifier: &Identifier,
-        ) -> String {
-            format!(
-                "op:://{vault}/{item}/{inner_reference}",
-                vault = item.vault.named(),
-                item = item.identifier.id(),
-                inner_reference = match &section {
-                    None => format!("{}", identifier.id()),
-                    Some(s) => format!("{}/{}", s.id(), identifier.id()),
-                }
-            )
-        }
     }
 }
 
@@ -1927,4 +1891,22 @@ pub mod section {
             assert_eq!(one_pux_section.name, section.id());
         }
     }
+}
+
+/// Creates a reference string for 1password,
+/// This is used as a short url to the item.
+fn reference_of(
+    item: &item::Attrs,
+    section: Option<&section::Section>,
+    identifier: &identifier::Identifier,
+) -> String {
+    format!(
+        "op:://{vault}/{item}/{inner_reference}",
+        vault = item.vault.named(),
+        item = item.identifier.id(),
+        inner_reference = match &section {
+            None => format!("{}", identifier.id()),
+            Some(s) => format!("{}/{}", s.id(), identifier.id()),
+        }
+    )
 }

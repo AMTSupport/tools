@@ -63,15 +63,18 @@ impl Downloader for BitWardenCore {
 }
 
 impl Prune for BitWardenCore {
-    fn files(&self, config: &RuntimeConfig) -> Vec<PathBuf> {
-        let glob = glob::glob(&format!(
-            "{root}/backup-{org}/*.json",
+    fn files(&self, config: &RuntimeConfig) -> Result<Vec<PathBuf>> {
+        use std::path::MAIN_SEPARATOR;
+
+        let glob = format!(
+            "{root}{MAIN_SEPARATOR}backup-{org}/*.json",
             root = &config.directory.display(),
             org = &self.org_name
-        ))
-        .unwrap(); // TODO: Handle this better.
+        );
 
-        glob.flatten().collect()
+        glob::glob(&glob)
+            .with_context(|| format!("Glob backup files for {glob}"))
+            .map(|g| g.flatten().collect())
     }
 }
 

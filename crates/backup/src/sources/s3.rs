@@ -13,7 +13,6 @@ use inquire::validator::Validation;
 use lib::anyhow::{Context, Result};
 use lib::fs::normalise_path;
 use lib::progress::{download, spinner};
-use tracing::{debug, error, info, trace};
 use opendal::layers::LoggingLayer;
 use opendal::services::S3;
 use opendal::{Builder, Operator, OperatorBuilder};
@@ -22,6 +21,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::string::ToString;
 use std::time::UNIX_EPOCH;
+use tracing::{debug, error, info, trace};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct S3Base {
@@ -60,18 +60,18 @@ impl S3Core {
 
 #[async_trait]
 impl Prune for S3Core {
-    fn files(&self, config: &RuntimeConfig) -> Vec<PathBuf> {
-        let directory = normalise_path(S3Core::base_dir(config).join(&self.base.object));
-        if !directory.exists() {
-            return vec![];
-        }
+    fn files(&self, config: &RuntimeConfig) -> Result<Vec<PathBuf>> {
+        use std::path::MAIN_SEPARATOR;
 
-        glob::glob(normalise_path(directory.join("*")).to_str().unwrap())
-            .unwrap()
-            .flatten()
-            .filter(|path| path.is_file() && !path.is_symlink())
-            .inspect(|path| trace!("Found file: {}", path.display()))
-            .collect()
+        let glob = format!(
+            "{root}{MAIN_SEPARATOR}{bucket}{MAIN_SEPARATOR}*",
+            root = normalise_path(S3Core::base_dir(config)).display(),
+            bucket = self.base.object.display()
+        );
+
+        glob::glob(&glob)
+            .with_context(|| format!("Failed to glob: {}", glob))
+            .map(|p| p.flatten().collect())
     }
 }
 
@@ -165,7 +165,7 @@ impl Exporter for S3Core {
 
         let object = self.base.object.clone();
         let output = normalise_path(Self::base_dir(config).join(&object));
-        let mut backup_len = self.files(config).len();
+        let mut backup_len = self.files(config)?.len();
         let op = self.op();
 
         progress_state.set_message("Requesting objects from S3...");

@@ -220,3 +220,9 @@ impl RuntimeConfig {
         Ok(exporters)
     }
 }
+
+impl From<RuntimeConfig> for PathBuf {
+    fn from(ref value: RuntimeConfig) -> Self {
+        value.directory.clone()
+    }
+}
