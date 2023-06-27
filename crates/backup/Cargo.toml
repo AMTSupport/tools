@@ -20,13 +20,13 @@ const_format = "0.2.31"
 rayon = "1.7"
 
 # For downloading the required cli
-bytes = "1.4.0"
-rand = "0.8.5"
+bytes = "1.4.*"
+rand = "0.8.*"
 
 # Logging & Errors
-tracing = "0.1.37"
-thiserror = "1.0.40"
-anyhow = "1.0.71"
+tracing = "0.1.*"
+thiserror = "1.0.*"
+anyhow = "1.0.*"
 
 [dependencies.zip]
 version = "0.6.6"

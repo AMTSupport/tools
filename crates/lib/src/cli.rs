@@ -16,7 +16,7 @@
 
 use clap::Parser;
 
-#[derive(Parser, Debug, Clone)]
+#[derive(Parser, Debug, Clone, Copy)]
 pub struct Flags {
     /// The verbosity of the terminal logger
     #[arg(short, long, action = clap::ArgAction::Count)]

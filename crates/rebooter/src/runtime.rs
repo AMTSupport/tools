@@ -14,21 +14,29 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use anyhow::Context;
-use fmt::Subscriber;
-use tracing::{debug, subscriber, Level};
-use tracing_subscriber::fmt;
+use crate::application::{Cli, Error};
+use anyhow::Result;
+use clap::Parser;
+use tracing::info;
 
-pub fn init(_named: &str, verbosity: u8) -> anyhow::Result<()> {
-    let level = match verbosity {
-        0 => Level::INFO,
-        1 => Level::DEBUG,
-        _ => Level::TRACE,
-    };
+#[derive(Debug, Clone, Copy)]
+pub struct Runtime {
+    pub cli: Cli,
+}
 
-    let builder = Subscriber::builder().with_max_level(level).pretty();
+impl Runtime {
+    pub async fn new() -> Result<Self> {
+        let cli = match Cli::try_parse() {
+            Ok(cli) => cli,
+            Err(err) => return Err(Error::CliError(err).into()),
+        };
 
-    subscriber::set_global_default(builder.finish())
-        .with_context(|| "Set global default logger")
-        .inspect(|_| debug!("Initialised global logger"))
+        lib::log::init(env!("CARGO_CRATE_NAME"), cli.flags.verbose)?;
+
+        if cli.flags.dry_run {
+            info!("Dry run enabled, no actions will be taken");
+        }
+
+        Ok(Self { cli })
+    }
 }

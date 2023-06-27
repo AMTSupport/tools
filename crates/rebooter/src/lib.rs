@@ -14,21 +14,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use anyhow::Context;
-use fmt::Subscriber;
-use tracing::{debug, subscriber, Level};
-use tracing_subscriber::fmt;
-
-pub fn init(_named: &str, verbosity: u8) -> anyhow::Result<()> {
-    let level = match verbosity {
-        0 => Level::INFO,
-        1 => Level::DEBUG,
-        _ => Level::TRACE,
-    };
-
-    let builder = Subscriber::builder().with_max_level(level).pretty();
-
-    subscriber::set_global_default(builder.finish())
-        .with_context(|| "Set global default logger")
-        .inspect(|_| debug!("Initialised global logger"))
-}
+pub mod application;
+pub mod runtime;
+pub mod reason;

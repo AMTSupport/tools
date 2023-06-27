@@ -17,6 +17,7 @@
 #![feature(lazy_cell)]
 #![feature(const_for)]
 #![feature(const_option)]
+#![feature(result_option_inspect)]
 
 pub mod cli;
 pub mod fs;
