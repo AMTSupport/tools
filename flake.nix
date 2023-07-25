@@ -25,9 +25,13 @@
         lib = pkgs.lib;
 
         toolchain = with fenix.packages.${system}; combine [
-          minimal.cargo
-          minimal.rustc
-          complete.rust-src
+          (complete.withComponents [
+            "cargo"
+            "rustc"
+            "rust-src"
+            "clippy-preview"
+            "rustfmt-preview"
+          ])
           targets.x86_64-pc-windows-gnu.latest.rust-std
           targets.x86_64-unknown-linux-gnu.latest.rust-std
         ];
@@ -46,13 +50,7 @@
               release = false;
             } // (lib.optionalAttrs (target != system) {
               CARGO_BUILD_TARGET = target;
-            }) // args // {
-              nativeBuildInputs = with pkgs; [
-#                fenix.complete.cargo
-#                fenix.complete.clippy-preview
-#                fenix.complete.rustfmt-preview
-              ] ++ nativeBuildInputs;
-            }
+            }) // args // { inherit nativeBuildInputs; }
           );
 
       in rec {
@@ -89,16 +87,28 @@
 
 
         devShells.default = pkgs.mkShell {
-          packages = [ pkgs.bashInteractive ];
-          nativeBuildInputs = with pkgs; [
-            pkg-config
-            openssl
+          # TODO - Conditional
+          CARGO_BUILD_TARGET = "x86_64-unknown-linux-gnu";
+          CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER = "${pkgs.clang}/bin/clang";
+          CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUSTFLAGS = "-C link-arg=-fuse-ld=${pkgs.mold}/bin/mold";
+
+          packages = with pkgs; [
+            bashInteractive
             license-cli
           ] ++ (with fenix.packages.${system}; [
-            complete.cargo
-            complete.clippy-preview
-            complete.rustfmt-preview
-          ]);
+            (complete.withComponents [
+              "cargo"
+              "rustc"
+              "rust-src"
+              "clippy-preview"
+              "rustfmt-preview"
+          ])]);
+
+          nativeBuildInputs = with pkgs; [
+            pkg-config
+#            clang_16
+            openssl
+          ];
         };
       });
 }
