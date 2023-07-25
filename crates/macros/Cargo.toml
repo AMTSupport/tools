@@ -13,3 +13,5 @@ lib = { path = "../lib" }
 syn = "2.0.22"
 quote = "1.0.28"
 proc-macro2 = "1.0.63"
+downcast-rs = "1.2.0"
+

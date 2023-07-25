@@ -14,24 +14,16 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#![feature(async_closure)]
-#![feature(lazy_cell)]
+use clap::Parser;
+use lib::cli::Flags;
 
-use cleaner::application::application;
-use cleaner::config::runtime::Runtime;
-use lib::anyhow::Result;
-use lib::helper::required_elevated_privileges;
-use lib::log as Logger;
-use std::sync::LazyLock;
+#[derive(Parser, Debug)]
+#[command(name = env!["CARGO_PKG_NAME"], version, author, about)]
+pub struct Cli {
+    // Allows a user to interact with the application.
+    #[arg(short, long)]
+    pub interactive: bool,
 
-static RUNTIME: LazyLock<Runtime> = LazyLock::new(|| Runtime::new().unwrap());
-
-#[tokio::main]
-async fn main() -> Result<()> {
-    Logger::init(env!["CARGO_PKG_NAME"], RUNTIME.cli.flags.verbose)?;
-    let _ = required_elevated_privileges().is_some_and(|code| code.exit());
-
-    application(&RUNTIME).await?;
-
-    Ok(())
+    #[command(flatten)]
+    pub flags: Flags,
 }

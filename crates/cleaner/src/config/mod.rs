@@ -14,24 +14,5 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#![feature(async_closure)]
-#![feature(lazy_cell)]
-
-use cleaner::application::application;
-use cleaner::config::runtime::Runtime;
-use lib::anyhow::Result;
-use lib::helper::required_elevated_privileges;
-use lib::log as Logger;
-use std::sync::LazyLock;
-
-static RUNTIME: LazyLock<Runtime> = LazyLock::new(|| Runtime::new().unwrap());
-
-#[tokio::main]
-async fn main() -> Result<()> {
-    Logger::init(env!["CARGO_PKG_NAME"], RUNTIME.cli.flags.verbose)?;
-    let _ = required_elevated_privileges().is_some_and(|code| code.exit());
-
-    application(&RUNTIME).await?;
-
-    Ok(())
-}
+pub mod runtime;
+pub mod cli;

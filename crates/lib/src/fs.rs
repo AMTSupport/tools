@@ -15,25 +15,32 @@
  */
 
 use anyhow::{Context, Result};
+use cfg_if::cfg_if;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-#[cfg(windows)]
-const PATH_SEPARATOR: char = '\\';
-#[cfg(windows)]
-const OTHER_PATH_SEPARATOR: char = '/';
-#[cfg(unix)]
-const PATH_SEPARATOR: char = '/';
-#[cfg(unix)]
-const OTHER_PATH_SEPARATOR: char = '\\';
+cfg_if! {
+    if #[cfg(windows)] {
+        use std::sync::LazyLock;
+
+        const PATH_SEPARATOR: char = '\\';
+        const OTHER_PATH_SEPARATOR: char = '/';
+        pub static SYSTEM_DRIVE: LazyLock<String> = LazyLock::new(|| {
+            std::env::var("SystemDrive")
+                .with_context(|| "Getting system drive from environment variable")
+                .unwrap_or_else(|_| "C:".to_owned())
+        });
+    } else if #[cfg(unix)] {
+        pub const PATH_SEPARATOR: char = '/';
+        pub const OTHER_PATH_SEPARATOR: char = '\\';
+        pub const SYSTEM_DRIVE: char = PATH_SEPARATOR;
+    }
+}
 
 pub fn create_parents(path: &Path) -> Result<()> {
-    path.parent().with_context(|| format!("Get parent directory for {}", &path.display())).and_then(
-        |p| {
-            fs::create_dir_all(p)
-                .with_context(|| format!("Creating parent directories for {}", &path.display()))
-        },
-    )
+    path.parent().with_context(|| format!("Get parent directory for {}", &path.display())).and_then(|p| {
+        fs::create_dir_all(p).with_context(|| format!("Creating parent directories for {}", &path.display()))
+    })
 }
 
 pub fn normalise_path(path: PathBuf) -> PathBuf {
@@ -61,10 +68,7 @@ pub fn normalise_path(path: PathBuf) -> PathBuf {
     // TODO -> What else do we need to replace?
     let mut p = if cfg!(windows) {
         let drive = p.next().expect("Get drive root");
-        let p = p
-            .map(|v| v.replace(':', "_"))
-            .collect::<Vec<String>>()
-            .join(PATH_SEPARATOR.to_string().as_str());
+        let p = p.map(|v| v.replace(':', "_")).collect::<Vec<String>>().join(PATH_SEPARATOR.to_string().as_str());
 
         format!(
             "{drive}{sep}{path}",

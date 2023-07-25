@@ -31,7 +31,6 @@ use lib::anyhow;
 use lib::anyhow::{anyhow, Context};
 use lib::fs::normalise_path;
 use lib::pathed::Pathed;
-use macros::FromCommand;
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::fmt::{Display, Formatter};
@@ -172,7 +171,7 @@ impl Exporter for BitWardenCore {
         let session_id = String::from_utf8(output.stdout)?;
         trace!("Successfully logged into BitWarden");
 
-        let account = BitW
+        // let account = BitW
 
         let organisations = command()
             .arg("list")

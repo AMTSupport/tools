@@ -14,17 +14,23 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use tracing::error;
+use cfg_if::cfg_if;
 use sysexits::ExitCode;
+use tracing::error;
 
 const ERROR_MESSAGE: &str = "Failed to elevate privileges";
 
 pub fn elevated_privileges() -> bool {
-    #[cfg(windows)]
-    return is_elevated::is_elevated();
-
-    #[cfg(unix)]
-    nix::unistd::geteuid().is_root()
+    cfg_if! {
+         if #[cfg(windows)] {
+            is_elevated::is_elevated()
+        } else if #[cfg(unix)] {
+            nix::unistd::geteuid().is_root()
+        } else {
+            warn!("Unsupported platform, assuming not elevated");
+            false
+        }
+    }
 }
 
 pub fn required_elevated_privileges() -> Option<ExitCode> {
