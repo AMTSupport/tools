@@ -1,115 +1,76 @@
 {
-  description = "dev-shell for tools";
+  description = "Foo Bar Rust Project";
+
+  nixConfig = {
+    extra-substituters = [ "https://racci.cachix.org" ];
+    extra-trusted-public-keys = [ "racci.cachix.org-1:Kl4opLxvTV9c77DpoKjUOMLDbCv6wy3GVHWxB384gxg=" ];
+  };
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    flake-utils.url = "github:numtide/flake-utils";
-    naersk = {
-      url = "github:nix-community/naersk";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-    fenix = {
-      url = "github:nix-community/fenix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+
+    systems.url = "github:nix-systems/default-linux";
+    flake-utils = { url = "github:numtide/flake-utils"; inputs.systems.follows = "systems"; };
+
+    crane = { url = "github:ipetkov/crane"; inputs.nixpkgs.follows = "nixpkgs"; };
+    fenix = { url = "github:nix-community/fenix"; inputs.nixpkgs.follows = "nixpkgs"; };
   };
 
-  outputs = { self, nixpkgs, flake-utils, naersk, fenix, ... }:
+  outputs = { nixpkgs, flake-utils, crane, fenix, ... }:
     let
-#      cargoToml = builtins.fromToml (builtins.readFile ./Cargo.toml);
-#      name = cargoToml.package.name;
+      # TODO - Darwin support (error: don't yet have a `targetPackages.darwin.LibsystemCross for x86_64-apple-darwin`)
+      targets = flake-utils.lib.defaultSystems ++ [ "x86_64-windows" ];
+      onAll = localSystem: f: (builtins.foldl' (attr: target: attr // (f target)) { } targets);
     in
-    flake-utils.lib.eachDefaultSystem (system: let
-        overlays = [ fenix.overlays.default ];
-        pkgs = import nixpkgs { inherit system overlays; };
-        lib = pkgs.lib;
+    flake-utils.lib.eachDefaultSystem (localSystem:
+      let
+        pkgs = import nixpkgs { system = localSystem; };
 
-        toolchain = with fenix.packages.${system}; combine [
-          (complete.withComponents [
-            "cargo"
-            "rustc"
-            "rust-src"
-            "clippy-preview"
-            "rustfmt-preview"
-          ])
-          targets.x86_64-pc-windows-gnu.latest.rust-std
-          targets.x86_64-unknown-linux-gnu.latest.rust-std
-        ];
+        cargoToml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
+        hasSubCrates = (builtins.length (cargoToml.workspace.members or [ ])) >= 1;
 
-        naersk-lib = naersk.lib.${system}.override {
-          cargo = toolchain;
-          rustc = toolchain;
-        };
-
-        buildPackage = target: { nativeBuildInputs ? [ ], ...}@args:
-          naersk-lib.buildPackage({
-              name = "tools";
-              src = ./.;
-              doCheck = false;
-              strictDeps = true;
-              release = false;
-            } // (lib.optionalAttrs (target != system) {
-              CARGO_BUILD_TARGET = target;
-            }) // args // { inherit nativeBuildInputs; }
+        cargoPackages = onAll localSystem
+          (crossSystem:
+            let
+              disambiguate = name: if crossSystem == localSystem then name else "${name}-${crossSystem}";
+            in
+            (if hasSubCrates then
+              let
+                members = cargoToml.workspace.default-members or [ ];
+                getCargoToml = path: builtins.fromTOML (builtins.readFile (./. + "/${path}" + "/Cargo.toml"));
+                memberName = path: let cargo = getCargoToml path; in cargo.package.name;
+                getPkg = workspace: pkgs.callPackage ./default.nix { inherit localSystem crossSystem flake-utils crane fenix workspace; };
+              in
+              if builtins.length members >= 1
+              then builtins.listToAttrs (builtins.map (member: { name = disambiguate (memberName member); value = let split = builtins.split "/" member; in getPkg (builtins.elemAt split (builtins.length split - 1)); }) members)
+              else builtins.listToAttrs (builtins.map (member: { name = disambiguate (memberName "crates/${member}"); value = getPkg member; }) (builtins.attrNames (builtins.readDir ./crates)))
+            else { }) // (if ((cargoToml.package.name or null) == null) then { } else (builtins.listToAttrs [{ name = disambiguate "default"; value = pkgs.callPackage ./default.nix { inherit localSystem crossSystem flake-utils crane fenix; }; }]))
           );
-
-      in rec {
-        packages = {
-          # TODO :: Default run/build from system arch
-          default = buildPackage system { };
-
-          backup.x86_64-unknown-linux-gnu = buildPackage "x86_64-unknown-linux-gnu" {
-            nativeBuildInputs = with pkgs; [ openssl pkgsStatic.stdenv.cc mold ];
-            CARGO_BUILD_TARGET = "x86_64-unknown-linux-gnu";
-            CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUSTFLAGS = "-C link-arg=-fuse-ld=mold";
-          };
-
-          backup.x86_64-pc-windows-gnu = buildPackage "x86_64-pc-windows-gnu" {
-            doCheck = false;#system == "x86_64-linux";
-
-            depsBuildBuild = with pkgs; [
-              pkgsCross.mingwW64.stdenv.cc
-              pkgsCross.mingwW64.buildPackages.gcc
-              pkgsCross.mingwW64.windows.pthreads
-            ];
-
-#            nativeBuildInputs = lib.optional doCheck pkgs.wineWowPackages.stable;
-
-            CARGO_BUILD_TARGET = "x86_64-pc-windows-gnu";
-            CARGO_TARGET_X86_64_PC_WINDOWS_GNU_RUNNER = pkgs.writeScript "wine-wrapper" ''
-              # Without this, wine will error out when attempting to create the
-              # prefix in the build's homeless shelter.
-              export WINEPREFIX="$(mktemp -d)"
-              exec wine64 $@
-            '';
+      in
+      {
+        packages = cargoPackages // {
+          all = pkgs.symlinkJoin {
+            name = "all";
+            paths = builtins.attrValues cargoPackages;
           };
         };
 
-
-        devShells.default = pkgs.mkShell {
-          # TODO - Conditional
-          CARGO_BUILD_TARGET = "x86_64-unknown-linux-gnu";
-          CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER = "${pkgs.clang}/bin/clang";
-          CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUSTFLAGS = "-C link-arg=-fuse-ld=${pkgs.mold}/bin/mold";
-
-          packages = with pkgs; [
-            bashInteractive
-            license-cli
-          ] ++ (with fenix.packages.${system}; [
-            (complete.withComponents [
-              "cargo"
-              "rustc"
-              "rust-src"
-              "clippy-preview"
-              "rustfmt-preview"
-          ])]);
-
-          nativeBuildInputs = with pkgs; [
-            pkg-config
-#            clang_16
-            openssl
-          ];
+        devShells = {
+          default = pkgs.callPackage ./shell.nix { inherit localSystem flake-utils crane fenix; };
         };
+
+        checks = builtins.foldl'
+          (attr: packageChecks: (attr // packageChecks))
+          { }
+          (builtins.attrValues (builtins.mapAttrs
+            (name: package:
+              let inherit (package.passthru) craneLib commonArgs; in {
+                "${name}-fmt" = craneLib.cargoFmt commonArgs;
+                "${name}-clippy" = craneLib.cargoClippy (commonArgs // {
+                  inherit (package) cargoArtifacts;
+                  cargoClippyExtraArgs = "--workspace -- --deny warnings";
+                });
+              })
+            cargoPackages));
       });
 }
-
