@@ -14,24 +14,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#![feature(lazy_cell)]
-#![feature(const_for)]
-#![feature(const_option)]
-#![feature(result_option_inspect)]
-#![feature(associated_type_defaults)]
+use crate::config::cli::Cli;
+use macros::runtime;
 
-pub mod cli;
-pub mod fs;
-pub mod helper;
-pub mod log;
-pub mod progress;
-pub mod pathed;
-pub mod inquire;
-pub mod runtime;
-
-pub use anyhow;
-pub use clap;
-pub use sysexits;
-
-#[cfg(unix)]
-pub use nix;
+#[derive(Debug)]
+#[runtime(Cli)]
+pub struct Runtime {}

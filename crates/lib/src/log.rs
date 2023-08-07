@@ -26,7 +26,7 @@ pub fn init(_named: &str, verbosity: u8) -> anyhow::Result<()> {
         _ => Level::TRACE,
     };
 
-    let builder = Subscriber::builder().with_max_level(level).pretty();
+    let builder = Subscriber::builder().with_max_level(level).pretty().without_time().compact();
 
     subscriber::set_global_default(builder.finish())
         .with_context(|| "Set global default logger")

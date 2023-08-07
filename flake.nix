@@ -19,7 +19,7 @@
   outputs = { nixpkgs, flake-utils, crane, fenix, ... }:
     let
       # TODO - Darwin support (error: don't yet have a `targetPackages.darwin.LibsystemCross for x86_64-apple-darwin`)
-      targets = flake-utils.lib.defaultSystems ++ [ "x86_64-windows" ];
+      targets = [ "x86_64-linux" ] ++ [ "x86_64-windows" ];
       onAll = localSystem: f: (builtins.foldl' (attr: target: attr // (f target)) { } targets);
     in
     flake-utils.lib.eachDefaultSystem (localSystem:

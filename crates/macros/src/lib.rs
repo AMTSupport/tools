@@ -21,12 +21,131 @@
 use proc_macro::Level::Error;
 use proc_macro::{Diagnostic, Span, TokenStream};
 use quote::quote;
+use syn::parse::Parser;
 use syn::spanned::Spanned;
-use syn::{parse_macro_input, Data, DeriveInput, Fields, Ident, Path, Type, TypePath};
+use syn::{parse_macro_input, Data, DeriveInput, Field, Fields, Ident, Path, Type, TypePath};
 
 fn error(span: proc_macro2::Span, message: &str) -> TokenStream {
-    Diagnostic::spanned(span.unwrap(), Error, message).emit();
-    TokenStream::new()
+    span.unwrap().error(message).emit();
+    syn::Error::new(span, message).into_compile_error().into()
+}
+
+#[proc_macro_attribute]
+pub fn runtime_cli(_args: TokenStream, input: TokenStream) -> TokenStream {
+    let mut input = parse_macro_input!(input as DeriveInput);
+
+    let struct_data = match &mut input.data {
+        Data::Struct(ref mut data) => data,
+        _ => return error(input.span(), "RuntimeCLI can only be derived for structs"),
+    };
+
+    let struct_fields = match &mut struct_data.fields {
+        Fields::Named(fields) => fields,
+        pointer => {
+            return error(
+                pointer.span(),
+                "RuntimeCLI can only be derived for structs with named fields",
+            )
+        }
+    };
+
+    struct_fields.named.push(
+        Field::parse_named
+            .parse2(quote! {
+                #[command(flatten)]
+                pub flags: Flags
+            })
+            .unwrap(),
+    );
+
+    return quote! {
+        use lib::cli::Flags;
+        use clap::Parser;
+
+        #[derive(Parser, Debug)]
+        #[command(name = env!["CARGO_PKG_NAME"], version, author, about)]
+        #input
+
+        impl lib::runtime::runtime::Cli for #input {
+            fn flags(&self) -> &Flags {
+                &self.flags
+            }
+        }
+    }
+    .into();
+}
+
+#[proc_macro_attribute]
+pub fn runtime(args: TokenStream, input: TokenStream) -> TokenStream {
+    let mut input = parse_macro_input!(input as DeriveInput);
+    let args = parse_macro_input!(args as TypePath);
+
+    let struct_data = match &mut input.data {
+        Data::Struct(data) => data,
+        _ => return error(input.span(), "Runtime can only be derived for structs"),
+    };
+
+    let struct_fields = match &mut struct_data.fields {
+        Fields::Named(fields) => fields,
+        pointer => {
+            return error(
+                pointer.span(),
+                "Runtime can only be derived for structs with named fields",
+            )
+        }
+    };
+
+    let new_fields = vec![
+        Field::parse_named.parse2(quote! { pub cli: #args }),
+        Field::parse_named.parse2(quote! { pub errors: std::sync::RwLock<Vec<Error>> }),
+        Field::parse_named.parse2(quote! { pub logger: tracing::dispatcher::DefaultGuard }),
+    ]
+    .into_iter()
+    .map(|f| f.map_err(|e| error(e.span(), "Failed to parse field")))
+    .collect::<Vec<Result<Field, TokenStream>>>();
+
+    for field in new_fields {
+        match field {
+            Ok(field) => struct_fields.named.push(field),
+            Err(err) => return err,
+        }
+    }
+
+    let struct_ident = &input.ident;
+
+    return quote! {
+        use lib::runtime::runtime::Runtime as RuntimeBase;
+        use anyhow::{Result,Error};
+
+        #input
+
+        #[automatically_derived]
+        impl RuntimeBase<#args> for #struct_ident {
+            #[automatically_derived]
+            fn new() -> Result<Self> where Self: Sized {
+                let cli = Self::new_cli()?;
+                let logger = Self::new_logger(&cli.flags);
+                let errors = Self::new_errors();
+
+                Ok(Self {
+                    cli,
+                    logger,
+                    errors,
+                })
+            }
+
+            #[automatically_derived]
+            fn __get_cli(&self) -> &#args {
+                &self.cli
+            }
+
+            #[automatically_derived]
+            fn __get_errors(&mut self) -> &mut std::sync::RwLock<Vec<Error>> {
+                &mut self.errors
+            }
+        }
+    }
+    .into();
 }
 
 #[proc_macro_derive(EnumVariants)]
@@ -102,7 +221,7 @@ pub fn delegate_trait(input: TokenStream) -> TokenStream {
 
             let path = meta.value()?.parse::<Path>()?;
             let const_ident = Ident::new(&format!("{}_INSTANCE", ident), ident.span());
-            let r#const = quote! { const #const_ident: LazyLock<Box<dyn #delegate_type>> = LazyLock::new(|| Box::new(#path::new())); };
+            let r#const = quote! { #[allow(non_upper_case_globals)] const #const_ident: LazyLock<Box<dyn #delegate_type>> = LazyLock::new(|| Box::new(#path::new())); };
             let arm = quote! { #enum_name::#ident => #enum_name::#const_ident };
             consts.push(r#const);
             delegation_arms.push(arm);
@@ -185,18 +304,32 @@ pub fn conditional_fields_macro(input: TokenStream) -> TokenStream {
 
     // Generate the conditional fields
     let functions = common_fields.iter().map(|(field_name, field_type)| {
+        let mut string = field_name.to_string();
+        if string.starts_with("__self_") {
+            string.retain(|c| c.is_numeric());
+        };
+
+        let (function_name, field_index) = match string.parse::<usize>() {
+            Ok(index) => (Ident::new(&format!("field_{index}"), field_name.span()), Some(index)),
+            Err(_) => (field_name.clone(), None),
+        };
+
         let enum_branches = variants.iter().map(|variant| {
             let variant_name = &variant.ident;
-            quote! {
-                #enum_name::#variant_name { #field_name, .. } => #field_name,
+            match field_index {
+                Some(index) => {
+                    let varargs = (0..index).map(|_| quote! { _ }).collect::<Vec<_>>();
+                    quote! { #enum_name::#variant_name(#(#varargs,)* field, ..) => field }
+                }
+                None => quote! { #enum_name::#variant_name { #field_name, .. } => #field_name },
             }
         });
 
         quote! {
             #[automatically_derived]
-            pub const fn #field_name(&self) -> &#field_type {
+            pub const fn #function_name(&self) -> &#field_type {
                 match self {
-                    #(#enum_branches)*
+                    #(#enum_branches,)*
                 }
             }
         }
@@ -426,7 +559,7 @@ fn get_fields_from_variant(variant: &syn::Variant) -> Vec<(Ident, &Type)> {
             .iter()
             .enumerate()
             .map(|(index, field)| {
-                let field_name = Ident::new(&format!("field{}", index), field.span());
+                let field_name = Ident::new(&format!("__self_{}", index), field.span());
                 let field_type = &field.ty;
                 (field_name, field_type)
             })

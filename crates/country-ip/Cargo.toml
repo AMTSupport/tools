@@ -1,0 +1,41 @@
+[package]
+name = "country-ip"
+version = "0.1.0"
+edition = "2021"
+categories = ["command-line-utilities", "utilities", "cli", "library", "lib"]
+keywords = ["random", "ip", "ip-address", "ipv4", "testing", "geoip", "geo", "country"]
+description = "A command line utility to generate random IP addresses from a given country."
+
+[lib]
+name = "country_ip"
+path = "src/lib.rs"
+
+[dependencies]
+lib = { path = "../lib" }
+macros = { path = "../macros" }
+
+clap = { version = "4.2.7", features = ["derive","color","suggestions","usage"] }
+tokio = { version = "1.28.1", features = ["fs", "macros", "rt-multi-thread"] }
+reqwest = { version = "0.11.13", features = ["stream"] }
+rand = { version = "0.8.5", features = ["small_rng"] }
+rayon = "1.7"
+async-compression = { version = "0.4.1", default-features = false, features = ["tokio","gzip"] }
+tokio-util = { version = "0.7.8", features = ["compat"] }
+futures = "0.3.28"
+cidr = "0.2.2"
+async-trait = "0.1.72"
+
+# Logging & Errors
+tracing = "0.1.*"
+tracing-subscriber = { version = "0.3.*", features = ["fmt"] }
+thiserror = "1.0.*"
+anyhow = "1.0.*"
+
+# Countries
+keshvar = "0.3.0"
+
+# Testing
+[dev-dependencies]
+env_logger = "*"
+test-log = { version = "0.2.12", features = ["trace"] }
+tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "fmt"] }
