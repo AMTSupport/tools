@@ -23,6 +23,7 @@
 #![feature(impl_trait_in_assoc_type)]
 #![feature(thin_box)]
 #![feature(associated_type_defaults)]
+#![feature(extend_one)]
 
 pub mod application;
 pub mod builder;

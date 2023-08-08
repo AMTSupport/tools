@@ -18,22 +18,35 @@ use anyhow::{Context, Result};
 use cfg_if::cfg_if;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::LazyLock;
 
 cfg_if! {
     if #[cfg(windows)] {
-        use std::sync::LazyLock;
-
         const PATH_SEPARATOR: char = '\\';
         const OTHER_PATH_SEPARATOR: char = '/';
-        pub static SYSTEM_DRIVE: LazyLock<String> = LazyLock::new(|| {
-            std::env::var("SystemDrive")
+        pub static SYSTEM_DRIVE: LazyLock<PathBuf> = LazyLock::new(|| {
+            let letter = std::env::var("SystemDrive")
                 .with_context(|| "Getting system drive from environment variable")
-                .unwrap_or_else(|_| "C:".to_owned())
+                .unwrap_or_else(|_| "C:".to_owned());
+
+            PathBuf::from(format!("{}{}", letter, PATH_SEPARATOR))
+        });
+        pub static DRIVES: LazyLock<Vec<PathBuf>> = LazyLock::new(|| {
+            let mut drives = Vec::with_capacity(26);
+            for x in 0..26 {
+                let drive = format!("{}:", (x + 64) as u8 as char);
+                let drive = PathBuf::from(drive);
+                if drive.exists() {
+                    drives.push(drive);
+                }
+            }
+
+            drives
         });
     } else if #[cfg(unix)] {
         pub const PATH_SEPARATOR: char = '/';
         pub const OTHER_PATH_SEPARATOR: char = '\\';
-        pub const SYSTEM_DRIVE: char = PATH_SEPARATOR;
+        pub const SYSTEM_DRIVE: LazyLock<PathBuf> = LazyLock::new(|| PathBuf::from(PATH_SEPARATOR.to_string()));
     }
 }
 
@@ -52,10 +65,7 @@ pub fn normalise_path(path: PathBuf) -> PathBuf {
 
     // Fast line for empty path.
     if path.is_empty() {
-        #[cfg(windows)]
-        return crate::windows::ROOT_DRIVE.clone();
-        #[cfg(unix)]
-        return PathBuf::from("/");
+        return SYSTEM_DRIVE.clone()
     }
 
     let path = path.replace(OTHER_PATH_SEPARATOR, PATH_SEPARATOR.to_string().as_str());

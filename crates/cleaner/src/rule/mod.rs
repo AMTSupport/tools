@@ -43,10 +43,13 @@ impl Rule {
     /// Returns true if the paths passes the rule
     #[instrument]
     pub fn test(&self, path: &Path) -> bool {
-        match self {
+        let passed = match self {
             Rule::Age(..) => age::test(*self, path),
             Rule::None => true,
-        }
+        };
+
+        trace!("Rule {self:?} passed for {}: {passed}", path.display());
+        passed
     }
 }
 

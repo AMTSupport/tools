@@ -14,17 +14,18 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::cleaners::cleaner::Cleaner::Logs;
+use lib::fs::SYSTEM_DRIVE;
+use crate::cleaners::cleaner::Cleaner::Temp;
 use crate::cleaners::cleaner::{CleanerInternal, CleanupResult};
 use crate::cleaners::location::Location;
 use crate::config::runtime::Runtime;
-use crate::rule::{age::Since, Rule, Rules};
-use chrono::Duration;
+use crate::rule::Rules;
 
 #[derive(Default, Debug, Clone, Copy)]
-pub struct LogCleaner;
+pub struct TempCleaner;
 
-impl CleanerInternal for LogCleaner {
+// TODO - Browser Shader Cache
+impl CleanerInternal for TempCleaner {
     fn new() -> Self
     where
         Self: Sized,
@@ -32,10 +33,8 @@ impl CleanerInternal for LogCleaner {
         Self::default()
     }
 
-    /// Clean logs older than 14 days;
-    /// We don't want to clean logs immediately, as they may be useful for debugging.
     fn rules(&self) -> Rules {
-        vec![Rule::Age(Duration::days(14), Since::Modified)]
+        vec![]
     }
 
     #[cfg(unix)]
@@ -45,15 +44,13 @@ impl CleanerInternal for LogCleaner {
 
     #[cfg(windows)]
     fn locations(&self) -> Vec<Location> {
-        use super::{PROGRAM_DATA, WINDIR};
+        use super::{USERS, WINDIR};
+        let prefix = "AppData/Local/";
 
         vec![
-            Location::Globbing(PROGRAM_DATA.join("NVIDIA/*").to_string_lossy().to_string()),
-            Location::Globbing(
-                PROGRAM_DATA.join("Microsoft/Windows/WER/ReportArchive/*").to_string_lossy().to_string(),
-            ),
-            Location::Globbing(WINDIR.join("Panther/*").to_string_lossy().to_string()),
-            Location::Globbing(WINDIR.join("Minidump/*").to_string_lossy().to_string()),
+            Location::Sub(&USERS, format!("{prefix}Temp/*")),
+            Location::Globbing(WINDIR.join("Temp/*").to_string_lossy().into()),
+            Location::Globbing(SYSTEM_DRIVE.join("/[Tt]e?mp/*").to_string_lossy().into()),
         ]
     }
 
@@ -61,7 +58,7 @@ impl CleanerInternal for LogCleaner {
         use crate::cleaners::cleaner::{clean_files, collect_locations};
 
         let (passed, failed) = collect_locations(self.locations(), self.rules());
-        let passed_result = clean_files(Logs, passed, &runtime);
+        let passed_result = clean_files(Temp, passed, &runtime);
         let final_result = passed_result.extend_missed(failed);
 
         final_result

@@ -14,7 +14,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::cleaners::cleaner::Cleaner::Logs;
+use crate::cleaners::cleaner::Cleaner::Trash;
 use crate::cleaners::cleaner::{CleanerInternal, CleanupResult};
 use crate::cleaners::location::Location;
 use crate::config::runtime::Runtime;
@@ -22,9 +22,9 @@ use crate::rule::{age::Since, Rule, Rules};
 use chrono::Duration;
 
 #[derive(Default, Debug, Clone, Copy)]
-pub struct LogCleaner;
+pub struct TrashCleaner;
 
-impl CleanerInternal for LogCleaner {
+impl CleanerInternal for TrashCleaner {
     fn new() -> Self
     where
         Self: Sized,
@@ -32,10 +32,9 @@ impl CleanerInternal for LogCleaner {
         Self::default()
     }
 
-    /// Clean logs older than 14 days;
-    /// We don't want to clean logs immediately, as they may be useful for debugging.
+    /// Only clean items that were added more than 7 days ago.
     fn rules(&self) -> Rules {
-        vec![Rule::Age(Duration::days(14), Since::Modified)]
+        vec![Rule::Age(Duration::days(7), Since::Modified)]
     }
 
     #[cfg(unix)]
@@ -46,22 +45,19 @@ impl CleanerInternal for LogCleaner {
     #[cfg(windows)]
     fn locations(&self) -> Vec<Location> {
         use super::{PROGRAM_DATA, WINDIR};
+        use lib::fs::DRIVES;
 
-        vec![
-            Location::Globbing(PROGRAM_DATA.join("NVIDIA/*").to_string_lossy().to_string()),
-            Location::Globbing(
-                PROGRAM_DATA.join("Microsoft/Windows/WER/ReportArchive/*").to_string_lossy().to_string(),
-            ),
-            Location::Globbing(WINDIR.join("Panther/*").to_string_lossy().to_string()),
-            Location::Globbing(WINDIR.join("Minidump/*").to_string_lossy().to_string()),
-        ]
+        DRIVES
+            .iter()
+            .map(|drive| Location::Globbing(drive.join("$RECYCLE.BIN/*").to_string_lossy().to_string()))
+            .collect()
     }
 
     fn clean(&self, runtime: &'static Runtime) -> CleanupResult {
         use crate::cleaners::cleaner::{clean_files, collect_locations};
 
         let (passed, failed) = collect_locations(self.locations(), self.rules());
-        let passed_result = clean_files(Logs, passed, &runtime);
+        let passed_result = clean_files(Trash, passed, &runtime);
         let final_result = passed_result.extend_missed(failed);
 
         final_result

@@ -14,14 +14,57 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+use crate::cleaners::cleaner::{Cleaner, CleanupResult};
 use crate::config::runtime::Runtime;
-use tracing::info;
+use tracing::{debug, error, info};
 
-pub async fn application(_runtime: &'static Runtime) -> anyhow::Result<()> {
+pub async fn application(runtime: &'static Runtime) -> anyhow::Result<()> {
     info!("Starting cleaner");
 
     // TODO :: Progress bar
     info!("Collecting cleanable items...");
+
+    let mut results = vec![];
+    for cleaner_ref in runtime.cli.cleaners.clone() {
+        info!("Cleaning up {:?}...", cleaner_ref);
+        let cleaner = &*cleaner_ref.delegate();
+
+        if !cleaner.supported() {
+            results.push(CleanupResult::Skipped(cleaner_ref, "Unsupported".into()));
+            continue;
+        }
+
+        let result = cleaner.clean(&runtime);
+        results.push(result);
+    }
+
+    for result in results {
+        match result {
+            CleanupResult::Skipped(source, reason) => info!("{source:?} was skipped due to {reason}"),
+            CleanupResult::Failed(source, err) => error!("{source:?} encountered an error during execution: {err}"),
+            CleanupResult::Cleaned(source, files) => info!(
+                "Cleanup removed {removed_files} files from {source:?}, freeing up a total of {removed_size}.",
+                removed_files = indicatif::HumanCount(files.len() as u64),
+                removed_size = indicatif::HumanBytes(files.iter().fold(0, |acc, file| acc + file.size))
+            ),
+            CleanupResult::Partial(source, cleaned, missed) => {
+                debug!("{:?}", missed);
+
+                info!(
+                    "Cleanup removed {removed_files} files from {source:?}, freeing up a total of {removed_size}.",
+                    removed_files = indicatif::HumanCount(cleaned.len() as u64),
+                    removed_size = indicatif::HumanBytes(cleaned.iter().fold(0, |acc, file| acc + file.size))
+                );
+
+                info!(
+                    "Automatic cleanup was unable to remove {missed_files} files from {source:?}, which would have freed up an additional total of {missed_size}.",
+                    missed_files = indicatif::HumanCount(missed.len() as u64),
+                    missed_size = indicatif::HumanBytes(missed.iter().fold(0, |acc, file| acc + file.field_1()))
+                )
+            }
+        };
+    }
+
     // let cleaners =
     //
     // let cleanable = LOCATIONS

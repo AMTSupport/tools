@@ -14,17 +14,17 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::cleaners::cleaner::Cleaner::Logs;
+use crate::cleaners::cleaner::Cleaner::Downloads;
 use crate::cleaners::cleaner::{CleanerInternal, CleanupResult};
 use crate::cleaners::location::Location;
 use crate::config::runtime::Runtime;
-use crate::rule::{age::Since, Rule, Rules};
-use chrono::Duration;
+use crate::rule::Rules;
 
 #[derive(Default, Debug, Clone, Copy)]
-pub struct LogCleaner;
+pub struct DownloadsCleaner;
 
-impl CleanerInternal for LogCleaner {
+// TODO - Browser Shader Cache
+impl CleanerInternal for DownloadsCleaner {
     fn new() -> Self
     where
         Self: Sized,
@@ -32,10 +32,8 @@ impl CleanerInternal for LogCleaner {
         Self::default()
     }
 
-    /// Clean logs older than 14 days;
-    /// We don't want to clean logs immediately, as they may be useful for debugging.
     fn rules(&self) -> Rules {
-        vec![Rule::Age(Duration::days(14), Since::Modified)]
+        vec![]
     }
 
     #[cfg(unix)]
@@ -46,14 +44,17 @@ impl CleanerInternal for LogCleaner {
     #[cfg(windows)]
     fn locations(&self) -> Vec<Location> {
         use super::{PROGRAM_DATA, WINDIR};
+        use lib::fs::SYSTEM_DRIVE;
 
         vec![
-            Location::Globbing(PROGRAM_DATA.join("NVIDIA/*").to_string_lossy().to_string()),
-            Location::Globbing(
-                PROGRAM_DATA.join("Microsoft/Windows/WER/ReportArchive/*").to_string_lossy().to_string(),
-            ),
-            Location::Globbing(WINDIR.join("Panther/*").to_string_lossy().to_string()),
-            Location::Globbing(WINDIR.join("Minidump/*").to_string_lossy().to_string()),
+            // Windows Update / Prefetch files
+            Location::Globbing(WINDIR.join("Downloaded Program Files/*").to_string_lossy().into()),
+            Location::Globbing(WINDIR.join("SoftwareDistribution/Download/*").to_string_lossy().into()),
+            Location::Globbing(WINDIR.join("Prefetch/*").to_string_lossy().into()),
+            // Graphic Drivers
+            Location::Globbing(PROGRAM_DATA.join("NVIDIA Corporation/Downloader/*").to_string_lossy().into()),
+            // Package Managers
+            Location::Globbing(SYSTEM_DRIVE.join("NinitePro/NiniteDownloads/Files/*").to_string_lossy().into()),
         ]
     }
 
@@ -61,7 +62,7 @@ impl CleanerInternal for LogCleaner {
         use crate::cleaners::cleaner::{clean_files, collect_locations};
 
         let (passed, failed) = collect_locations(self.locations(), self.rules());
-        let passed_result = clean_files(Logs, passed, &runtime);
+        let passed_result = clean_files(Downloads, passed, &runtime);
         let final_result = passed_result.extend_missed(failed);
 
         final_result

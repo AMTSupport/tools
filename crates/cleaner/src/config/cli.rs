@@ -14,15 +14,21 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+use crate::cleaners::cleaner::Cleaner;
 use clap::Parser;
 use lib::cli::Flags;
+use macros::runtime_cli;
 
 #[derive(Parser, Debug)]
 #[command(name = env!["CARGO_PKG_NAME"], version, author, about)]
+#[runtime_cli]
 pub struct Cli {
     // Allows a user to interact with the application.
     #[arg(short, long)]
     pub interactive: bool,
+
+    #[arg(short, long, default_value = "Cleaner::get_variants()")]
+    pub cleaners: Vec<Cleaner>,
 
     #[command(flatten)]
     pub flags: Flags,

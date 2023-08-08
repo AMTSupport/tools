@@ -20,12 +20,18 @@ use std::sync::LazyLock;
 
 pub mod browser;
 pub mod log;
+pub mod shader;
+pub mod thumbnail;
+pub mod temp;
+pub mod downloads;
+pub mod trash;
 
 cfg_if! {
     if #[cfg(unix)] {
         pub static USERS: LazyLock<Location> = LazyLock::new(|| Location::Globbing("/home/*/".into()));
     } else if #[cfg(windows)] {
         use crate::cleaners::env_dir;
+        use std::path::PathBuf;
 
         pub static PROGRAM_DATA: LazyLock<PathBuf> = LazyLock::new(|| env_dir("ProgramData".into()).expect("This is always set on Windows"));
         pub static WINDIR: LazyLock<PathBuf> = LazyLock::new(|| env_dir("windir".into()).expect("This is always set on Windows"));

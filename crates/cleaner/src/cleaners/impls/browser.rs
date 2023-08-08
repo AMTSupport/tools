@@ -14,15 +14,19 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::cleaners::cleaner::CleanerInternal;
+use crate::cleaners::cleaner::{Cleaner, CleanerInternal, CleanupResult};
 use crate::cleaners::location::Location;
+use crate::config::runtime::Runtime;
 use crate::rule::Rules;
 
 #[derive(Default, Debug, Clone, Copy)]
 pub struct BrowserCleaner;
 
 impl CleanerInternal for BrowserCleaner {
-    fn new() -> Self where Self: Sized {
+    fn new() -> Self
+    where
+        Self: Sized,
+    {
         Self::default()
     }
 
@@ -49,5 +53,15 @@ impl CleanerInternal for BrowserCleaner {
                 format!("{prefix}Mozilla/Firefox/Profiles/*.default-release/cache2/*"),
             ),
         ]
+    }
+
+    fn clean(&self, runtime: &'static Runtime) -> CleanupResult {
+        use crate::cleaners::cleaner::{clean_files, collect_locations};
+
+        let (passed, failed) = collect_locations(self.locations(), self.rules());
+        let passed_result = clean_files(Cleaner::Browsers, passed, &runtime);
+        let final_result = passed_result.extend_missed(failed);
+
+        final_result
     }
 }

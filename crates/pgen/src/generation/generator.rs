@@ -57,7 +57,7 @@ impl GeneratorFunctions for Generator {
     fn new(rules: Rules) -> Result<Self> {
         trace!("Initialising generator state");
         Ok(Generator {
-            rules: rules,
+            rules,
             seed: StdRng::from_entropy(),
         })
     }
