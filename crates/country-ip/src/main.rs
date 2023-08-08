@@ -96,6 +96,16 @@ async fn get(_runtime: &'static Runtime, alpha: &Option<String>, use_ipv6: &bool
     Ok(())
 }
 
-async fn lookup(runtime: &'static Runtime, addr: &IpAddr) -> anyhow::Result<()> {
-    unimplemented!()
+async fn lookup(_runtime: &'static Runtime, addr: &IpAddr) -> anyhow::Result<()> {
+    let variants: Vec<Registry> = Registry::get_variants();
+    let mut stream = futures::stream::iter(variants.iter()).map(|reg| reg.get()).buffer_unordered(variants.len());
+
+    while let Some(Ok(db)) = stream.next().await {
+        if let Some(alpha) = db.lookup(addr).await {
+            info!("Found country for IP address: {}", alpha.to_country().iso_short_name());
+            return Ok(());
+        }
+    }
+
+    Err(anyhow!("No country found for IP address"))
 }
