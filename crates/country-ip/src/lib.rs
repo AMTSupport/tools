@@ -17,18 +17,41 @@
 #![feature(lazy_cell)]
 #![feature(result_option_inspect)]
 #![feature(ip_bits)]
+#![feature(async_closure)]
+#![feature(unboxed_closures)]
 
 use crate::record::Record;
+use crate::registry::Registry;
 use async_trait::async_trait;
-use keshvar::Alpha2;
+use keshvar::{Alpha2, Country};
 use rand::prelude::IteratorRandom;
 use std::fmt::Debug;
 use std::net::IpAddr;
+use tracing::{info, instrument};
 
 pub mod config;
 pub mod db_ip;
+#[cfg(feature = "gui")]
+pub mod gui;
 pub mod record;
 pub mod registry;
+
+#[instrument]
+pub async fn get_record_db(country: &Country) -> anyhow::Result<Box<dyn RecordDB>> {
+    match Registry::get_for(&country) {
+        Ok(registry) => {
+            info!("Using registry {} for {}", registry.name(), country.iso_short_name());
+            registry.get().await
+        }
+        Err(_) => {
+            info!(
+                "No registry found for {}, falling back to DB-IP",
+                country.iso_short_name()
+            );
+            Ok(db_ip::DB::instance())
+        }
+    }
+}
 
 #[async_trait]
 pub trait RecordDB: Send + Sync + Debug {
@@ -55,5 +78,3 @@ pub trait RecordDB: Send + Sync + Debug {
     }
 }
 
-#[cfg(test)]
-mod test {}

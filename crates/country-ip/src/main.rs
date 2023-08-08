@@ -17,16 +17,17 @@
 #![feature(lazy_cell)]
 #![feature(slice_take)]
 
+use anyhow::anyhow;
 use country_ip::config::cli::CliAction;
 use country_ip::config::runtime::Runtime;
-use country_ip::db_ip;
 use country_ip::registry::Registry;
-use futures::FutureExt;
+use country_ip::{get_record_db, RecordDB};
+use futures::{FutureExt, StreamExt, TryStreamExt};
 use keshvar::{Alpha2, Alpha3, Country, CountryIterator};
 use lib::runtime::runtime::Runtime as _;
 use rand::thread_rng;
+use rayon::prelude::ParallelIterator;
 use std::net::IpAddr;
-use std::ops::Deref;
 use std::sync::LazyLock;
 use thiserror::Error;
 use tracing::{debug, info, instrument};
@@ -44,6 +45,13 @@ async fn main() -> anyhow::Result<()> {
     let runtime = &*RUNTIME;
 
     match &runtime.cli.action {
+        #[cfg(feature = "gui")]
+        CliAction::GUI => {
+            use country_ip::gui::application::CountryIPApp;
+            use iced::{Application, Settings};
+
+            CountryIPApp::run(Settings::default()).map_err(|e| anyhow!(e))
+        }
         CliAction::Get { country, ipv6 } => get(runtime, country, ipv6).await,
         CliAction::Lookup { addr, .. } => lookup(runtime, addr).await,
     }?;
@@ -72,23 +80,10 @@ async fn get(_runtime: &'static Runtime, alpha: &Option<String>, use_ipv6: &bool
 
     debug!("Selected Country: {country:?}");
 
-    let registry = match Registry::get_for(&country) {
-        Ok(registry) => {
-            info!("Using registry {} for {}", registry.name(), country.iso_short_name());
-            registry.get().await?
-        }
-        Err(_) => {
-            info!(
-                "No registry found for {}, falling back to DB-IP",
-                country.iso_short_name()
-            );
-            db_ip::DB::instance()
-        }
-    };
-
+    let record_db = get_record_db(&country).await?;
     let random = match use_ipv6 {
-        true => registry.random_ipv6(&alpha),
-        false => registry.random_ipv4(&alpha),
+        true => record_db.random_ipv6(&alpha),
+        false => record_db.random_ipv4(&alpha),
     }
     .await
     .ok_or_else(|| anyhow::anyhow!("No IP addresses found for {}", country.iso_short_name()))?;

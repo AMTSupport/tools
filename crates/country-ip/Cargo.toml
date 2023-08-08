@@ -10,6 +10,10 @@ description = "A command line utility to generate random IP addresses from a giv
 name = "country_ip"
 path = "src/lib.rs"
 
+[features]
+default = []
+gui = ["iced", "iced_aw"]
+
 [dependencies]
 lib = { path = "../lib" }
 macros = { path = "../macros" }
@@ -32,7 +36,11 @@ thiserror = "1.0.*"
 anyhow = "1.0.*"
 
 # Countries
-keshvar = "0.3.0"
+keshvar = { version = "0.3.0", features = ["search-iso-short-name"] }
+
+# GUI
+iced = { optional = true, git = "https://github.com/iced-rs/iced.git", branch = "master", features = ["tokio"] }
+iced_aw = { optional = true, version = "^0.5.2", default-features = false, features = ["modal","card"] }
 
 # Testing
 [dev-dependencies]
