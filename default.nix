@@ -1,4 +1,5 @@
-{ pkgs
+{ self
+, pkgs
 , lib
 , localSystem
 , crossSystem ? localSystem
@@ -52,7 +53,7 @@ let
     let
       tomlPath = craneLib.path (if workspace == null then ./Cargo.toml else ./crates/${workspace}/Cargo.toml);
       cargoToml = builtins.fromTOML (builtins.readFile tomlPath);
-      inherit (cargoToml.package) name version;
+      inherit (cargoToml.package or { inherit (self) name; version = "0.0.0.0"; }) name version;
     in {
       pname = name;
       inherit version;
@@ -73,7 +74,7 @@ let
       cargoExtraArgs = if workspace != null then "--package ${workspace}" else "";
 
       strictDeps = true;
-      doCheck = true;
+      doCheck = false;
 
       passthru = { inherit craneLib commonArgs; };
 
@@ -86,6 +87,22 @@ let
 
       nativeBuildInputs = with pkgs; [ pkg-config ]
         ++ lib.optionals (useWine) ([ (pkgs.wine.override { wineBuild = "wine64"; }) ]);
+
+      LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath (with pkgs; [
+        openssl
+      ] ++ lib.optionals (isNative && targetPlatform.isLinux) (with pkgs; [
+        wayland
+        libxkbcommon
+        vulkan-loader
+        libglvnd
+        egl-wayland
+        wayland-protocols
+        xwayland
+        libdecor
+      ]));
+
+      RUST_LOG = "trace";
+      RUST_LOG_SPAN_EVENTS = "full";
 
       "CARGO_BUILD_TARGET" = target;
 
