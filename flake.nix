@@ -64,9 +64,9 @@
           { }
           (builtins.attrValues (builtins.mapAttrs
             (name: package:
-              let inherit (package.passthru) craneLib commonArgs; in {
-                "${name}-fmt" = craneLib.cargoFmt commonArgs;
-                "${name}-clippy" = craneLib.cargoClippy (commonArgs // {
+              let inherit (package.passthru) craneLib args; in {
+                "${name}-fmt" = craneLib.cargoFmt args;
+                "${name}-clippy" = craneLib.cargoClippy (args // {
                   inherit (package) cargoArtifacts;
                   cargoClippyExtraArgs = "--workspace -- --deny warnings";
                 });

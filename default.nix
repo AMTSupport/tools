@@ -7,10 +7,10 @@
 , flake-utils
 , crane
 , fenix
+, depsOnly ? false
 }:
 let
   # TODO: This is a hack to get the right target for the right system.
-
   target = let inherit (flake-utils.lib) system; in
     if crossSystem == system.x86_64-linux
     then "x86_64-unknown-linux-gnu"
@@ -54,15 +54,33 @@ let
       tomlPath = craneLib.path (if workspace == null then ./Cargo.toml else ./crates/${workspace}/Cargo.toml);
       cargoToml = builtins.fromTOML (builtins.readFile tomlPath);
       inherit (cargoToml.package or { inherit (self) name; version = "0.0.0.0"; }) name version;
-    in {
+    in
+    {
       pname = name;
       inherit version;
 
       src = craneLib.cleanCargoSource (craneLib.path ./.);
       cargoLock = craneLib.path ./Cargo.lock;
+      cargoExtraArgs = if workspace != null then "--package ${workspace}" else "";
     };
 
-  cargoCrate =
+  releaseArgs = commonArgs // {
+    doCheck = false;
+
+    RUST_LOG = "info";
+    RUST_LOG_SPAN_EVENTS = "none";
+  };
+
+  developmentArgs = commonArgs // {
+    doCheck = false;
+
+    CARGO_PROFILE = "dev";
+
+    RUST_LOG = "trace";
+    RUST_LOG_SPAN_EVENTS = "full";
+  };
+
+  mkDerivation = args:
     let
       inherit (crossPackages) targetPlatform;
 
@@ -70,13 +88,10 @@ let
       useMold = isNative && targetPlatform.isLinux;
       useWine = targetPlatform.isWindows && localSystem == flake-utils.lib.system.x86_64-linux;
     in
-    craneLib.buildPackage (commonArgs // {
-      cargoExtraArgs = if workspace != null then "--package ${workspace}" else "";
-
+    craneLib.buildPackage (args // {
       strictDeps = true;
-      doCheck = false;
 
-      passthru = { inherit craneLib commonArgs; };
+      passthru = { inherit craneLib args; };
 
       depsBuildBuild = [ ]
         ++ lib.optionals (!isNative) (with pkgs; [ qemu ])
@@ -100,9 +115,6 @@ let
         xwayland
         libdecor
       ]));
-
-      RUST_LOG = "trace";
-      RUST_LOG_SPAN_EVENTS = "full";
 
       "CARGO_BUILD_TARGET" = target;
 
@@ -128,4 +140,6 @@ let
         else "${pkgs.qemu}/bin/qemu-${targetPlatform.qemuArch}";
     });
 in
-cargoCrate
+(if depsOnly then
+  mkDerivation commonArgs
+else mkDerivation releaseArgs)
