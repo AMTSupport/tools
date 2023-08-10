@@ -10,13 +10,17 @@ description = "A cleaning tool written in Rust"
 lib = { path = "../lib" }
 macros = { path = "../macros" }
 
+# Runtimes
+tokio = { workspace = true }
+
+# Cli & UI
+clap = { workspace = true }
+indicatif = { workspace = true }
+inquire = { workspace = true }
+
 cfg-if = "1.0"
-clap = { version = "4.2.7", features = ["derive"] }
-tokio = { version = "1.28.1", features = ["fs", "macros", "rt-multi-thread"] }
 chrono = { version = "0.4.24" }
 glob = "0.3.1"
-inquire = "0.6.2"
-indicatif = { version = "0.17.4", features = ["rayon"] }
 rayon = "1.7"
 michie = "3.0.2"
 async-trait = "0.1.71"
@@ -24,14 +28,10 @@ lazy_static = "1.4.0"
 downcast-rs = "1.2.0"
 
 # Logging & Errors
-tracing = "0.1.*"
-tracing-subscriber = { version = "0.3.*", features = ["fmt"] }
-thiserror = "1.0.*"
-anyhow = "1.0.*"
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
 
 [target.'cfg(unix)'.dependencies]
 permissions = "0.4.1"
-nix = { version = "0.26.2" }
-
-[target.'cfg(windows)'.dependencies]
-

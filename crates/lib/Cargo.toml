@@ -4,20 +4,23 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-clap = { version = "4.2.7", features = ["derive", "std"], default-features = false }
-anyhow = { version = "1.0.71" }
-exitcode = "1.1.2"
-sysexits = "0.6.0"
-indicatif = { version = "0.17.4" }
-inquire = { version = "0.6.2", default-features = false, features = ["default"] }
-cfg-if = "1.0"
+# Cli & UI
+clap = { workspace = true, default-features = false, features = ["derive", "std"] }
+indicatif = { workspace = true }
+inquire = { workspace = true }
 
 # Logging & Errors
-tracing = "0.1.37"
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
 tracing-appender = "0.2.2"
 tracing-journald = "0.3.0"
 tracing-error = "0.2.0"
-tracing-subscriber = "0.3.17"
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+exitcode = "1.1.2"
+sysexits = "0.6.0"
+cfg-if = "1.0"
 
 [target.'cfg(unix)'.dependencies]
 nix = { version = "0.26.2" }

@@ -5,73 +5,67 @@ edition = "2021"
 categories = ["command-line-utilities", "system", "utilities", "cli"]
 keywords = ["backup"]
 
+[features]
+default = ["sources-s3", "sources-bitwarden", "sources-1password"]
+binary-downloader = ["bytes", "rand", "const_format"]
+
+sources-s3 = ["opendal", "futures"]
+sources-bitwarden = ["binary-downloader"]
+sources-1password = ["binary-downloader", "zip"]
+
 [dependencies]
 lib = { path = "../lib" }
 macros = { path = "../macros" }
-filetime = "0.2"
-glob = "0.3.1"
-indicatif = { version = "0.17.4", features = ["improved_unicode","in_memory","rayon"] }
-serde_json = "1.0.96"
-async-trait = "0.1.68"
-futures = "0.3.28" # Needed by opendal
-tokio-util = { version = "0.7.8", features = ["full"] }
-futures-util = "0.3.28"
-const_format = "0.2.31"
-rayon = "1.7"
 
-# For downloading the required cli
-bytes = "1.4.*"
-rand = "0.8.*"
+# Runtimes
+tokio = { workspace = true }
+
+# Cli & UI
+clap = { workspace = true }
+indicatif = { workspace = true }
+inquire = { workspace = true }
+
+# Data / Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true, features = ["serde"] }
+zip = { version = "0.6.6", features = ["zstd", "bzip2", "deflate", "deflate-zlib"], optional = true } # TODO :: Downsize features
+
+# Networking
+reqwest = { workspace = true }
 
 # Logging & Errors
-tracing = "0.1.*"
-thiserror = "1.0.*"
-anyhow = "1.0.*"
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
 
-[dependencies.zip]
-version = "0.6.6"
-default-features = false
-features = ["zstd","bzip2","deflate","deflate-zlib"]
+filetime = "0.2"
+glob = "0.3.1"
+async-trait = "0.1.68"
 
-[dependencies.reqwest]
-version = "0.11.18"
-default-features = false
-features = ["gzip", "rustls"]
+futures = { version = "0.3.28", optional = true } # Needed by opendal
+opendal = { version = "0.37.0", features = ["services-s3", "rustls"], optional = true }
 
-[dependencies.chrono]
-version = "0.4.24"
-default-features = false
-features = ["serde"]
+#tokio-util = { version = "0.7.8", features = ["full"] }
+futures-util = "0.3.28"
+#rayon = "1.7"
 
-[dependencies.tokio]
-version = "1.28.1"
-default-features = false
-features = ["rt-multi-thread", "macros"]
-
-[dependencies.opendal]
-version = "0.37.0"
-default-features = false
-features = ["services-s3", "rustls"]
-
-[dependencies.serde]
-version = "1.0.163"
-default-features = false
-features = ["std", "derive"]
-
-[dependencies.clap]
-version = "4.2.7"
-default-features = false
-features = ["derive", "std", "help", "usage", "suggestions", "color"]
-
-[dependencies.inquire]
-version = "0.6.2"
-default-features = false
-features = ["default"]
+# For downloading cli binaries
+bytes = { version = "1.4.*", optional = true }
+rand = { version = "0.8.*", optional = true }
+const_format = { version = "0.2.31", optional = true }
 
 [dependencies.value-bag]
 version = "1.4.0"
 
 [dev-dependencies]
+# Logging & Errors
+env_logger = "*"
+test-log = { version = "0.2.12", features = ["trace"] }
+tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "fmt"] }
+
+# Generating random data for tests
 fake = { version = "2.6", features=["derive", "chrono", "serde_json", "maybe-non-empty-collections"]}
 rand = "0.8"
 

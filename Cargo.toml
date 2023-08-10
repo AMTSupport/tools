@@ -11,8 +11,47 @@ default-members = [
 ]
 resolver = "2"
 
+[workspace.package]
+authors = ["Racci"]
+
+edition = "2021"
+homepage = "https://github.com/AMTSupport/tools"
+
+license-file = "LICENSE.md"
+readme = "README.md"
+
+# Listing all common dependencies here to make sure they are all
+# using the same versions, and to make it easier to update.
+[workspace.dependencies]
+# Runtimes
+tokio = { version = "1.30.0", features = ["macros", "rt-multi-thread"] }
+
+# Cli & UI
+clap = { version = "4.3.21", features = ["derive", "color", "suggestions", "usage"] }
+indicatif = { version = "0.17.6", features = ["improved_unicode", "in_memory"] }
+inquire = { version = "0.6.2", features = [] }
+
+# GUI
+iced = { git = "https://github.com/iced-rs/iced.git", branch = "master", features = ["tokio"] }
+iced_aw = { version = "^0.6.0", features = ["modal", "card"] }
+
+# Data / Serialization
+serde = { version = "^1.0.183", features = ["derive"] }
+serde_json = { version = "^1.0.104" }
+chrono = { version = "^0.4.26" }
+
+# Networking
+reqwest = { version = "^0.11.18", features = ["gzip", "rustls"] }
+
+# Logging & Errors
+tracing = "0.1.*"
+tracing-subscriber = { version = "0.3.*", features = ["fmt"] }
+thiserror = "1.0.*"
+anyhow = "1.0.*"
+
+
 [profile.release]
-opt-level= 2
+opt-level = 2
 lto = true
 strip = true
 panic = "abort"

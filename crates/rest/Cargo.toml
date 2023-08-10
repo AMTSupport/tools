@@ -4,21 +4,34 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-clap = { version = "4.2.7", features = ["derive"] }
-reqwest = { version = "0.11.18", features = ["json", "gzip"] }
-tokio = { version = "1.28.1", features = ["full"] }
-anyhow = { version = "1.0.71", default-features = false }
-simplelog = { version = "0.12.1", features = ["paris"] }
 lib = { path = "../lib" }
+
+# Runtimes
+tokio = { workspace = true }
+
+# Cli & UI
+clap = { workspace = true }
+
+# Data & Serialization
+serde = { workspace = true }
+chrono = { workspace = true, features = ["serde"] }
+quick-xml = { version = "0.30.0", features = ["serde", "serialize"] }
+
+# Networking
+reqwest = { workspace = true, features = ["json", "gzip"] }
+reqwest-middleware = "0.2.2"
+http-cache-reqwest = { version = "0.9.0", features = ["manager-moka"] }
+
+# Logging & Errors
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
 async-trait = "0.1.68"
-serde = { version = "1.0.163", features = ["serde_derive", "derive"] }
-chrono = { version = "0.4.24", features = ["serde"] }
 async-lazy = "0.1.0"
-quick-xml = { version = "0.28.2", features = ["serde", "serialize"] }
 cached = "0.43.0"
 michie = { version = "3.0.2" }
-http-cache-reqwest = { version = "0.9.0", features = ["manager-moka"] }
-reqwest-middleware = "0.2.2"
 skim = "0.10.4"
 regex = "1.8.1"
 fuzzy-matcher = "0.3.7"
