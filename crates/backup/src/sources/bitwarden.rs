@@ -14,14 +14,13 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+use std::env;
 use crate::config::backend::Backend;
 use crate::config::runtime::RuntimeConfig;
 use crate::sources::auto_prune::Prune;
 use crate::sources::downloader::Downloader;
 use crate::sources::exporter::Exporter;
-use crate::sources::exporter::ExporterSource::BitWarden;
 use crate::sources::getter::CliGetter;
-use crate::sources::op::cli::field::Purpose::Password;
 use anyhow::Result;
 use async_trait::async_trait;
 use const_format::formatcp;
@@ -32,11 +31,9 @@ use lib::anyhow::{anyhow, Context};
 use lib::fs::normalise_path;
 use lib::pathed::Pathed;
 use serde::{Deserialize, Serialize};
-use std::env;
 use std::fmt::{Display, Formatter};
 use std::path::PathBuf;
 use std::process::Command;
-use thiserror::__private::DisplayAsDisplay;
 use tracing::{error, info, trace};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

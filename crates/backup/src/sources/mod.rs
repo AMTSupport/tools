@@ -30,13 +30,16 @@ use std::path::PathBuf;
 use std::{env, fs};
 
 pub mod auto_prune;
-pub mod bitwarden;
 pub mod downloader;
 pub mod exporter;
-pub(crate) mod interactive;
-pub mod op;
-pub mod s3;
 mod getter;
+pub(crate) mod interactive;
+#[cfg(feature = "sources-bitwarden")]
+pub mod bitwarden;
+#[cfg(feature = "sources-1password")]
+pub mod op;
+#[cfg(feature = "sources-s3")]
+pub mod s3;
 
 async fn download_to<E: Error>(
     total_size: u64,

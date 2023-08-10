@@ -19,64 +19,61 @@ pub mod identifier {
     use std::fmt::{Display, Formatter};
 
     #[cfg(test)]
-    use fake::{faker::lorem::en::Word, Dummy};
+    use fake::{faker::lorem::en::Word, Dummy, Fake};
+
+    /// The internal identifier for this entity.
+    #[cfg_attr(test, derive(Dummy))]
+    #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+    pub struct Id(
+        #[serde(default, skip_serializing_if = "String::is_empty")]
+        #[cfg_attr(test, dummy(faker = "26"))]
+        pub String,
+    );
+
+    /// The user facing & modifiable name for this entity.
+    #[cfg_attr(test, derive(Dummy))]
+    #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+    #[serde(rename_all = "lowercase")]
+    pub enum UniqueName {
+        Label(
+            #[serde(default, skip_serializing_if = "String::is_empty")]
+            #[cfg_attr(test, dummy(faker = "Word()"))]
+            String,
+        ),
+        Name(
+            #[serde(default, skip_serializing_if = "String::is_empty")]
+            #[cfg_attr(test, dummy(faker = "Word()"))]
+            String,
+        ),
+        Title(
+            #[serde(default, skip_serializing_if = "String::is_empty")]
+            #[cfg_attr(test, dummy(faker = "Word()"))]
+            String,
+        ),
+    }
 
     #[cfg_attr(test, derive(Dummy))]
     #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
-    pub enum Identifier {
-        Label {
-            /// The internal identifier for this entity.
-            #[serde(default, skip_serializing_if = "String::is_empty")]
-            #[cfg_attr(test, dummy(faker = "26"))]
-            id: String,
-
-            /// The user facing & modifiable name for this entity.
-            #[serde(default, skip_serializing_if = "String::is_empty")]
-            #[cfg_attr(test, dummy(faker = "Word()"))]
-            label: String,
-        },
-        Name {
-            /// The internal identifier for this entity.
-            #[serde(default, skip_serializing_if = "String::is_empty")]
-            #[cfg_attr(test, dummy(faker = "26"))]
-            id: String,
-
-            /// The user facing & modifiable name for this entity.
-            #[serde(default, skip_serializing_if = "String::is_empty")]
-            #[cfg_attr(test, dummy(faker = "Word()"))]
-            name: String,
-        },
-        Title {
-            /// The internal identifier for this entity.
-            #[serde(default, skip_serializing_if = "String::is_empty")]
-            #[cfg_attr(test, dummy(faker = "26"))]
-            id: String,
-
-            /// The user facing & modifiable name for this entity.
-            #[serde(default, skip_serializing_if = "String::is_empty")]
-            #[cfg_attr(test, dummy(faker = "Word()"))]
-            title: String,
-        },
+    pub struct Identifier {
+        pub id: Id,
+        #[serde(flatten)]
+        pub unique_name: UniqueName,
     }
 
     impl Identifier {
         /// # Returns
         /// The internal tracking identifier for this entity.
         pub fn id(&self) -> &str {
-            match self {
-                Identifier::Label { id, .. } => id,
-                Identifier::Name { id, .. } => id,
-                Identifier::Title { id, .. } => id,
-            }
+            self.id.0.as_str()
         }
 
         /// # Returns
         /// The user facing & modifiable name for this entity.
         pub fn named(&self) -> &str {
-            match self {
-                Identifier::Label { label, .. } => label,
-                Identifier::Name { name, .. } => name,
-                Identifier::Title { title, .. } => title,
+            match &self.unique_name {
+                UniqueName::Label(label, ..) => label,
+                UniqueName::Name(name, ..) => name,
+                UniqueName::Title(title, ..) => title,
             }
         }
     }
@@ -126,10 +123,7 @@ pub mod dated {
     #[cfg_attr(test, derive(Dummy))]
     #[derive(Default, Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
     pub struct Dated {
-        #[cfg_attr(
-            test,
-            dummy(faker = "DateTimeAfter(DateTime::<Utc>::from(UNIX_EPOCH))")
-        )]
+        #[cfg_attr(test, dummy(faker = "DateTimeAfter(DateTime::<Utc>::from(UNIX_EPOCH))"))]
         pub created_at: DateTime<Utc>,
         #[cfg_attr(test, dummy(faker = "DateTimeAfter(created_at)"))]
         pub updated_at: DateTime<Utc>,
@@ -180,10 +174,7 @@ pub mod user {
         pub dated: super::dated::Dated,
 
         /// When this user was last authenticated with the cli.
-        #[cfg_attr(
-            test,
-            dummy(faker = "DateTimeBetween(dated.created_at, dated.updated_at)")
-        )]
+        #[cfg_attr(test, dummy(faker = "DateTimeBetween(dated.created_at, dated.updated_at)"))]
         pub last_auth_at: DateTime<Utc>,
     }
 
@@ -260,6 +251,8 @@ pub mod account {
     use chrono::{DateTime, Utc};
     use serde::{Deserialize, Serialize};
 
+    use crate::sources::op::cli::identifier;
+    use macros::CommonFields;
     #[cfg(test)]
     use {
         fake::{
@@ -271,7 +264,6 @@ pub mod account {
         },
         std::time::UNIX_EPOCH,
     };
-    use macros::CommonFields;
 
     /// This comes from the list of account gotten with `op list accounts`
     #[cfg_attr(test, derive(Dummy))]
@@ -294,7 +286,7 @@ pub mod account {
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct Attrs {
         #[serde(flatten)]
-        pub identifier: super::identifier::Identifier,
+        pub identifier: identifier::Identifier,
 
         /// The 1password domain for this account
         /// ### This is only the subdomain and not the entire url.
@@ -302,14 +294,10 @@ pub mod account {
         pub domain: String,
 
         /// The accounts current state.
-        #[cfg_attr(test, dummy(faker = "Option::None"))]
         pub state: super::state::State,
 
         /// When this account was created.
-        #[cfg_attr(
-            test,
-            dummy(faker = "DateTimeAfter(DateTime::<Utc>::from(UNIX_EPOCH))")
-        )]
+        #[cfg_attr(test, dummy(faker = "DateTimeAfter(DateTime::<Utc>::from(UNIX_EPOCH))"))]
         pub created_at: DateTime<Utc>,
     }
 
@@ -360,9 +348,9 @@ pub mod account {
     #[cfg(test)]
     mod tests {
         use super::*;
-        use crate::sources::op::cli::state;
         use fake::{Fake, Faker};
         use serde_json::json;
+        use tracing::debug;
 
         #[test]
         fn test_short() {
@@ -383,39 +371,49 @@ pub mod account {
             assert_eq!(short.account_uuid, reference.account_uuid);
         }
 
-        #[test]
-        fn test_account() {
-            let reference: Account = Faker.fake();
+        #[test_log::test(test)]
+        fn test_deserialisation() -> anyhow::Result<()> {
+            let reference = Faker.fake::<Account>();
 
             let json = json!({
                 "type": "INDIVIDUAL",
-                "id": "LAIQMSG1PWNMCA9LAS5KLSDURN",
-                "name": "Test Name",
-                "domain": "test-domain",
-                "state": "ACTIVE",
-                "created_at": "2023-02-05T05:07:29Z"
+                "id": reference.attrs().identifier.id(),
+                "name": reference.attrs().identifier.named(),
+                "domain": reference.attrs().domain,
+                "state": reference.attrs().state,
+                "created_at": reference.attrs().created_at,
             });
 
-            let account = serde_json::from_value::<Account>(json).unwrap();
+            let account = serde_json::from_value::<Account>(json)?;
+            debug!("{account:#?}");
             let attrs = account.attrs();
-            assert_eq!(attrs.identifier.id(), "LAIQMSG1PWNMCA9LAS5KLSDURN");
-            assert_eq!(attrs.identifier.named(), "Test Name");
-            assert_eq!(attrs.domain, "test-domain");
-            assert_eq!(attrs.state, state::State::Active);
+
+            assert_eq!(
+                attrs.identifier.id(),
+                reference.attrs().identifier.id(),
+                "Id's should be the same"
+            );
+            assert_eq!(
+                attrs.identifier.named(),
+                reference.attrs().identifier.named(),
+                "Names should be the same"
+            );
+            assert_eq!(attrs.domain, reference.attrs().domain, "Domains should be the same");
+            assert_eq!(attrs.state, reference.attrs().state, "States should be the same");
             assert_eq!(
                 attrs.created_at,
-                chrono::DateTime::parse_from_rfc3339("2023-02-05T05:07:29Z")
-                    .unwrap()
-                    .with_timezone(&Utc)
+                reference.attrs().created_at,
+                "Created at should be the same"
             );
+
+            Ok(())
         }
     }
 }
 
 pub mod file {
-    use super::identifier::Identifier;
     use crate::sources::op::cli::dated::Dated;
-    use crate::sources::op::cli::vault;
+    use crate::sources::op::cli::{identifier, vault};
     use crate::sources::op::one_pux;
     use serde::{Deserialize, Serialize};
 
@@ -423,7 +421,7 @@ pub mod file {
     pub struct Reference {
         /// Name Identifier.
         #[serde(flatten)]
-        pub identifier: Identifier,
+        pub identifier: identifier::Identifier,
 
         pub size: usize,
 
@@ -432,9 +430,9 @@ pub mod file {
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct Attrs {
-        #[serde(flatten)]
         /// Title identifier.
-        pub identifier: Identifier,
+        #[serde(flatten)]
+        pub identifier: identifier::Identifier,
 
         /// The times this file has been modified.
         pub version: String,
@@ -466,9 +464,9 @@ pub mod file {
     impl Reference {
         pub(crate) fn new(id: &str, name: &str, size: usize, content_path: &str) -> Self {
             Self {
-                identifier: Identifier::Name {
-                    id: id.to_owned(),
-                    name: name.to_owned(),
+                identifier: identifier::Identifier {
+                    id: identifier::Id(id.into()),
+                    unique_name: identifier::UniqueName::Name(name.into()),
                 },
                 size,
                 content_path: content_path.to_owned(),
@@ -487,9 +485,9 @@ pub mod file {
             dated: Dated,
         ) -> Self {
             Self {
-                identifier: Identifier::Title {
-                    id: id.to_owned(),
-                    title: title.to_owned(),
+                identifier: identifier::Identifier {
+                    id: identifier::Id(id.to_owned()),
+                    unique_name: identifier::UniqueName::Title(title.to_owned()),
                 },
                 version: version.to_owned(),
                 vault,
@@ -505,16 +503,16 @@ pub mod file {
 pub mod item {
     use super::super::one_pux;
     use crate::config::runtime::RuntimeConfig;
+    use crate::sources::op::account::OnePasswordAccount;
     use indicatif::{MultiProgress, ParallelProgressIterator, ProgressBar};
     use lib::{anyhow, anyhow::Context, anyhow::Result};
+    use macros::CommonFields;
     use rayon::prelude::*;
     use serde::{Deserialize, Serialize};
     use serde_json::from_slice;
     use std::fmt::{Display, Formatter};
     use std::process::Command;
     use tracing::{error, instrument, trace};
-    use macros::CommonFields;
-    use crate::sources::op::account::OnePasswordAccount;
 
     #[derive(Debug, Clone, Serialize, Deserialize, CommonFields)]
     #[serde(rename_all = "SCREAMING_SNAKE_CASE", tag = "category")]
@@ -700,9 +698,7 @@ pub mod item {
                 .clone()
                 .into_iter()
                 .filter_map(|f| match f {
-                    super::field::Field::Concealed {
-                        password_details, ..
-                    } => Some(password_details),
+                    super::field::Field::Concealed { password_details, .. } => Some(password_details),
                     _ => None,
                 })
                 .flatten()
@@ -753,9 +749,7 @@ pub mod item {
                 .filter(|(_, f)| f.is_login_field())
                 .inspect(|(_, f)| match f {
                     // This is a bit of a hack, but it works for now
-                    super::field::Field::Concealed {
-                        password_details, ..
-                    } => {
+                    super::field::Field::Concealed { password_details, .. } => {
                         if password_details.is_some() {
                             let into = password_details
                                 .clone() // TODO -> Better error handling
@@ -805,33 +799,21 @@ pub mod item {
 
                 if attrs.section.as_ref().is_none() {
                     if sections.is_empty()
-                        || sections
-                            .iter()
-                            .find(|s| s.title.is_empty() && s.name.is_empty())
-                            .is_none()
+                        || sections.iter().find(|s| s.title.is_empty() && s.name.is_empty()).is_none()
                     {
                         sections.insert(0, one_pux::item::AdditionalSection::default())
                     }
 
-                    sections
-                        .first_mut()
-                        .context("Get empty section for fields.")?
-                        .fields
-                        .push(field.into());
+                    sections.first_mut().context("Get empty section for fields.")?.fields.push(field.into());
                     continue;
                 }
 
-                let section_ref = attrs.section.as_ref().with_context(|| {
-                    format!(
-                        "Get section for field {} of item {value}.",
-                        attrs.identifier,
-                    )
-                })?;
+                let section_ref = attrs
+                    .section
+                    .as_ref()
+                    .with_context(|| format!("Get section for field {} of item {value}.", attrs.identifier,))?;
 
-                sections
-                    .iter_mut()
-                    .find(|s| s.name == section_ref.id())
-                    .map(|s| s.fields.push(field.into()));
+                sections.iter_mut().find(|s| s.name == section_ref.id()).map(|s| s.fields.push(field.into()));
             }
 
             let document_attributes = match value {
@@ -844,9 +826,7 @@ pub mod item {
                 login_fields,
                 notes_plain,
                 sections,
-                password_history: password_history
-                    .context("Unwrap password history")
-                    .unwrap_or_default(),
+                password_history: password_history.context("Unwrap password history").unwrap_or_default(),
                 document_attributes,
             })
         }
@@ -912,11 +892,7 @@ pub mod item {
                 .map(|o| o.stdout)
         }
 
-        fn raw_long(
-            vault: &super::vault::Reference,
-            item: Item,
-            mut command: Command,
-        ) -> Result<Vec<u8>> {
+        fn raw_long(vault: &super::vault::Reference, item: Item, mut command: Command) -> Result<Vec<u8>> {
             command
                 .args(["item", "get", &item.attrs().identifier.id()])
                 .args(["--vault", &vault.id(), "--format=json"])
@@ -953,9 +929,7 @@ pub mod item {
             let items = items
                 .into_par_iter()
                 .progress_with(bar)
-                .map(|item| {
-                    Self::raw_long(&vault.attrs().reference, item, account.command(config)?)
-                })
+                .map(|item| Self::raw_long(&vault.attrs().reference, item, account.command(config)?))
                 .map(|r| {
                     if r.is_err() {
                         return Err(r.err().unwrap());
@@ -989,12 +963,11 @@ pub mod item {
     #[cfg(test)]
     mod test {
         use super::*;
-        use crate::sources::op::cli::dated::Dated;
-        use crate::sources::op::cli::{state, vault};
+        use crate::sources::op::cli::{dated, identifier, state, vault};
         use chrono::{DateTime, Utc};
-        use fake::faker::boolean::en::*;
-        use fake::faker::chrono::en::*;
-        use fake::faker::lorem::en::*;
+        use fake::faker::boolean::en::Boolean;
+        use fake::faker::chrono::en::DateTimeAfter;
+        use fake::faker::lorem::en::Word;
         use fake::{Fake, Faker};
         use rand::random;
         use serde_json::{from_str, json};
@@ -1004,15 +977,12 @@ pub mod item {
             26.fake::<String>()
         }
 
-        fn random_dated() -> Dated {
+        fn random_dated() -> dated::Dated {
             let epoch = DateTime::<Utc>::from(UNIX_EPOCH);
             let created_at = DateTimeAfter(epoch).fake();
             let updated_at = DateTimeAfter(created_at).fake();
 
-            Dated {
-                created_at,
-                updated_at,
-            }
+            dated::Dated { created_at, updated_at }
         }
 
         fn random_defaults() -> Attrs {
@@ -1025,9 +995,9 @@ pub mod item {
                     true => state::State::Archived,
                     false => state::State::Active,
                 },
-                vault: vault::Reference::Name {
-                    id: random_id(),
-                    name: Words(1..3).fake::<Vec<String>>().join(" "),
+                vault: vault::Reference {
+                    id: Faker.fake(),
+                    unique_name: identifier::UniqueName::Name(Faker.fake()),
                 },
                 last_edited_by: random_id(),
                 dated: random_dated(),
@@ -1082,23 +1052,22 @@ pub mod item {
         }
 
         #[test]
-        fn test_common_attrs() {
+        fn test_common_attrs() -> Result<()> {
             let attrs = random_defaults();
-            let json = json_item(Item::Login {
-                attrs: attrs.clone(),
-            });
+            let json = json_item(Item::Login { attrs: attrs.clone() });
 
             println!("json: {json:#}");
 
             let item = from_str::<Item>(&json);
-            assert!(item.is_ok(), "Item should deserialize without error.");
-            let item = item.unwrap();
+            assert!(
+                item.is_ok(),
+                "Item should deserialize without error; {:#?}",
+                item.err().unwrap()
+            );
+            let item = item?;
 
             assert_eq!(item.attrs().identifier.id(), attrs.identifier.id());
-            assert_eq!(
-                item.attrs().identifier.named(),
-                attrs.identifier.named()
-            );
+            assert_eq!(item.attrs().identifier.named(), attrs.identifier.named());
             assert_eq!(item.attrs().tags, attrs.tags);
             assert_eq!(item.attrs().version, attrs.version);
             assert_eq!(item.attrs().vault.id(), attrs.vault.id());
@@ -1106,6 +1075,8 @@ pub mod item {
             assert_eq!(item.attrs().last_edited_by, attrs.last_edited_by);
             assert_eq!(item.attrs().dated.created_at, attrs.dated.created_at);
             assert_eq!(item.attrs().dated.updated_at, attrs.dated.updated_at);
+
+            Ok(())
         }
 
         #[test]
@@ -1137,20 +1108,19 @@ pub mod item {
 
 pub mod vault {
     use crate::config::runtime::RuntimeConfig;
-    use crate::sources::getter::{CliGetter};
+    use crate::sources::getter::CliGetter;
+    use crate::sources::op::account::OnePasswordAccount;
     use crate::sources::op::cli::dated::Dated;
     use crate::sources::op::cli::identifier::Identifier;
     use crate::sources::op::core::OnePasswordCore;
     use crate::sources::op::one_pux;
+    #[cfg(test)]
+    use fake::Dummy;
     use lib::anyhow::Result;
+    use macros::CommonFields;
     use serde::{Deserialize, Serialize};
     use std::fmt::Display;
     use tracing::{trace, warn};
-
-    #[cfg(test)]
-    use fake::Dummy;
-    use macros::CommonFields;
-    use crate::sources::op::account::OnePasswordAccount;
 
     pub type Reference = Identifier;
 
@@ -1208,10 +1178,7 @@ pub mod vault {
     }
 
     impl Vault {
-        pub async fn parse(
-            account: &OnePasswordAccount,
-            config: &RuntimeConfig,
-        ) -> Result<Vec<Vault>> {
+        pub async fn parse(account: &OnePasswordAccount, config: &RuntimeConfig) -> Result<Vec<Vault>> {
             let attrs = account.attrs();
             let vaults = &attrs.vaults;
 
@@ -1272,16 +1239,17 @@ pub mod url {
     use tracing::instrument;
 
     #[cfg(test)]
-    use fake::{Dummy, faker::internet::en::DomainSuffix};
+    use fake::{faker::internet::en::DomainSuffix, Dummy};
 
     #[cfg_attr(test, derive(Dummy))]
-    #[derive(Default, Debug, Clone, Serialize, Deserialize)]
+    #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
     pub struct Url {
         /// The user defined & editable label for the url.
         #[serde(default)]
         pub label: Option<String>,
 
         /// Whether this is the primary url.
+        #[cfg_attr(test, dummy(faker = "false"))]
         #[serde(default)]
         pub primary: bool,
 
@@ -1338,30 +1306,42 @@ pub mod url {
         }
 
         #[test]
-        fn test_select_primary() {
+        fn test_empty_urls() {
             let urls: Vec<Url> = vec![];
+            assert!(
+                urls.get_primary().is_none(),
+                "Should return None when there are no urls."
+            );
+        }
+
+        #[test]
+        fn test_no_primary() {
+            let urls: Vec<Url> = fake::vec![super::Url; 3..10];
             assert!(
                 urls.get_primary().is_none(),
                 "Should return None when no primary url is present."
             );
+        }
 
-            let urls: Vec<Url> = fake::vec![Url as Faker.fake(); 4, 3..5, 2];
+        #[test]
+        fn test_has_primary() {
+            let mut urls: Vec<Url> = fake::vec![super::Url; 3..10];
+            let index = (0..urls.len()).choose(&mut rand::thread_rng()).unwrap();
+            urls[index].primary = true;
             assert!(
                 urls.get_primary().is_some(),
-                "Should return None when no primary url is present."
+                "Should return the primary when one is present."
             );
+        }
 
-            // let mut urls: Vec<Url> = fake::vec![Url as Faker.fake(); 4, 3..5, 2];
-            let index = (0..10).choose(&mut rand::thread_rng()).unwrap();
+        #[test]
+        fn test_primary_matches() {
+            let mut urls: Vec<Url> = fake::vec![super::Url; 3..10];
+            let index = (0..urls.len()).choose(&mut rand::thread_rng()).unwrap();
             urls[index].primary = true;
-            let primary = urls.get_primary();
-            assert!(
-                primary.is_some(),
-                "Should return None when no primary url is present."
-            );
+            let primary = urls.get_primary().unwrap();
             assert_eq!(
-                primary.unwrap(),
-                &urls[index],
+                primary, &urls[index],
                 "The returned url should have been the set via random index."
             );
         }
@@ -1371,12 +1351,12 @@ pub mod url {
 pub mod field {
     use super::super::one_pux;
     use crate::sources::op::cli::reference_of;
+    use macros::CommonFields;
     use serde::de::{SeqAccess, Visitor};
     use serde::{Deserialize, Deserializer, Serialize};
     use std::fmt;
     use std::str::FromStr;
     use tracing::debug;
-    use macros::CommonFields;
 
     #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
     #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -1552,15 +1532,13 @@ pub mod field {
                 _ => return false,
             };
 
-            attrs.section.is_none()
-                && attrs.purpose.as_ref().is_some_and(|p| Self::LOGIN_PURPOSES.contains(&p))
+            attrs.section.is_none() && attrs.purpose.as_ref().is_some_and(|p| Self::LOGIN_PURPOSES.contains(&p))
         }
 
         pub fn is_notes_field(&self) -> bool {
             match self {
                 Field::String { attrs, .. } => {
-                    attrs.section.is_none()
-                        && attrs.purpose.as_ref().is_some_and(|p| p == &Purpose::Notes)
+                    attrs.section.is_none() && attrs.purpose.as_ref().is_some_and(|p| p == &Purpose::Notes)
                 }
                 _ => false,
             }
@@ -1642,9 +1620,7 @@ pub mod field {
                     ..Default::default()
                 },
                 Field::Concealed { ref attrs, .. } => one_pux::section::Field {
-                    value: one_pux::section::Value::Concealed(
-                        attrs.value.clone().unwrap_or_default(),
-                    ),
+                    value: one_pux::section::Value::Concealed(attrs.value.clone().unwrap_or_default()),
                     ..Default::default()
                 },
                 Field::Otp { ref attrs, .. } => one_pux::section::Field {
@@ -1657,9 +1633,7 @@ pub mod field {
                     ..Default::default()
                 },
                 Field::CreditCardNumber { ref attrs } => one_pux::section::Field {
-                    value: one_pux::section::Value::CreditCardNumber(
-                        attrs.value.clone().unwrap_or_default(),
-                    ),
+                    value: one_pux::section::Value::CreditCardNumber(attrs.value.clone().unwrap_or_default()),
                     guarded: true,
                     clipboard_filter: Some("0123456789".to_string()),
                     input_traits: one_pux::section::InputTraits {
@@ -1673,9 +1647,7 @@ pub mod field {
                     ..Default::default()
                 },
                 Field::Date { ref attrs } => one_pux::section::Field {
-                    value: one_pux::section::Value::Date(
-                        attrs.value.clone().map(|v| usize::from_str(&v).unwrap()),
-                    ),
+                    value: one_pux::section::Value::Date(attrs.value.clone().map(|v| usize::from_str(&v).unwrap())),
                     ..Default::default()
                 },
                 Field::MonthYear { ref attrs } => one_pux::section::Field {
@@ -1754,9 +1726,7 @@ pub mod field {
                     ..Default::default()
                 },
                 Field::Reference { ref attrs, .. } => one_pux::section::Field {
-                    value: one_pux::section::Value::Reference(
-                        attrs.value.clone().unwrap_or_default(),
-                    ),
+                    value: one_pux::section::Value::Reference(attrs.value.clone().unwrap_or_default()),
                     ..Default::default()
                 },
                 Field::Unknown { ref attrs } => one_pux::section::Field {
@@ -1791,10 +1761,7 @@ pub mod field {
             where
                 A: SeqAccess<'de>,
             {
-                debug!(
-                    "Visiting seq with hint of {}",
-                    seq.size_hint().unwrap_or(usize::MAX)
-                );
+                debug!("Visiting seq with hint of {}", seq.size_hint().unwrap_or(usize::MAX));
                 let mut fields = vec![];
 
                 while let Some(field) = seq.next_element::<Field>()? {
@@ -1812,8 +1779,7 @@ pub mod field {
     #[cfg(test)]
     pub(crate) mod test {
         use super::*;
-        use crate::sources::op::cli::identifier::Identifier;
-        use crate::sources::op::cli::item;
+        use crate::sources::op::cli::{identifier, item};
         use fake::faker::boolean::en::Boolean;
         use fake::faker::internet::en::*;
         use fake::faker::lorem::en::*;
@@ -1825,9 +1791,9 @@ pub mod field {
                 Field::String {
                     attrs: Attrs::new(
                         parent_attrs,
-                        Identifier::Label {
-                            id: "username".to_string(),
-                            label: "username".to_string(),
+                        identifier::Identifier {
+                            id: identifier::Id("username".into()),
+                            unique_name: identifier::UniqueName::Label("username".into()),
                         },
                         None,
                         Some(Purpose::Username),
@@ -1837,9 +1803,9 @@ pub mod field {
                 Field::Concealed {
                     attrs: Attrs::new(
                         parent_attrs,
-                        Identifier::Label {
-                            id: "password".to_string(),
-                            label: "password".to_string(),
+                        identifier::Identifier {
+                            id: identifier::Id("password".into()),
+                            unique_name: identifier::UniqueName::Label("password".into()),
                         },
                         None,
                         Some(Purpose::Password),
@@ -1864,9 +1830,9 @@ pub mod field {
             Some(Field::String {
                 attrs: Attrs::new(
                     parent_attrs,
-                    Identifier::Label {
-                        id: "notesPlain".to_string(),
-                        label: "notesPlain".to_string(),
+                    identifier::Identifier {
+                        id: identifier::Id("notesPlain".into()),
+                        unique_name: identifier::UniqueName::Label("notesPlain".into()),
                     },
                     None,
                     Some(Purpose::Notes),
@@ -1911,11 +1877,7 @@ pub mod section {
 
 /// Creates a reference string for 1password,
 /// This is used as a short url to the item.
-fn reference_of(
-    item: &item::Attrs,
-    section: Option<&section::Section>,
-    identifier: &identifier::Identifier,
-) -> String {
+fn reference_of(item: &item::Attrs, section: Option<&section::Section>, identifier: &identifier::Identifier) -> String {
     format!(
         "op:://{vault}/{item}/{inner_reference}",
         vault = item.vault.named(),

@@ -29,23 +29,17 @@ use std::path::PathBuf;
 use std::process::Command;
 use tracing::{debug, trace};
 
-#[cfg(unix)]
-use {
-    std::fs::{metadata, set_permissions},
-    std::os::unix::fs::PermissionsExt,
-};
-
 #[async_trait]
 pub trait Downloader: Exporter {
     const BINARY: &'static str;
     const URL: &'static str;
 
-    fn binary(config: &RuntimeConfig) -> PathBuf {
-        Self::base_dir(config).join(Self::BINARY)
+    fn binary(config: &RuntimeConfig) -> Result<PathBuf> {
+        Ok(Self::base_dir(config)?.join(Self::BINARY))
     }
 
-    fn base_command(config: &RuntimeConfig) -> Command {
-        Command::new(Self::binary(config))
+    fn base_command(config: &RuntimeConfig) -> Result<Command> {
+        Ok(Command::new(Self::binary(config)?))
     }
 
     async fn download_cli(
@@ -53,7 +47,7 @@ pub trait Downloader: Exporter {
         main_bar: &ProgressBar,
         multi_bar: &MultiProgress,
     ) -> Result<()> {
-        let target = Self::binary(config);
+        let target = Self::binary(config)?;
         create_parents(&target)?;
 
         // TODO :: Check for correct version, platform & arch
@@ -107,15 +101,6 @@ pub trait Downloader: Exporter {
         if !found {
             return Err(anyhow::anyhow!("Failed to find CLI binary in archive"));
         }
-
-        // TODO :: Windows permissions
-        #[cfg(unix)]
-        let mut permissions =
-            metadata(&target).context("Get metadata for CLI binary")?.permissions();
-        #[cfg(unix)]
-        permissions.set_mode(0o755);
-        #[cfg(unix)]
-        set_permissions(&target, permissions).context("Set permissions for CLI binary")?;
 
         Ok(())
     }
