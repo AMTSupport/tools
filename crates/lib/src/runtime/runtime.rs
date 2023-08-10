@@ -15,7 +15,7 @@
  */
 
 use crate::cli::Flags;
-use anyhow::{Context, Error, Result};
+use anyhow::{Error, Result};
 use clap::Parser;
 use std::sync::RwLock;
 use tracing::dispatcher::DefaultGuard;
@@ -41,13 +41,15 @@ pub trait Runtime<C: Cli>: Send + Sync + 'static {
             _ => (LevelFilter::TRACE, FmtSpan::FULL),
         };
 
-        let mut builder = tracing_subscriber::fmt()
+        let builder = tracing_subscriber::fmt()
+            .without_time()
             .with_thread_names(flags.verbose > 2)
             .with_thread_ids(flags.verbose > 2)
             .with_level(flags.verbose > 0)
             .with_line_number(flags.verbose > 0)
             .with_max_level(level)
-            .with_span_events(span);
+            .with_span_events(span)
+            .with_target(false);
 
         builder.finish().set_default()
     }
