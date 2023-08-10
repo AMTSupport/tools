@@ -29,7 +29,7 @@ use indicatif::{MultiProgress, ProgressBar};
 use lib::anyhow::Result;
 use lib::anyhow::{anyhow, Context};
 use lib::fs::normalise_path;
-use lib::pathed::Pathed;
+use lib::pathed::{ensure_directory_exists, ensure_permissions, Pathed};
 use serde::{Deserialize, Serialize};
 use serde_json::to_string_pretty;
 use std::io::Write;
@@ -45,8 +45,18 @@ pub struct OnePasswordCore {
 }
 
 impl OnePasswordCore {
-    pub fn data_dir(config: &RuntimeConfig) -> PathBuf {
-        Self::base_dir(config).join("data")
+    pub fn data_dir(config: &RuntimeConfig) -> Result<PathBuf> {
+        let path = Self::base_dir(config)?.join("data");
+        let path = ensure_directory_exists(path)?;
+        ensure_permissions(path, Self::PERMISSIONS)
+    }
+}
+
+impl Pathed<RuntimeConfig> for OnePasswordCore {
+    const NAME: &'static str = "1Password";
+
+    fn get_unique_name(&self) -> String {
+        self.account.get_unique_name()
     }
 }
 
@@ -65,20 +75,16 @@ impl Downloader for OnePasswordCore {
         }
     );
 
-    fn base_command(config: &RuntimeConfig) -> Command {
-        let mut command = Command::new(Self::binary(config));
-        command
-            .arg("--cache")
-            .args(["--config", Self::data_dir(config).display().to_string().as_str()]);
+    fn base_command(config: &RuntimeConfig) -> Result<Command> {
+        let mut command = Command::new(Self::binary(config)?);
+        command.arg("--cache").args(["--config", Self::data_dir(config)?.to_str().context("Convert path to &str")?]);
 
-        command
+        Ok(command)
     }
 }
 
 #[async_trait]
 impl Exporter for OnePasswordCore {
-    const DIRECTORY: &'static str = "1Password";
-
     async fn interactive(config: &RuntimeConfig) -> Result<Vec<Backend>> {
         let account = OnePasswordAccount::interactive(config).await?;
         Ok(vec![OnePassword(OnePasswordCore { account })])
@@ -99,10 +105,7 @@ impl Exporter for OnePasswordCore {
         use one_pux::{attributes::Attributes, export::Export};
 
         let account = &self.account;
-        let file_name = format!(
-            "1PasswordExport-{}.1pux",
-            Local::now().format("%Y%m%d-%H%M%S")
-        );
+        let file_name = format!("1PasswordExport-{}.1pux", Local::now().format("%Y%m%d-%H%M%S"));
 
         let file = self.account.unique_dir(config)?.join(file_name);
         let file = normalise_path(file);
@@ -153,8 +156,6 @@ impl Prune for OnePasswordCore {
             self.account.unique_dir(config)?.display()
         );
 
-        glob::glob(&glob)
-            .with_context(|| format!("Glob for files in {}", glob))
-            .map(|glob| glob.flatten().collect())
+        glob::glob(&glob).with_context(|| format!("Glob for files in {}", glob)).map(|glob| glob.flatten().collect())
     }
 }

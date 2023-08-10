@@ -42,7 +42,7 @@ use tracing::{error, info, trace};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BitwardenUser {
     pub user: String,
-    session_token: String
+    session_token: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -55,7 +55,7 @@ pub struct BitWardenCore {
 
 impl Display for BitWardenCore {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{user}/{org}")
+        write!(f, "{}/{}", self.user, self.org_name)
     }
 }
 
@@ -71,11 +71,12 @@ impl BitWardenCore {
     const BW_SESSION: &'static str = "BW_SESSION";
     const BW_DIRECTORY: &'static str = "BITWARDENCLI_APPDATA_DIR";
 
-    fn command(&self, config: &RuntimeConfig) -> Command {
-        let mut cmd = Self::base_command(config);
-        cmd.env(Self::BW_DIRECTORY, &self.unique_dir(config));
+    fn command(&self, config: &RuntimeConfig) -> Result<Command> {
+        let mut cmd = Self::base_command(config)?;
+        cmd.env(Self::BW_DIRECTORY, &self.unique_dir(config)?);
         cmd.env(Self::BW_SESSION, &self.session_id);
-        cmd
+
+        Ok(cmd)
     }
 }
 
@@ -98,16 +99,12 @@ impl Prune for BitWardenCore {
             org = &self.org_name
         );
 
-        glob::glob(&glob)
-            .with_context(|| format!("Glob backup files for {glob}"))
-            .map(|g| g.flatten().collect())
+        glob::glob(&glob).with_context(|| format!("Glob backup files for {glob}")).map(|g| g.flatten().collect())
     }
 }
 
 #[async_trait]
 impl Exporter for BitWardenCore {
-    const DIRECTORY: &'static str = BitWardenCore::NAME;
-
     async fn interactive(config: &RuntimeConfig) -> Result<Vec<Backend>> {
         use inquire::{Password, Text};
         use lib::inquire::inquire_style;
@@ -121,20 +118,20 @@ impl Exporter for BitWardenCore {
 
         let data_dir = BitWardenCore::base_dir(config)?.join(&username);
 
-        let command = || -> Command {
-            let mut cmd = BitWardenCore::base_command(config);
+        let command = || -> Result<Command> {
+            let mut cmd = BitWardenCore::base_command(config)?;
             cmd.env(Self::BW_DIRECTORY, &data_dir);
-            cmd
+            Ok(cmd)
         };
 
-        let envs = [(Self::BW_DIRECTORY, &data_dir)];
+        let envs = [(Self::BW_DIRECTORY, data_dir.to_str().unwrap())];
         let status = LoginStatus::_get(config, &envs, &[]).await?;
 
         if let LoginStatus::Authenticated(user) = status {
             // TODO -> Prompt to log out?
-            error!("Already logged into BitWarden as {}", user);
+            error!("Already logged into BitWarden as {user}");
             error!("Please remove {} and try again.", data_dir.display());
-            return Err(anyhow!("Already logged into BitWarden as {}", user));
+            return Err(anyhow!("Already logged into BitWarden as {user}"));
         }
 
         trace!("Not logged into BitWarden, logging in.");
@@ -154,7 +151,7 @@ impl Exporter for BitWardenCore {
             .prompt()
             .with_context(|| "Get 2FA code for bitwarden user.")?;
 
-        let output = command()
+        let output = command()?
             .args(["login", &username, &password])
             .args(["--code", &two_fa])
             .arg("--raw")
@@ -164,7 +161,7 @@ impl Exporter for BitWardenCore {
         if !output.status.success() {
             return Err(anyhow!(
                 "Failed to log into BitWarden -> {}",
-                String::from_utf8_lossy(output.stdout)
+                String::from_utf8_lossy(&output.stdout)
             ));
         }
 
@@ -173,7 +170,7 @@ impl Exporter for BitWardenCore {
 
         // let account = BitW
 
-        let organisations = command()
+        let organisations = command()?
             .arg("list")
             .arg("organizations")
             .arg("--session")
@@ -186,14 +183,9 @@ impl Exporter for BitWardenCore {
             .context("Parse possible organisations")?;
 
         let organisations = match organisations.len() {
-            0 => Err(anyhow!(
-                "Unable to find any possible organisations to extract from!"
-            ))?,
+            0 => Err(anyhow!("Unable to find any possible organisations to extract from!"))?,
             1 => {
-                info!(
-                    "Only one organisation found, using {}.",
-                    organisations[0].name
-                );
+                info!("Only one organisation found, using {}.", organisations[0].name);
                 vec![Backend::BitWarden(BitWardenCore {
                     user: username,
                     org_id: organisations[0].id.clone(),
@@ -201,21 +193,18 @@ impl Exporter for BitWardenCore {
                     session_id,
                 })]
             }
-            _ => inquire::MultiSelect::new(
-                "Select which organisations you would like to use.",
-                organisations,
-            )
-            .prompt()?
-            .iter()
-            .map(|org| {
-                Backend::BitWarden(BitWardenCore {
-                    user: username.clone(),
-                    org_id: org.id.clone(),
-                    org_name: org.name.clone(),
-                    session_id: session_id.clone(),
+            _ => inquire::MultiSelect::new("Select which organisations you would like to use.", organisations)
+                .prompt()?
+                .iter()
+                .map(|org| {
+                    Backend::BitWarden(BitWardenCore {
+                        user: username.clone(),
+                        org_id: org.id.clone(),
+                        org_name: org.name.clone(),
+                        session_id: session_id.clone(),
+                    })
                 })
-            })
-            .collect(),
+                .collect(),
         };
 
         Ok(organisations)
@@ -228,14 +217,14 @@ impl Exporter for BitWardenCore {
         _progress_bar: &MultiProgress,
     ) -> Result<()> {
         let export = |format: &str, ext: &str| -> Result<()> {
-            let output_file = normalise_path(self.unique_dir(config).join(format!(
+            let output_file = normalise_path(self.unique_dir(config)?.join(format!(
                 "{org_id}_{date}-{format}.{ext}",
                 org_id = &self.org_id,
                 date = chrono::Local::now().format("%Y-%m-%dT%H:%M:%SZ%z")
             )));
 
             let cmd = self
-                .command(config)
+                .command(config)?
                 .arg("export")
                 .args(["--organizationid", &self.org_id])
                 .args(["--format", format])
@@ -245,10 +234,7 @@ impl Exporter for BitWardenCore {
 
             if !cmd.stderr.is_empty() {
                 let string = String::from_utf8(cmd.stderr)?;
-                return Err(anyhow!(
-                    "BitWarden export for {} failed: {string}",
-                    &self.org_name
-                ));
+                return Err(anyhow!("BitWarden export for {} failed: {string}", &self.org_name));
             }
 
             Ok(())

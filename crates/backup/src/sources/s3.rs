@@ -38,6 +38,7 @@ use std::path::PathBuf;
 use std::string::ToString;
 use std::time::UNIX_EPOCH;
 use tracing::{debug, error, info, trace};
+use lib::pathed::Pathed;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct S3Base {
@@ -81,7 +82,7 @@ impl Prune for S3Core {
 
         let glob = format!(
             "{root}{MAIN_SEPARATOR}{bucket}{MAIN_SEPARATOR}*",
-            root = normalise_path(S3Core::base_dir(config)).display(),
+            root = normalise_path(S3Core::base_dir(config)?).display(),
             bucket = self.base.object.display()
         );
 
@@ -91,10 +92,16 @@ impl Prune for S3Core {
     }
 }
 
+impl Pathed<RuntimeConfig> for S3Core {
+    const NAME: &'static str = "S3";
+
+    fn get_unique_name(&self) -> String {
+        self.base.backend["root"].clone()
+    }
+}
+
 #[async_trait]
 impl Exporter for S3Core {
-    const DIRECTORY: &'static str = "S3";
-
     async fn interactive(_config: &RuntimeConfig) -> Result<Vec<Backend>> {
         let not_empty_or_ascii = |str: &str, msg: &str| match str
             .chars()
@@ -180,7 +187,7 @@ impl Exporter for S3Core {
         progress_state.set_message("Initialising S3 exporter...");
 
         let object = self.base.object.clone();
-        let output = normalise_path(Self::base_dir(config).join(&object));
+        let output = normalise_path(Self::base_dir(config)?.join(&object));
         let mut backup_len = self.files(config)?.len();
         let op = self.op();
 

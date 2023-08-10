@@ -52,7 +52,7 @@ where
     fn get_unique_name(&self) -> String;
 }
 
-fn ensure_directory_exists(buf: PathBuf) -> Result<PathBuf> {
+pub fn ensure_directory_exists(buf: PathBuf) -> Result<PathBuf> {
     if buf.exists() {
         return match &buf.is_dir() {
             false => Err(anyhow!(
@@ -70,7 +70,7 @@ fn ensure_directory_exists(buf: PathBuf) -> Result<PathBuf> {
 }
 
 #[cfg(unix)]
-fn ensure_permissions(buf: PathBuf, permissions: u32) -> Result<PathBuf> {
+pub fn ensure_permissions(buf: PathBuf, permissions: u32) -> Result<PathBuf> {
     use std::os::unix::prelude::PermissionsExt;
     std::fs::set_permissions(&buf, std::fs::Permissions::from_mode(permissions)).with_context(
         || {
@@ -86,6 +86,6 @@ fn ensure_permissions(buf: PathBuf, permissions: u32) -> Result<PathBuf> {
 
 // TODO: Windows permissions
 #[cfg(windows)]
-fn ensure_permissions(buf: PathBuf, _permissions: u32) -> Result<PathBuf> {
+pub fn ensure_permissions(buf: PathBuf, _permissions: u32) -> Result<PathBuf> {
     Ok(buf)
 }

@@ -75,12 +75,13 @@ pub enum Error {
 
 impl OnePasswordAccount {
     /// Creates a new command with the required environment variables & arguments for the account.
-    pub(crate) fn command(&self, config: &RuntimeConfig) -> Command {
-        let mut command = OnePasswordCore::base_command(config);
+    pub(crate) fn command(&self, config: &RuntimeConfig) -> Result<Command> {
+        let mut command = OnePasswordCore::base_command(config)?;
         let (fill_args, fill_envs) = self.fill();
         command.args(fill_args);
         command.envs(fill_envs);
-        command
+
+        Ok(command)
     }
 }
 

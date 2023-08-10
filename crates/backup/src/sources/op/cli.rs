@@ -944,7 +944,7 @@ pub mod item {
 
             bar.set_message(format!("Requesting items from `{vault}` vault...",));
 
-            let items = Self::raw(&vault.attrs().reference.id(), account.command(config))
+            let items = Self::raw(&vault.attrs().reference.id(), account.command(config)?)
                 .and_then(|raw| from_slice::<Vec<Item>>(&raw).context("Deserialize items list"))?;
 
             bar.set_length(items.len() as u64);
@@ -954,7 +954,7 @@ pub mod item {
                 .into_par_iter()
                 .progress_with(bar)
                 .map(|item| {
-                    Self::raw_long(&vault.attrs().reference, item, account.command(config))
+                    Self::raw_long(&vault.attrs().reference, item, account.command(config)?)
                 })
                 .map(|r| {
                     if r.is_err() {

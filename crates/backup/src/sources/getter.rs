@@ -77,7 +77,7 @@ where
         envs: &[(&str, &str)],
         args: &[&str],
     ) -> anyhow::Result<T> {
-        let mut command = B::base_command(config);
+        let mut command = B::base_command(config)?;
         command.arg("--format=json");
         command.args(Self::ARGS);
         command.args(args);

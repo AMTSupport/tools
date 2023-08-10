@@ -24,18 +24,12 @@ use async_trait::async_trait;
 use clap::ValueEnum;
 use indicatif::{MultiProgress, ProgressBar};
 use lib::anyhow::Result;
+use lib::pathed::Pathed;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display, Formatter};
-use std::path::PathBuf;
 
 #[async_trait]
-pub trait Exporter {
-    const DIRECTORY: &'static str;
-
-    fn base_dir(config: &RuntimeConfig) -> PathBuf {
-        config.directory.join(Self::DIRECTORY)
-    }
-
+pub trait Exporter: Pathed<RuntimeConfig> {
     /// Used to attempt to interactively interactive a new exporter.
     async fn interactive(config: &RuntimeConfig) -> Result<Vec<Backend>>;
 

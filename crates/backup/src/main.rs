@@ -27,7 +27,7 @@ use std::path::PathBuf;
 #[tokio::main(flavor = "multi_thread")]
 pub async fn main() -> Result<()> {
     let cli = application::Cli::try_parse()?;
-    lib::log::init("backup-interactive", &cli.flags)?;
+    lib::log::init("backup-interactive", cli.flags.verbose)?;
     rayon::ThreadPoolBuilder::new().num_threads(22).build_global().unwrap();
     application::main(select_location()?, cli, true).await
 
