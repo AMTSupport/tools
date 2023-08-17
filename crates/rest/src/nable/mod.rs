@@ -15,7 +15,8 @@
  */
 
 pub mod structs;
-pub mod web;
+// pub mod web;
+pub mod endpoints;
 
 pub const API_ENDPOINT: &str = "/api";
 pub const QUERY_API_KEY: &str = "apikey";

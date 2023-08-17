@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 lib = { path = "../lib" }
+macros = { path = "../macros" }
 
 # Runtimes
 tokio = { workspace = true }
@@ -35,3 +36,9 @@ michie = { version = "3.0.2" }
 skim = "0.10.4"
 regex = "1.8.1"
 fuzzy-matcher = "0.3.7"
+
+# Testing
+[dev-dependencies]
+env_logger = "*"
+test-log = { version = "0.2.12", features = ["trace"] }
+tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "fmt"] }

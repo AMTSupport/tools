@@ -25,13 +25,13 @@ use reqwest::{
     Response,
 };
 use serde::de::DeserializeOwned;
-use simplelog::{error, trace};
 use std::any::Any;
 
 use http_cache_reqwest::{Cache, CacheMode, HttpCache};
 use reqwest_middleware::RequestBuilder;
 use std::collections::HashMap;
 use std::hash::Hash;
+use tracing::{error, trace};
 
 #[async_trait]
 pub trait Hudu {

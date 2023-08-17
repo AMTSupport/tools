@@ -14,14 +14,16 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+extern crate core;
+
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Deserializer};
-use simplelog::error;
 use std::hash::Hash;
 use std::str::FromStr;
+use tracing::error;
 
-pub mod hudu;
-pub mod manager;
+// pub mod hudu;
+// pub mod manager;
 pub mod nable;
 
 const AGENT: &str = "rest_agent";

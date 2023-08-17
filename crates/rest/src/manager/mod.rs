@@ -20,9 +20,9 @@ use crate::nable::web::NAble;
 use clap::Subcommand;
 use fuzzy_matcher::FuzzyMatcher;
 use regex::Regex;
-use simplelog::{info, trace};
 
 use std::collections::HashMap;
+use tracing::{info, trace};
 
 pub mod structs;
 
