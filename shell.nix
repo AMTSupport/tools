@@ -10,11 +10,15 @@ let
   fenixPkgs = fenix.packages.${localSystem};
 in
 mainPkg.overrideAttrs (oa: {
-  nativeBuildInputs = [
+  nativeBuildInputs = with pkgs; [
     (fenixPkgs.complete.withComponents [
       "rust-analyzer"
       "clippy-preview"
       "rustfmt-preview"
     ])
+    cargo-udeps
+    cargo-audit
+    cargo-expand
+    cargo-nextest
   ] ++ (oa.nativeBuildInputs or [ ]);
 })
