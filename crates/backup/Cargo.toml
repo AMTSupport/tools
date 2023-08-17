@@ -44,6 +44,7 @@ filetime = "0.2"
 glob = "0.3.1"
 async-trait = "0.1.68"
 tokio-stream = "0.1.14"
+readable-regex = "0.1.0-alpha1"
 
 futures = { version = "0.3.28", optional = true } # Needed by opendal
 opendal = { version = "0.37.0", features = ["services-s3", "rustls"], optional = true }
@@ -69,4 +70,7 @@ tracing-subscriber = { version = "0.3", default-features = false, features = ["e
 # Generating random data for tests
 fake = { version = "2.6", features=["derive", "chrono", "serde_json", "maybe-non-empty-collections"]}
 rand = "0.8"
+
+# Fs & IO
+tempdir = "0.3.7"
 
