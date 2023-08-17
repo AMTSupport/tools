@@ -23,15 +23,11 @@
 pub mod cli;
 pub mod fs;
 pub mod helper;
-pub mod log;
-pub mod progress;
-pub mod pathed;
 pub mod inquire;
+pub mod log;
+pub mod pathed;
+pub mod progress;
 pub mod runtime;
-
-pub use anyhow;
-pub use clap;
-pub use sysexits;
 
 #[cfg(unix)]
 pub use nix;
