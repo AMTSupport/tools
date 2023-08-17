@@ -174,17 +174,18 @@ pub fn enum_variants(input: TokenStream) -> TokenStream {
     enums::variants::variants(input).into()
 }
 
-    let variant_names = variants.iter().map(|variant| &variant.ident).collect::<Vec<_>>();
+#[proc_macro_derive(EnumNames)]
+pub fn enum_names(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
 
-    let expanded = quote! {
-        impl #name {
-            pub fn get_variants() -> Vec<#name> {
-                vec![#(#name::#variant_names),*]
-            }
-        }
-    };
+    enums::names::names(input).into()
+}
 
-    TokenStream::from(expanded)
+#[proc_macro_derive(EnumRegex)]
+pub fn enum_regex(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+
+    enums::regex::regex(input).into()
 }
 
 #[proc_macro_derive(Delegation, attributes(delegate))]
