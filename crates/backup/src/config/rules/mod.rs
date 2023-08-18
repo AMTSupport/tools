@@ -15,12 +15,40 @@
  */
 
 pub mod autoprune;
+mod metadata;
+mod rule;
 
 use crate::config::rules::autoprune::AutoPrune;
+use crate::config::rules::metadata::Metadata;
+use crate::config::rules::rule::Rule;
 use serde::{Deserialize, Serialize};
+use std::path::Path;
+use tracing::trace;
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct Rules {
     /// The AutoPrune configuration.
-    pub auto_prune: AutoPrune,
+    pub auto_prune: Option<AutoPrune>,
+}
+
+impl Rules {
+    pub async fn would_survive(&self, existing_files: &[&Path], destination: &Path, metadata: Metadata) -> bool {
+        let mut survive = true;
+        let mut reason = None;
+
+        if let Some(auto_prune) = &self.auto_prune {
+            if !auto_prune.would_keep(existing_files, destination, &metadata).await {
+                survive = false;
+                reason = Some("AutoPrune");
+            }
+        }
+
+        if survive {
+            trace!("File {:?} would survive", destination);
+        } else {
+            trace!("File {:?} would not survive because of {:?}", destination, reason);
+        }
+
+        survive
+    }
 }

@@ -158,49 +158,39 @@ impl RuntimeConfig {
     fn new_rules() -> Result<Rules> {
         trace!("Inquiring about rules");
 
-        let prune = if inquire::Confirm::new("Do you want to enable auto-pruning?")
-            .with_default(true)
-            .prompt()?
-        {
-            let mut prune = AutoPrune {
-                enabled: true,
-                ..Default::default()
-            };
+        let autoprune = if inquire::Confirm::new("Do you want to enable auto-pruning?").with_default(true).prompt()? {
+            let mut autoprune = AutoPrune { ..Default::default() };
 
             if let Ok(days) = inquire::Text::new("How long do you want to retain backups for?")
-                .with_default(&prune.days.to_string())
+                .with_default(&autoprune.days.to_string())
                 .with_validator(|v: &_| match usize::from_str(v).is_ok() {
                     true => Ok(Validation::Valid),
-                    false => Ok(Validation::Invalid(
-                        "Please enter a valid number of days".into(),
-                    )),
+                    false => Ok(Validation::Invalid("Please enter a valid number of days".into())),
                 })
                 .prompt()
             {
-                prune.days = usize::from_str(&days)?;
+                autoprune.days = usize::from_str(&days)?;
             }
 
             if let Ok(minimum) = inquire::Text::new(
                 "How many backups do you want to retain at a minimum, ignoring the age of the backup?",
             )
-                .with_default(&prune.keep_latest.to_string())
-                .with_validator(|v: &_| match usize::from_str(v).is_ok() {
-                    true => Ok(Validation::Valid),
-                    false => Ok(Validation::Invalid(
-                        "Please enter a valid number of backups".into(),
-                    )),
-                })
-                .prompt()
+            .with_default(&autoprune.keep_latest.to_string())
+            .with_validator(|v: &_| match usize::from_str(v).is_ok() {
+                true => Ok(Validation::Valid),
+                false => Ok(Validation::Invalid("Please enter a valid number of backups".into())),
+            })
+            .prompt()
             {
-                prune.keep_latest = usize::from_str(&minimum)?;
+                autoprune.keep_latest = usize::from_str(&minimum)?;
             }
 
-            prune
+            Some(autoprune)
         } else {
-            AutoPrune::default()
+            None
         };
 
-        Ok(Rules { auto_prune: prune })
+        Ok(Rules { auto_prune: autoprune })
     }
 
     async fn new_exporters(config: &RuntimeConfig) -> Result<Vec<Backend>> {

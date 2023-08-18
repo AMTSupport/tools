@@ -22,7 +22,6 @@ use crate::sources::exporter::Exporter;
 use crate::{continue_loop, env_or_prompt};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
-use chrono::Utc;
 use futures::{Stream, TryStreamExt};
 use futures_util::StreamExt;
 use indicatif::{MultiProgress, ProgressBar};
@@ -188,7 +187,7 @@ impl Exporter for S3Core {
 
         let object = self.base.object.clone();
         let output = normalise_path(Self::base_dir(config)?.join(&object));
-        let mut backup_len = self.files(config)?.len();
+        let existing_files = self.files(config)?;
         let op = self.op();
 
         progress_state.set_message("Requesting objects from S3...");
@@ -241,27 +240,19 @@ impl Exporter for S3Core {
                 if host_len != remote_len {
                     debug!("File size is different, deleting");
                     std::fs::remove_file(&path)?;
-                    backup_len -= 1;
                 }
 
                 progress_state.inc(1)
             }
 
-            debug!("Checking if file should be pruned...");
-            progress_state.set_message(format!("Checking if {:#} would be pruned...", &filename));
+            debug!("Checking if file would survice rules...");
+            progress_state.set_message(format!("Checking if {:#} would survive rules...", &filename));
 
-            if config.config.rules.auto_prune.enabled
-                && backup_len > config.config.rules.auto_prune.keep_latest
-            {
-                let since_mtime = Utc::now() - meta.last_modified().unwrap();
-                if since_mtime.num_days() > config.config.rules.auto_prune.days as i64 {
-                    debug!(
-                        "File is older than {}, skipping.",
-                        &config.config.rules.auto_prune.days
-                    );
-                    progress_state.inc(1);
-                    continue;
-                }
+            let existing = existing_files.iter().map(|p| p.as_path()).collect::<Vec<&Path>>();
+            if !config.config.rules.would_survive(&existing, &path, meta.clone().into()).await {
+                debug!("File would not survive rules, skipping.");
+                progress_state.inc(1);
+                continue;
             }
 
             trace!("Checking if {} exists", &path.to_str().unwrap());
@@ -284,7 +275,6 @@ impl Exporter for S3Core {
                 .with_context(|| format!("Failed to set access time for {}", &path.to_str().unwrap()))?;
 
             progress_state.inc(1);
-            backup_len += 1;
         }
 
         download_bar.finish_and_clear();

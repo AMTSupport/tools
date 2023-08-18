@@ -14,23 +14,25 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+use crate::config::rules::rule::Rule;
 use anyhow::{Context, Result};
-use chrono::Duration;
+use chrono::{DateTime, Duration, Utc};
 use macros::{EnumNames, EnumRegex, EnumVariants};
 use readable_regex::{
-    either, ends_with, everything, named_group, non_capture_group, optional, starts_and_ends_with, starts_with,
-    ReadableRe,
+    ends_with, everything, non_capture_group, optional, starts_and_ends_with, starts_with, ReadableRe,
 };
 use serde::{Deserialize, Serialize};
 use std::cell::LazyCell;
 use std::collections::HashMap;
-use std::fs::Metadata;
 use std::ops::Add;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
-use tracing::info;
+use tokio_stream::StreamExt;
+use tracing::{info, instrument};
 
-#[derive(Debug, Clone, PartialOrd, PartialEq, Serialize, Deserialize, EnumVariants, EnumNames, EnumRegex)]
+#[derive(
+    Debug, Clone, Copy, Hash, PartialOrd, Ord, PartialEq, Eq, Serialize, Deserialize, EnumVariants, EnumNames, EnumRegex,
+)]
 pub enum Tag {
     None,
     Hourly,
@@ -54,30 +56,46 @@ impl Tag {
 
     /// Applies the applicable tags to the file.
     /// This may be multiple tags, or none.
-    pub fn tag(path: Path) -> Result<PathBuf> {
-        let now = SystemTime::now();
-        let mtime = path.metadata()?.modified()?;
-        let age = Duration::from_std(now.duration_since(mtime)?)?;
-
-        let mut path = path.into_path_buf();
-        for tag in Self::get_variants() {
-            if age < tag.duration() {
-                continue;
-            }
-
-            path = tag.add_tag(path)?;
+    #[instrument]
+    pub fn tag(path: &Path) -> Result<PathBuf> {
+        let mut path = path.to_path_buf();
+        let metadata = path.metadata().context("Getting metadata")?;
+        let metadata = crate::config::rules::metadata::Metadata::from(metadata);
+        for tag in Self::applicable_tags(&metadata) {
+            path = tag.add_tag(&path)?;
         }
 
         Ok(path)
     }
 
-    pub fn add_tag(&self, path: PathBuf) -> Result<PathBuf> {
+    #[instrument]
+    pub fn applicable_tags(metadata: &crate::config::rules::metadata::Metadata) -> Vec<Tag> {
+        let now = Utc::now();
+        let age = now.signed_duration_since(metadata.mtime);
+
+        let mut tags = vec![];
+        for tag in Self::get_variants() {
+            if age < tag.duration() {
+                continue;
+            }
+
+            tags.push(tag);
+        }
+
+        tags
+    }
+
+    /// Appends the tag to the file name.
+    /// If this tag is already present there is no change.
+    /// If there are other tags present they will be sorted.
+    #[instrument]
+    pub fn add_tag(&self, path: &Path) -> Result<PathBuf> {
         let file_name = path.file_name().context("Getting file name")?;
         let file_name = file_name.to_str().context("Converting file name to string")?;
         let (mut tags, file_name) = Self::get_tags(file_name)?;
 
         if tags.contains(&self) {
-            return Ok(path);
+            return Ok(path.to_path_buf());
         }
 
         tags.push(self.clone());
@@ -90,13 +108,14 @@ impl Tag {
         Ok(new_path)
     }
 
-    pub fn remove_tag(&self, path: Path) -> Result<PathBuf> {
+    #[instrument]
+    pub fn remove_tag(&self, path: &Path) -> Result<PathBuf> {
         let file_name = path.file_name().context("Getting file name")?;
         let file_name = file_name.to_str().context("Converting file name to string")?;
         let (mut tags, file_name) = Self::get_tags(file_name)?;
 
         if !tags.contains(&self) {
-            return Ok(path.into_path_buf());
+            return Ok(path.to_path_buf());
         }
 
         tags.retain(|tag| tag != self);
@@ -126,6 +145,7 @@ impl Tag {
     /// assert_eq!(tags, vec![Tag::None]);
     /// assert_eq!(file_name, "file.txt");
     /// ```
+    #[instrument]
     pub fn get_tags(str: &str) -> Result<(Vec<Tag>, &str)> {
         match starts_and_ends_with(non_capture_group(ReadableRe::String(Self::MULTI_REGEX.into())))
             .compile()
@@ -134,7 +154,7 @@ impl Tag {
         {
             None => return Ok((vec![Tag::None], str)),
             Some(captures) => Ok((
-                captures.iter().map(|m| m.unwrap().as_str().into()).collect::<Vec<Tag>>(),
+                captures.iter().map(|m| m.unwrap().as_str().try_into().unwrap()).collect::<Vec<Tag>>(),
                 str.strip_prefix(captures.get(0).unwrap().as_str()).unwrap(),
             )),
         }
@@ -143,9 +163,6 @@ impl Tag {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AutoPrune {
-    /// Whether or not the auto prune feature is enabled.
-    pub enabled: bool,
-
     /// How many hours of backups should be kept.
     pub hours: usize,
 
@@ -163,56 +180,15 @@ pub struct AutoPrune {
 }
 
 impl AutoPrune {
-    const REGEX: LazyCell<ReadableRe<'static>> = LazyCell::new(|| {
-        starts_with(optional(named_group(
-            "tag",
-            either(Tag::get_variants().iter().map(Tag::name).map(str::to_lowercase)),
-        )))
-        .add(ends_with(everything()))
-    });
+    const REGEX: LazyCell<ReadableRe<'static>> =
+        LazyCell::new(|| starts_with(optional(ReadableRe::Raw(Tag::MULTI_REGEX))).add(ends_with(everything())));
 
-    pub fn partition_prune(&self, paths: Vec<PathBuf>) -> Result<(Vec<Path>, Vec<Path>)> {
-        let now = SystemTime::now();
-        let mut keep = Vec::new();
-        let mut prune = Vec::new();
-
-        let mut time_paired = paths
-            .into_iter()
-            .filter(|path| path.is_file())
-            .filter_map(|path| path.metadata().map(|meta| (path, meta)).ok())
-            .map(|(path, meta)| {
-                let mtime = meta.modified().unwrap();
-                let age = now.duration_since(mtime).unwrap();
-                let age = Duration::from_std(age).unwrap();
-                (path, meta, age)
-            })
-            .collect::<Vec<(Path, Metadata, Duration)>>();
-        time_paired.sort_by(|(_, _, time_a), (_, _, time_b)| time_a.cmp(time_b));
-
-        // Keep the newest files for keep_latest.
-        for (path, _, _) in time_paired.iter().rev().take(self.keep_latest) {
-            keep.push(path.into());
-        }
-
-        Ok((keep, prune))
-    }
-
-    pub fn should_prune(&self, file: &Path, remaining_files: usize) -> Result<bool> {
-        if self.enabled == false {
-            return Ok(false);
-        }
-
-        let mtime = file.metadata()?.modified()?;
-        let now = SystemTime::now();
-        let age = now.duration_since(mtime)?;
-        let days = Duration::from_std(age)?.num_days();
-
-        Ok(days > self.days as i64 && remaining_files > self.keep_latest)
-    }
-
-    fn auto_remove(&self, files: Vec<PathBuf>) -> Result<Vec<PathBuf>> {
-        let now = SystemTime::now();
-        let map = Self::tag_map(files)?;
+    /// This will iterate over the files, removing the tags from the oldest
+    /// files until the maximum number of backups for its tag is reached.
+    #[instrument]
+    async fn auto_remove(&self, files: Vec<PathBuf>) -> Result<Vec<PathBuf>> {
+        let now = Utc::now();
+        let mut map = Self::tag_map(files).await?;
 
         for tag in Tag::get_variants() {
             let (date_limit, count_limit) = match tag {
@@ -224,7 +200,7 @@ impl AutoPrune {
                 Tag::Yearly => (now - Duration::days(self.months as i64 * 365), self.months),
             };
 
-            let files = map.get(&tag).context("Getting files for tag, should never fail")?;
+            let files = map.get_mut(&tag).context("Getting files for tag, should never fail")?;
             let mut file_count = files.len();
 
             while file_count > count_limit {
@@ -235,14 +211,12 @@ impl AutoPrune {
                     );
                 }
 
-                let file = &files[file_count - 1];
-                if file.metadata()?.modified()? < date_limit {
-                    tag.remove_tag(file)?;
+                let file = &*files[file_count - 1];
+                let file_mtime = file.metadata()?.modified()?;
+                let file_mtime = DateTime::<Utc>::from(file_mtime);
+                if file_mtime < date_limit {
+                    files[file_count - 1] = tag.remove_tag(file)?;
                     file_count -= 1;
-
-                    // Remove from map?
-
-                    info!("Removed tag from {}", file.display());
                 }
             }
         }
@@ -250,61 +224,93 @@ impl AutoPrune {
         Ok(map.into_iter().flat_map(|(_, files)| files).collect())
     }
 
-    fn remove_untagged(&self, files: Vec<PathBuf>) -> Result<()> {
-        let mut untagged = Vec::new();
-        for file in files {
-            if Self::get_tag(&file)? == Tag::None {
-                untagged.push(file);
-            }
-        }
+    #[instrument]
+    async fn remove_untagged(&self, files: Vec<PathBuf>) -> Result<()> {
+        let mut stream = tokio_stream::iter(files).filter(|file| {
+            let name = file.file_name().expect("Getting file name").to_string_lossy();
+            let (tags, _) = Tag::get_tags(&name).expect("Getting tags from file name");
+            tags == vec![Tag::None]
+        });
 
-        for file in untagged {
-            std::fs::remove_file(file)?;
+        while let Some(file) = stream.next().await {
+            tokio::fs::remove_file(file).await.context("Removing untagged file")?;
         }
 
         Ok(())
     }
 
+    #[instrument]
     fn time_sorted(paths: Vec<PathBuf>) -> Result<Vec<PathBuf>> {
         let mut time_paired = paths
             .into_iter()
             .filter_map(|path| path.metadata().map(|meta| (path, meta)).ok())
             .map(|(path, meta)| {
-                let mtime = meta.modified().context("Getting modified time")?;
-                let age = SystemTime::now().duration_since(mtime).context("Getting age")?;
-                let age = Duration::from_std(age).context("Converting std::time::Duration to chrono::Duration")?;
-                (path, meta, age)
+                let mtime = meta.modified().context("Getting modified time").unwrap();
+                let age = SystemTime::now().duration_since(mtime).context("Getting age").unwrap();
+                let age =
+                    Duration::from_std(age).context("Converting std::time::Duration to chrono::Duration").unwrap();
+                (path, age)
             })
-            .collect::<Vec<(Path, Metadata, Duration)>>();
-        time_paired.sort_by(|(_, _, time_a), (_, _, time_b)| time_a.cmp(time_b));
+            .collect::<Vec<(PathBuf, Duration)>>();
+        time_paired.sort_by(|(_, time_a), (_, time_b)| time_a.cmp(time_b));
 
-        Ok(time_paired.into_iter().map(|(path, _, _)| path).collect())
+        Ok(time_paired.into_iter().map(|(path, _)| path).collect())
     }
 
-    fn tag_map(paths: Vec<PathBuf>) -> Result<HashMap<Tag, Vec<PathBuf>>> {
-        let mut tags = HashMap::new();
-        for path in paths {
-            let tag = Self::get_tag(&path)?;
-            tags.entry(tag).or_insert_with(Vec::new).push(path);
+    #[instrument]
+    async fn tag_map(paths: Vec<PathBuf>) -> Result<HashMap<Tag, Vec<PathBuf>>> {
+        let tuple_tags = Tag::get_variants().into_iter().map(|tag| (tag, Vec::new()));
+        let mut map = HashMap::from_iter(tuple_tags);
+
+        let mut stream = tokio_stream::iter(paths).map(|path| {
+            let name = path.file_name().context("Getting file name")?.to_string_lossy();
+            let tags = Tag::get_tags(&name);
+            tags.map(|(tags, _)| (tags, path.clone()))
+        });
+
+        while let Some(Ok((tags, path))) = stream.next().await {
+            for tag in tags {
+                let vec = map.get_mut(&tag).context("Getting tag from map")?;
+                vec.push(path.clone());
+            }
         }
 
-        for (tag, paths) in tags {
-            tags.insert(tag, Self::time_sorted(paths)?);
+        for (key, paths) in map.clone().into_iter() {
+            let sorted = Self::time_sorted(paths.clone())?;
+            map.insert(key, sorted);
         }
 
-        Ok(tags)
+        Ok(map)
     }
 }
 
 impl Default for AutoPrune {
     fn default() -> Self {
         Self {
-            enabled: false,
             hours: 0,
             days: 14,
             weeks: 0,
             months: 0,
             keep_latest: 5,
         }
+    }
+}
+
+impl Rule for AutoPrune {
+    async fn would_keep(
+        &self,
+        existing_files: &[&Path],
+        _new_path: &Path,
+        new_metadata: &crate::config::rules::metadata::Metadata,
+    ) -> bool {
+        if existing_files.len() < self.keep_latest {
+            return true;
+        }
+
+        if Tag::applicable_tags(&new_metadata) == vec![Tag::None] {
+            return false;
+        }
+
+        true
     }
 }

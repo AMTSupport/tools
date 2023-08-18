@@ -29,6 +29,7 @@
 #![feature(const_trait_impl)]
 #![feature(lazy_cell)]
 #![feature(result_flattening)]
+#![feature(async_fn_in_trait)]
 
 extern crate core;
 
