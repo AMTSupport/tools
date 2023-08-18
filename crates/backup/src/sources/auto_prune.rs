@@ -15,10 +15,9 @@
  */
 
 use crate::config::runtime::RuntimeConfig;
+use anyhow::Result;
 use indicatif::MultiProgress;
-use lib::anyhow::Result;
 use std::path::PathBuf;
-use tracing::{trace};
 
 // TODO :: Implement logic from cleaner crate to handle this!
 pub trait Prune {
@@ -34,7 +33,7 @@ pub trait Prune {
     /// * `rules` - The `AutoPrune` struct which contains the rules for pruning.
     /// # Returns
     /// A `Result` with the `Vec<PathBuf>` of the files which were removed.
-    fn prune(&self, config: &RuntimeConfig, _progress_bar: &MultiProgress) -> Result<Vec<PathBuf>> {
+    fn prune(&self, _config: &RuntimeConfig, _progress_bar: &MultiProgress) -> Result<Vec<PathBuf>> {
         // let files = self.files(config).sort_by(|a, b| {
         //     fn chrono(path: &PathBuf) -> Result<DateTime<FixedOffset>> {
         //         let meta = path.metadata().context("Get meta for comparing times")?;
@@ -53,24 +52,26 @@ pub trait Prune {
         //     let b = b.metadata();
         //     a.metadata()
         // });
-        let files = self.files(config)?;
-        let mut files = files.iter();
-        let mut removed_files = vec![];
+        // let files = self.files(config)?;
+        // let mut files = files.iter();
+        // let mut removed_files = vec![];
+        //
+        // // TODO :: Add dry run option.
+        // while let Some(file) = files.next() {
+        //     if !(config.config.rules.auto_prune.should_prune(file, files.len())?) {
+        //         trace!("Pruning rules prevented pruning for: {}", file.display());
+        //         continue;
+        //     }
+        //
+        //     trace!("Pruning file: {}", file.display());
+        //     if !config.cli.flags.dry_run {
+        //         std::fs::remove_file(file)?;
+        //     }
+        //     removed_files.push(file.clone());
+        // }
+        //
+        // Ok(removed_files)
 
-        // TODO :: Add dry run option.
-        while let Some(file) = files.next() {
-            if !(config.config.rules.auto_prune.should_prune(file, files.len())?) {
-                trace!("Pruning rules prevented pruning for: {}", file.display());
-                continue;
-            }
-
-            trace!("Pruning file: {}", file.display());
-            if !config.cli.flags.dry_run {
-                std::fs::remove_file(file)?;
-            }
-            removed_files.push(file.clone());
-        }
-
-        Ok(removed_files)
+        Ok(vec![])
     }
 }

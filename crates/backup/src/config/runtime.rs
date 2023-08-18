@@ -20,12 +20,12 @@ use crate::config::rules::{autoprune::AutoPrune, Rules};
 use crate::config::Config;
 use crate::continue_loop;
 use crate::sources::exporter::ExporterSource;
+use anyhow::{anyhow, Context, Result};
 use clap::ValueEnum;
 use inquire::validator::Validation;
-use lib::anyhow::{anyhow, Context, Result};
-use tracing::{error, info, trace};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
+use tracing::{error, info, trace};
 
 #[derive(Clone, Debug)]
 pub struct RuntimeConfig {
@@ -79,9 +79,9 @@ impl RuntimeConfig {
             mutated: false,
             directory: directory.to_path_buf(),
             cli: cli.clone(),
-            config: std::fs::read(config_path).context("Reading settings.json").and_then(
-                |vec| serde_json::from_slice::<Config>(&vec).context("Parsing settings.json"),
-            )?,
+            config: std::fs::read(config_path)
+                .context("Reading settings.json")
+                .and_then(|vec| serde_json::from_slice::<Config>(&vec).context("Parsing settings.json"))?,
         })
     }
 
@@ -104,10 +104,7 @@ impl RuntimeConfig {
         }
 
         // TODO :: Allow removal of existing exporters
-        if inquire::Confirm::new("Do you want to modify the exporters?")
-            .with_default(true)
-            .prompt()?
-        {
+        if inquire::Confirm::new("Do you want to modify the exporters?").with_default(true).prompt()? {
             let exporters = Self::new_exporters(&config).await?;
             if !exporters.is_empty() {
                 config.config.exporters.extend(exporters);
@@ -124,22 +121,17 @@ impl RuntimeConfig {
             return Ok(());
         }
 
-        if inquire::Confirm::new("Do you want to save these settings?")
-            .with_default(true)
-            .prompt()
-            .is_ok_and(|b| !b)
-        {
+        if inquire::Confirm::new("Do you want to save these settings?").with_default(true).prompt().is_ok_and(|b| !b) {
             trace!("Not saving settings");
             return Ok(());
         }
 
         let destination = self.directory.join("settings.json");
         if destination.exists() {
-            let overwrite =
-                inquire::Confirm::new("Do you want to overwrite the existing settings?")
-                    .with_default(true)
-                    .prompt()
-                    .context("Prompt for if we should overwrite settings.")?;
+            let overwrite = inquire::Confirm::new("Do you want to overwrite the existing settings?")
+                .with_default(true)
+                .prompt()
+                .context("Prompt for if we should overwrite settings.")?;
 
             if !overwrite {
                 trace!("Not overwriting settings");

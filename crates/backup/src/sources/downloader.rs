@@ -17,12 +17,12 @@
 use crate::config::runtime::RuntimeConfig;
 use crate::sources::download;
 use crate::sources::exporter::Exporter;
+use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
 use futures_util::StreamExt;
 use indicatif::{MultiProgress, ProgressBar};
-use lib::anyhow::{anyhow, Context, Result};
 use lib::fs::create_parents;
-use lib::{anyhow, progress};
+use lib::progress;
 use std::fs::File;
 use std::io::copy;
 use std::path::PathBuf;
@@ -56,11 +56,7 @@ pub trait Downloader: Exporter {
             return Ok(());
         }
 
-        debug!(
-            "Downloading CLI binary from {} to {}",
-            Self::URL,
-            &target.display()
-        );
+        debug!("Downloading CLI binary from {} to {}", Self::URL, &target.display());
         let response = reqwest::Client::new().get(Self::URL).send().await?;
         if !response.status().is_success() {
             return Err(anyhow!("Failed to download CLI: {}", response.status()));

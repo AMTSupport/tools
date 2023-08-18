@@ -33,7 +33,7 @@
 extern crate core;
 
 use inquire::validator::StringValidator;
-use lib::anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Context, Result};
 use tracing::{trace, warn};
 
 pub mod application;

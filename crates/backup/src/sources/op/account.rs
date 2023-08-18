@@ -22,7 +22,7 @@ use crate::sources::op::cli;
 use crate::sources::op::core::OnePasswordCore;
 use async_trait::async_trait;
 use futures_util::TryFutureExt;
-use lib::anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Context, Result};
 use lib::pathed::Pathed;
 use macros::CommonFields;
 use serde::{Deserialize, Serialize};

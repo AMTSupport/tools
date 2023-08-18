@@ -20,25 +20,25 @@ use crate::sources::auto_prune::Prune;
 use crate::sources::download_to;
 use crate::sources::exporter::Exporter;
 use crate::{continue_loop, env_or_prompt};
+use anyhow::{Context, Result};
 use async_trait::async_trait;
 use chrono::Utc;
 use futures::{Stream, TryStreamExt};
 use futures_util::StreamExt;
 use indicatif::{MultiProgress, ProgressBar};
 use inquire::validator::Validation;
-use lib::anyhow::{Context, Result};
 use lib::fs::normalise_path;
+use lib::pathed::Pathed;
 use lib::progress::{download, spinner};
 use opendal::layers::LoggingLayer;
 use opendal::services::S3;
 use opendal::{Builder, Operator, OperatorBuilder};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::string::ToString;
 use std::time::UNIX_EPOCH;
 use tracing::{debug, error, info, trace};
-use lib::pathed::Pathed;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct S3Base {
@@ -228,14 +228,11 @@ impl Exporter for S3Core {
                 debug!("Host len: {}", host_len);
                 debug!("Host modified: {}", host_modified.as_millis());
                 debug!("Remote len: {}", remote_len);
-                debug!(
-                    "Remote modified: {}",
-                    remote_modified.timestamp_millis() as u128
-                );
+                debug!("Remote modified: {}", remote_modified.timestamp_millis() as u128);
 
-                if host_len == remote_len
-                    && host_modified.as_millis() == remote_modified.timestamp_millis() as u128
-                {
+                // TODO :: Hash check
+
+                if host_len == remote_len && host_modified.as_millis() == remote_modified.timestamp_millis() as u128 {
                     debug!("Skipping export as file is the same");
                     progress_state.inc(1);
                     continue;
@@ -270,10 +267,7 @@ impl Exporter for S3Core {
             trace!("Checking if {} exists", &path.to_str().unwrap());
             let host_path = normalise_path(config.directory.join(&path));
             if host_path.exists() && meta.content_length() == host_path.metadata().unwrap().len() {
-                debug!(
-                    "Skipping export of {} as it already exists",
-                    &path.to_str().unwrap()
-                );
+                debug!("Skipping export of {} as it already exists", &path.to_str().unwrap());
                 progress_state.inc(1);
                 continue;
             }
@@ -286,13 +280,8 @@ impl Exporter for S3Core {
             progress_state.set_message(format!("Setting access time for {:#}...", &filename));
 
             let access_time = meta.last_modified().unwrap();
-            filetime::set_file_mtime(
-                &path,
-                filetime::FileTime::from_system_time(access_time.into()),
-            )
-            .with_context(|| {
-                format!("Failed to set access time for {}", &path.to_str().unwrap())
-            })?;
+            filetime::set_file_mtime(&path, filetime::FileTime::from_system_time(access_time.into()))
+                .with_context(|| format!("Failed to set access time for {}", &path.to_str().unwrap()))?;
 
             progress_state.inc(1);
             backup_len += 1;

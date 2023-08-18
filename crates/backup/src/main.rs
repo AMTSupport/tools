@@ -16,13 +16,13 @@
 
 #![feature(result_option_inspect)]
 
+use anyhow::{Context, Result};
 use backup::application;
-use lib::anyhow::{Context, Result};
-use lib::clap::Parser;
-use tracing::{error, trace};
+use clap::Parser;
 use std::env;
 use std::env::VarError;
 use std::path::PathBuf;
+use tracing::{error, trace};
 
 #[tokio::main(flavor = "multi_thread")]
 pub async fn main() -> Result<()> {
@@ -47,11 +47,18 @@ fn select_location() -> Result<PathBuf> {
     env::var("BACKUP_DIR")
         .map(PathBuf::from)
         // TODO :: Verify writable
-        .and_then(|path| if path.exists() { Ok(path) } else { Err(VarError::NotPresent) })
+        .and_then(|path| {
+            if path.exists() {
+                Ok(path)
+            } else {
+                Err(VarError::NotPresent)
+            }
+        })
         .inspect_err(|_err| {
             error!("The path specified in BACKUP_DIR does not exist.");
             error!("Please fix this, or unset the BACKUP_DIR environment variable to use the interactive mode.");
-        }).context("Failed to get backup directory from BACKUP_DIR environment variable")
+        })
+        .context("Failed to get backup directory from BACKUP_DIR environment variable")
     // .or_else(|_| PathSelect::<&str>::new("Select your backup destination", None)
     //     .with_selection_mode(PathSelectionMode::Directory)
     //     .with_select_multiple(false)

@@ -15,17 +15,17 @@
  */
 
 use crate::config::runtime::RuntimeConfig;
+use anyhow::{anyhow, Result};
 use clap::{Parser, Subcommand};
 use indicatif::MultiProgress;
-use lib::anyhow::{anyhow, Result};
 use lib::cli::Flags;
 use lib::progress;
 use lib::progress::spinner;
-use tracing::error;
 use std::fmt::Debug;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::spawn;
+use tracing::error;
 use tracing::{span, Instrument};
 
 #[derive(Parser, Debug, Clone)]
@@ -73,8 +73,7 @@ pub async fn main(destination: PathBuf, cli: Cli, is_interactive: bool) -> Resul
         Action::Run => {
             let config = RuntimeConfig::get(cli, destination).await?;
             let multi_bar = Arc::new(MultiProgress::new());
-            let total_progress =
-                Arc::new(multi_bar.add(progress::bar(config.config.exporters.len() as u64)));
+            let total_progress = Arc::new(multi_bar.add(progress::bar(config.config.exporters.len() as u64)));
 
             let mut handles = vec![];
             for exporter in config.config.exporters.clone() {

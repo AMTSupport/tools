@@ -14,28 +14,27 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+use anyhow::{anyhow, Context};
 use bytes::Bytes;
 use futures_util::stream::BoxStream;
 use futures_util::StreamExt;
 use indicatif::ProgressBar;
-use lib::anyhow;
-use lib::anyhow::{anyhow, Context};
 use lib::fs::{create_parents, normalise_path};
-use tracing::debug;
 use rand::RngCore;
 use std::cmp::min;
 use std::error::Error;
 use std::io::Write;
 use std::path::PathBuf;
 use std::{env, fs};
+use tracing::debug;
 
 pub mod auto_prune;
+#[cfg(feature = "sources-bitwarden")]
+pub mod bitwarden;
 pub mod downloader;
 pub mod exporter;
 mod getter;
 pub(crate) mod interactive;
-#[cfg(feature = "sources-bitwarden")]
-pub mod bitwarden;
 #[cfg(feature = "sources-1password")]
 pub mod op;
 #[cfg(feature = "sources-s3")]
@@ -52,8 +51,7 @@ async fn download_to<E: Error>(
 
     progress.set_length(total_size);
     let mut downloaded = 0u64;
-    let mut file =
-        fs::File::create(path).with_context(|| format!("Create file {}", path.display()))?;
+    let mut file = fs::File::create(path).with_context(|| format!("Create file {}", path.display()))?;
 
     progress.set_message(format!(
         "Downloading {}...",

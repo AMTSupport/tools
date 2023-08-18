@@ -16,7 +16,7 @@
 
 use crate::config::runtime::RuntimeConfig;
 use async_trait::async_trait;
-use lib::anyhow::Result;
+use anyhow::Result;
 
 #[async_trait]
 pub trait Interactive<T> {

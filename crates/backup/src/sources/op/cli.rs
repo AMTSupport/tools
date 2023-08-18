@@ -504,8 +504,8 @@ pub mod item {
     use super::super::one_pux;
     use crate::config::runtime::RuntimeConfig;
     use crate::sources::op::account::OnePasswordAccount;
+    use anyhow::{Context, Result};
     use indicatif::{MultiProgress, ParallelProgressIterator, ProgressBar};
-    use lib::{anyhow, anyhow::Context, anyhow::Result};
     use macros::CommonFields;
     use rayon::prelude::*;
     use serde::{Deserialize, Serialize};
@@ -1114,9 +1114,9 @@ pub mod vault {
     use crate::sources::op::cli::identifier::Identifier;
     use crate::sources::op::core::OnePasswordCore;
     use crate::sources::op::one_pux;
+    use anyhow::Result;
     #[cfg(test)]
     use fake::Dummy;
-    use lib::anyhow::Result;
     use macros::CommonFields;
     use serde::{Deserialize, Serialize};
     use std::fmt::Display;
