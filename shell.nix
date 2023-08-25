@@ -20,5 +20,7 @@ mainPkg.overrideAttrs (oa: {
     cargo-audit
     cargo-expand
     cargo-nextest
+    cargo-expand
+    cargo-cranky
   ] ++ (oa.nativeBuildInputs or [ ]);
 })

@@ -14,7 +14,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-extern crate core;
+#![feature(async_fn_in_trait)]
 
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Deserializer};
@@ -22,9 +22,7 @@ use std::hash::Hash;
 use std::str::FromStr;
 use tracing::error;
 
-// pub mod hudu;
-// pub mod manager;
-pub mod nable;
+pub mod endpoints;
 
 const AGENT: &str = "rest_agent";
 
@@ -69,12 +67,32 @@ where
     }
 }
 
+pub fn deserialise_datetime_opt<'de, D>(deserializer: D) -> Result<Option<DateTime<Utc>>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    match String::deserialize(deserializer) {
+        Ok(s) if s.is_empty() => Ok(None),
+        Ok(s) => match chrono::DateTime::parse_from_rfc3339(&s) {
+            Ok(dt) => Ok(Some(dt.with_timezone(&Utc))),
+            Err(e) => {
+                error!("Failed to parse datetime: {:?}", e);
+                Err(serde::de::Error::custom("Failed to parse datetime"))?
+            }
+        },
+        Err(e) => {
+            error!("Failed to deserialise datetime: {:?}", e);
+            Err(serde::de::Error::custom("Failed to deserialise datetime"))?
+        }
+    }
+}
+
 pub fn deserialise_date<'de, D>(deserializer: D) -> Result<NaiveDate, D::Error>
 where
     D: Deserializer<'de>,
 {
     match String::deserialize(deserializer) {
-        Ok(s) => match chrono::NaiveDate::from_str(&s) {
+        Ok(s) => match NaiveDate::from_str(&s) {
             Ok(dt) => Ok(dt),
             Err(e) => {
                 error!("Failed to parse date: {:?}", e);
@@ -88,6 +106,22 @@ where
     }
 }
 
-pub trait Url<C: ?Sized> {
-    fn link(&self, client: &C) -> String;
+pub fn deserialise_date_opt<'de, D>(deserializer: D) -> Result<Option<NaiveDate>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    match String::deserialize(deserializer) {
+        Ok(s) if s.is_empty() => Ok(None),
+        Ok(s) => match NaiveDate::from_str(&s) {
+            Ok(dt) => Ok(Some(dt)),
+            Err(e) => {
+                error!("Failed to parse date: {:?}", e);
+                Err(serde::de::Error::custom("Failed to parse date"))?
+            }
+        },
+        Err(e) => {
+            error!("Failed to deserialise date: {:?}", e);
+            Err(serde::de::Error::custom("Failed to date date"))?
+        }
+    }
 }

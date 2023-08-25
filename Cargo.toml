@@ -28,12 +28,16 @@ tokio = { version = "1.30.0", features = ["macros", "rt-multi-thread"] }
 
 # Cli & UI
 clap = { version = "4.3.21", features = ["derive", "color", "suggestions", "usage"] }
+crossterm = { version = "0.27.0" }
 indicatif = { version = "0.17.6", features = ["improved_unicode", "in_memory"] }
-inquire = { version = "0.6.2", features = [] }
+inquire = { git = "https://github.com/anwarhahjjeffersongeorge/inquire-filepath/", branch = "filepath-select" }
 
 # GUI
 iced = { git = "https://github.com/iced-rs/iced.git", branch = "master", features = ["tokio"] }
 iced_aw = { version = "^0.6.0", features = ["modal", "card"] }
+
+# TUI
+ratatui = { version = "0.22.0" }
 
 # Data / Serialization
 serde = { version = "^1.0.183", features = ["derive"] }

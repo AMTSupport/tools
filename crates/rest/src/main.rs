@@ -19,10 +19,33 @@
 #![feature(async_fn_in_trait)]
 
 use anyhow::Result;
-use chrono::Duration;
-use http_cache_reqwest::{Cache, CacheMode, HttpCache};
-use reqwest::header::USER_AGENT;
-use tracing::{debug, Level};
+use clap::{Parser, Subcommand};
+use endpoints::nable::endpoints::NSightEndpoint;
+use lib::cli::Flags;
+use lib::log;
+use rest::endpoints;
+use rest::endpoints::endpoint::Endpoint;
+use tracing::info;
+
+#[derive(Debug, Parser)]
+struct Cli {
+    #[command(subcommand)]
+    endpoint: Endpoints,
+
+    #[command(flatten)]
+    flags: Flags,
+}
+
+#[derive(Debug, Subcommand)]
+enum Endpoints {
+    Nable {
+        #[command(flatten)]
+        args: <NSightEndpoint as Endpoint>::Args,
+
+        #[command(subcommand)]
+        request: <NSightEndpoint as Endpoint>::Request,
+    },
+}
 
 // #[derive(Parser)]
 // struct Cli {
@@ -67,40 +90,34 @@ use tracing::{debug, Level};
 //     },
 // }
 
-pub struct Rules {
-    password_max_age: Duration,
-    // management_type: ManagementType,
-}
+// pub struct Rules {
+//     password_max_age: Duration,
+//     // management_type: ManagementType,
+// }
+//
+// impl Default for Rules {
+//     fn default() -> Self {
+//         Self {
+//             password_max_age: Duration::days(90),
+//             // management_type: ManagementType::Unknown,
+//         }
+//     }
+// }
 
-impl Default for Rules {
-    fn default() -> Self {
-        Self {
-            password_max_age: Duration::days(90),
-            // management_type: ManagementType::Unknown,
+#[tokio::main(flavor = "multi_thread")]
+async fn main() -> Result<()> {
+    let cli = Cli::parse();
+    let _ = log::init("", cli.flags.verbose);
+
+    match cli.endpoint {
+        Endpoints::Nable { args, request } => {
+            let instance = NSightEndpoint::new(args);
+            let response = instance.handle(request).await?;
+
+            info!("{:#?}", response);
         }
     }
-}
 
-#[tokio::main]
-async fn main() -> Result<()> {
-    tracing_subscriber::fmt().pretty().with_max_level(Level::DEBUG).init();
-    // let cli = Cli::try_parse().context("Parse CLI")?;
-    // let rules = Rules::default(); // TODO load from config
-
-    let base_client = reqwest::Client::builder().user_agent(USER_AGENT).gzip(true).build()?;
-    let client = reqwest_middleware::ClientBuilder::new(base_client)
-        .with(Cache(HttpCache {
-            mode: CacheMode::ForceCache,
-            manager: http_cache_reqwest::MokaManager::default(),
-            options: None,
-        }))
-        .build();
-
-    let api_key = "ccad7b4188f49fddc3500eaec26f537a";
-    let endpoint = "system-monitor.com";
-
-    let clients = rest::nable::endpoints::list_clients(&client, &endpoint, &api_key).await?;
-    println!("{:?}", clients);
 
     // match cli.subcommand {
     //     Commands::Hudu {
