@@ -31,7 +31,7 @@ impl Runtime {
             Err(err) => return Err(Error::CliError(err).into()),
         };
 
-        lib::log::init(env!("CARGO_CRATE_NAME"), cli.flags.verbose)?;
+        let _ = lib::log::init(env!("CARGO_CRATE_NAME"), cli.flags.verbose);
 
         if cli.flags.dry_run {
             info!("Dry run enabled, no actions will be taken");

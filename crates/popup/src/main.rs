@@ -14,19 +14,14 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+use std::process::ExitCode;
 use iced::alignment::Vertical;
-use iced::theme::Button::Text;
 use iced::theme::Palette;
-use iced::widget::{button, column, container, text, text_input, Column, Container};
+use iced::widget::{column, text, Column, Container};
 use iced::window::Position;
 use iced::window::{Action, Mode};
-use iced::{
-    alignment::Horizontal, executor, widget, window, Alignment, Application, Color, Command,
-    Element, Length, Settings,
-};
+use iced::{alignment::Horizontal, executor, widget, window, Application, Color, Command, Element, Settings};
 use iced_aw::native::modal;
-use iced_aw::style;
-use lib::sysexits::ExitCode;
 use tracing::trace;
 
 #[derive(Default)]
@@ -170,7 +165,8 @@ impl Application for Informer {
             .into()
         })
         .backdrop(Message::Event("Backdrop clicked".into()))
-        .on_esc(Message::Event("Esc pressed".into())).into()
+        .on_esc(Message::Event("Esc pressed".into()))
+        .into()
 
         // container(content)
         //     .width(Length::FillPortion(30))
@@ -225,7 +221,7 @@ async fn main() -> anyhow::Result<ExitCode> {
     Informer::run(settings)?;
     toast();
 
-    Ok(ExitCode::Ok)
+    Ok(ExitCode::SUCCESS)
 }
 
 #[cfg(windows)]

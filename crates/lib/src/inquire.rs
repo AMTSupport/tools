@@ -16,7 +16,7 @@
 
 use inquire::ui::{Color, RenderConfig, StyleSheet, Styled};
 
-pub fn inquire_style() -> RenderConfig {
+pub fn inquire_style() -> RenderConfig<'static> {
     RenderConfig::default_colored()
         .with_selected_option(Some(StyleSheet::empty().with_fg(Color::White)))
         .with_highlighted_option_prefix(Styled::new("-> ").with_fg(Color::LightCyan))

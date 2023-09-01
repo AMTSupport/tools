@@ -17,18 +17,18 @@
 #![feature(async_closure)]
 #![feature(lazy_cell)]
 
+use anyhow::Result;
 use cleaner::application::application;
 use cleaner::config::runtime::Runtime;
-use lib::anyhow::Result;
 use lib::helper::required_elevated_privileges;
-use lib::log as Logger;
+use lib::log;
 use std::sync::LazyLock;
 
 static RUNTIME: LazyLock<Runtime> = LazyLock::new(|| Runtime::new().unwrap());
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    Logger::init(env!["CARGO_PKG_NAME"], RUNTIME.cli.flags.verbose)?;
+    let _ = log::init(env!["CARGO_PKG_NAME"], RUNTIME.cli.flags.verbose);
     let _ = required_elevated_privileges().is_some_and(|code| code.exit());
 
     application(&RUNTIME).await?;

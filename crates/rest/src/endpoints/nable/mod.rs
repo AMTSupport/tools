@@ -14,12 +14,35 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-pub mod structs;
-// pub mod web;
+// pub mod driver;
 pub mod endpoints;
+pub mod structs;
 
-pub const API_ENDPOINT: &str = "/api";
-pub const QUERY_API_KEY: &str = "apikey";
-pub const QUERY_SERVICE: &str = "service";
+use std::str::FromStr;
+use anyhow::Result;
+use clap::Parser;
 
-pub const SERVICE_LIST_CLIENTS: &str = "list_clients";
+#[derive(Debug, Clone)]
+pub struct NSightApiKey(pub String);
+
+impl NSightApiKey {
+    pub fn new<S: AsRef<str>>(key: S) -> Result<Self> {
+        if !Self::verify(key.as_ref()) {
+            anyhow::bail!("Invalid API key provided.");
+        }
+
+        Ok(Self(key.as_ref().to_string()))
+    }
+
+    pub fn verify<S: AsRef<str>>(key: S) -> bool {
+        key.as_ref().len() == 32
+    }
+}
+
+impl FromStr for NSightApiKey {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::new(s)
+    }
+}

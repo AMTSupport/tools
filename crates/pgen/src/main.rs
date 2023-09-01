@@ -25,8 +25,8 @@ use rpgen::generation::generator::{Generator, GeneratorFunctions, GeneratorHelpe
 use rpgen::{Commands, ConfigAction};
 use serde_json::Value;
 use simplelog::{
-    debug, error, info, trace, ColorChoice, CombinedLogger, ConfigBuilder, LevelFilter,
-    SharedLogger, TermLogger, TerminalMode, WriteLogger,
+    debug, error, info, trace, ColorChoice, CombinedLogger, ConfigBuilder, LevelFilter, SharedLogger, TermLogger,
+    TerminalMode, WriteLogger,
 };
 use std::collections::HashMap;
 use std::error::Error;
@@ -50,7 +50,7 @@ pub struct Cli {
 async fn main() -> anyhow::Result<()> {
     match Cli::try_parse().context("Parse CLI Arguments")?.commands {
         Commands::Generate { flags, file, rules } => {
-            let _ = lib::log::init("PGen", &flags)?;
+            let _ = lib::log::init("PGen", flags.verbose);
             let rules = merge_rules(rules, PathBuf::from(file));
             let mut generator = Generator::new(*rules)?;
             let passwords = generator.generate().join("\n");
@@ -59,16 +59,15 @@ async fn main() -> anyhow::Result<()> {
         }
         Commands::Config { action } => match action {
             ConfigAction::Show { flags, file } => {
-                let _ = lib::log::init("PGen-Config-Show", &flags)?;
-                let rules =
-                    serde_json::from_slice::<Rules>(&fs::read(file).with_context(|| {
-                        format!("Unable to read file {}, does it exist?", file.display())
-                    })?)
-                    .with_context(|| format!("Unable to parse file {}", file.display())?);
+                let _ = lib::log::init("PGen-Config-Show", flags.verbose);
+                let rules = serde_json::from_slice::<Rules>(
+                    &fs::read(file)
+                        .with_context(|| format!("Unable to read file {}, does it exist?", file.display()))?,
+                )
+                .with_context(|| format!("Unable to parse file {}", file.display())?);
                 println!(
                     "{}",
-                    serde_json::to_string_pretty(&rules)
-                        .with_context(|| format!("Unable to serialise rules"))?
+                    serde_json::to_string_pretty(&rules).with_context(|| format!("Unable to serialise rules"))?
                 );
             }
             ConfigAction::Generate {
@@ -77,17 +76,14 @@ async fn main() -> anyhow::Result<()> {
                 rules,
                 force,
             } => {
-                let _ = lib::log::init("PGen-Config-Generate", &flags)?;
+                let _ = lib::log::init("PGen-Config-Generate", flags.verbose);
                 if file.exists() && !force {
-                    anyhow!(
-                        "File {} already exists, use --force to overwrite",
-                        file.display()
-                    )?;
+                    anyhow!("File {} already exists, use --force to overwrite", file.display())?;
                 }
 
                 if !flags.dry_run {
-                    let mut file = File::create(file)
-                        .with_context(|| format!("Unable to interactive file {}", file.display()))?;
+                    let mut file =
+                        File::create(file).with_context(|| format!("Unable to interactive file {}", file.display()))?;
                     file.write_all(
                         serde_json::to_string_pretty(&rules)
                             .with_context(|| format!("Unable to serialise rules"))?
@@ -104,10 +100,8 @@ async fn main() -> anyhow::Result<()> {
 /// Some sort of tomfuckery to merge the file and cli rules.
 /// Merges in the order of defaults, file, cli.
 fn merge_rules(cli_rules: Rules, buf: PathBuf) -> Rules {
-    let to_value = |rules| {
-        serde_json::from_value::<HashMap<String, Value>>(serde_json::to_value(&rules).unwrap())
-            .unwrap()
-    };
+    let to_value =
+        |rules| serde_json::from_value::<HashMap<String, Value>>(serde_json::to_value(&rules).unwrap()).unwrap();
 
     let mut rules: HashMap<String, Value> = match &fs::read_to_string(&buf) {
         Ok(str) => match toml::from_str::<Rules>(str) {

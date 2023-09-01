@@ -94,7 +94,7 @@ pub fn common_fields(input: DeriveInput) -> TokenStream {
     };
 
     // Convert the generated code back into tokens and return them
-    output.into()
+    output
 }
 
 // Helper function get get all fields from a enum variant

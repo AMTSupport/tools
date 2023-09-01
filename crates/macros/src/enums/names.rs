@@ -41,6 +41,14 @@ pub fn names(input: DeriveInput) -> TokenStream {
         }
 
         #[automatically_derived]
+        impl std::fmt::Display for #name {
+            #[automatically_derived]
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}", self.name())
+            }
+        }
+
+        #[automatically_derived]
         impl TryFrom<&str> for #name {
             #[automatically_derived]
             type Error = anyhow::Error;

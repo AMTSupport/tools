@@ -14,9 +14,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use anyhow::{anyhow, Context, Result};
-use std::path::PathBuf;
 use crate::fs::normalise_path;
+use anyhow::{anyhow, Context, Result};
+use std::path::{Path, PathBuf};
 
 pub trait Pathed<T>
 where
@@ -33,8 +33,9 @@ where
     fn base_dir(from: &T) -> Result<PathBuf> {
         let root: PathBuf = from.clone().into();
         let path = normalise_path(root.join(Self::NAME));
-        let path = ensure_directory_exists(path)?;
-        ensure_permissions(path, Self::PERMISSIONS)
+        ensure_directory_exists(&path)?;
+        ensure_permissions(&path, Self::PERMISSIONS)?;
+        Ok(path)
     }
 
     /// # Returns
@@ -43,8 +44,9 @@ where
         let base = Self::base_dir(from)?;
         let name = self.get_unique_name();
         let path = normalise_path(base.join(name));
-        let path = ensure_directory_exists(path)?;
-        ensure_permissions(path, Self::PERMISSIONS)
+        ensure_directory_exists(&path)?;
+        ensure_permissions(&path, Self::PERMISSIONS)?;
+        Ok(path)
     }
 
     /// # Returns
@@ -52,40 +54,31 @@ where
     fn get_unique_name(&self) -> String;
 }
 
-pub fn ensure_directory_exists(buf: PathBuf) -> Result<PathBuf> {
-    if buf.exists() {
-        return match &buf.is_dir() {
-            false => Err(anyhow!(
-                "Path exists but is not a directory: {}",
-                buf.display()
-            )),
-            true => Ok(buf),
+pub fn ensure_directory_exists(path: &Path) -> Result<()> {
+    if path.exists() {
+        return match &path.is_dir() {
+            true => Ok(()),
+            false => Err(anyhow!("Path exists but is not a directory: {}", path.display())),
         };
     }
 
-    std::fs::create_dir_all(&buf)
-        .with_context(|| format!("Failed to create directories for dir of: {}", buf.display()))?;
+    std::fs::create_dir_all(path)
+        .with_context(|| format!("Failed to create directories for dir of: {}", path.display()))?;
 
-    Ok(buf)
+    Ok(())
 }
 
 #[cfg(unix)]
-pub fn ensure_permissions(buf: PathBuf, permissions: u32) -> Result<PathBuf> {
+pub fn ensure_permissions(path: &Path, permissions: u32) -> Result<()> {
     use std::os::unix::prelude::PermissionsExt;
-    std::fs::set_permissions(&buf, std::fs::Permissions::from_mode(permissions)).with_context(
-        || {
-            format!(
-                "Failed to set required permissions on directory: {}",
-                buf.display()
-            )
-        },
-    )?;
+    std::fs::set_permissions(path, std::fs::Permissions::from_mode(permissions))
+        .with_context(|| format!("Failed to set required permissions on directory: {}", path.display()))?;
 
-    Ok(buf)
+    Ok(())
 }
 
 // TODO: Windows permissions
 #[cfg(windows)]
-pub fn ensure_permissions(buf: PathBuf, _permissions: u32) -> Result<PathBuf> {
-    Ok(buf)
+pub fn ensure_permissions(path: &Path, _permissions: u32) -> Result<()> {
+    Ok(())
 }

@@ -69,21 +69,18 @@ pub fn runtime_cli(_args: TokenStream, input: TokenStream) -> TokenStream {
         Field::parse_named
             .parse2(quote! {
                 #[command(flatten)]
-                pub flags: Flags
+                pub flags: lib::cli::Flags
             })
             .unwrap(),
     );
 
     let expanded = quote! {
-        use lib::cli::Flags;
-        use clap::Parser;
-
-        #[derive(Parser, Debug)]
+        #[derive(clap::Parser, Debug)]
         #[command(name = env!["CARGO_PKG_NAME"], version, author, about)]
         #input
 
         impl lib::runtime::runtime::Cli for #input {
-            fn flags(&self) -> &Flags {
+            fn flags(&self) -> &lib::cli::Flags {
                 &self.flags
             }
         }
@@ -115,7 +112,7 @@ pub fn runtime(args: TokenStream, input: TokenStream) -> TokenStream {
 
     let new_fields = vec![
         Field::parse_named.parse2(quote! { pub cli: #args }),
-        Field::parse_named.parse2(quote! { pub errors: std::sync::RwLock<Vec<Error>> }),
+        Field::parse_named.parse2(quote! { pub errors: std::sync::RwLock<Vec<anyhow::Error>> }),
         Field::parse_named.parse2(quote! { pub logger: tracing::dispatcher::DefaultGuard }),
     ]
     .into_iter()
@@ -132,15 +129,12 @@ pub fn runtime(args: TokenStream, input: TokenStream) -> TokenStream {
     let struct_ident = &input.ident;
 
     let expanded = quote! {
-        use lib::runtime::runtime::Runtime as RuntimeBase;
-        use anyhow::{Result,Error};
-
         #input
 
         #[automatically_derived]
-        impl RuntimeBase<#args> for #struct_ident {
+        impl lib::runtime::runtime::Runtime<#args> for #struct_ident {
             #[automatically_derived]
-            fn new() -> Result<Self> where Self: Sized {
+            fn new() -> anyhow::Result<Self> where Self: Sized {
                 let cli = Self::new_cli()?;
                 let logger = Self::new_logger(&cli.flags);
                 let errors = Self::new_errors();
@@ -158,7 +152,7 @@ pub fn runtime(args: TokenStream, input: TokenStream) -> TokenStream {
             }
 
             #[automatically_derived]
-            fn __get_errors(&mut self) -> &mut std::sync::RwLock<Vec<Error>> {
+            fn __get_errors(&mut self) -> &mut std::sync::RwLock<Vec<anyhow::Error>> {
                 &mut self.errors
             }
         }

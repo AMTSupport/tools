@@ -15,6 +15,11 @@
  */
 
 #![feature(async_fn_in_trait)]
+#![feature(async_closure)]
+#![feature(lazy_cell)]
+#![feature(type_name_of_val)]
+#![feature(once_cell_try)]
+#![feature(inherent_associated_types)]
 
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Deserializer};
@@ -23,30 +28,6 @@ use std::str::FromStr;
 use tracing::error;
 
 pub mod endpoints;
-
-const AGENT: &str = "rest_agent";
-
-#[derive(Debug, Clone)]
-pub struct Client {
-    base_url: String,
-    api_key: String,
-    client: reqwest_middleware::ClientWithMiddleware,
-}
-
-impl Hash for Client {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.base_url.hash(state);
-        self.api_key.hash(state);
-    }
-}
-
-impl PartialEq<Self> for Client {
-    fn eq(&self, other: &Self) -> bool {
-        self.base_url == other.base_url && self.api_key == other.api_key
-    }
-}
-//
-impl Eq for Client {}
 
 pub fn deserialise_datetime<'de, D>(deserializer: D) -> Result<DateTime<Utc>, D::Error>
 where

@@ -14,21 +14,40 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use anyhow::Context;
-use fmt::Subscriber;
-use tracing::{debug, subscriber, Level};
-use tracing_subscriber::fmt;
+use tracing::dispatcher::DefaultGuard;
+use tracing::level_filters::LevelFilter;
+use tracing_subscriber::fmt::format::FmtSpan;
+use tracing_subscriber::util::SubscriberInitExt;
 
-pub fn init(_named: &str, verbosity: u8) -> anyhow::Result<()> {
-    let level = match verbosity {
-        0 => Level::INFO,
-        1 => Level::DEBUG,
-        _ => Level::TRACE,
+pub fn init(_named: &str, verbosity: u8) -> DefaultGuard {
+    let (level, span) = match verbosity {
+        0 => (LevelFilter::INFO, FmtSpan::NONE),
+        1 => (LevelFilter::DEBUG, FmtSpan::NONE),
+        2 => (LevelFilter::TRACE, FmtSpan::NONE),
+        _ => (LevelFilter::TRACE, FmtSpan::FULL),
     };
 
-    let builder = Subscriber::builder().with_max_level(level).pretty().without_time().compact();
+    tracing_subscriber::fmt()
+        .without_time()
+        .with_thread_names(verbosity > 2)
+        .with_thread_ids(verbosity > 2)
+        .with_level(verbosity > 0)
+        .with_line_number(verbosity > 0)
+        .with_max_level(level)
+        .with_span_events(span.clone())
+        .with_target(true)
+        .finish()
+        .init();
 
-    subscriber::set_global_default(builder.finish())
-        .with_context(|| "Set global default logger")
-        .inspect(|_| debug!("Initialised global logger"))
+    tracing_subscriber::fmt()
+        .without_time()
+        .with_thread_names(verbosity > 2)
+        .with_thread_ids(verbosity > 2)
+        .with_level(verbosity > 0)
+        .with_line_number(verbosity > 0)
+        .with_max_level(level)
+        .with_span_events(span)
+        .with_target(true)
+        .finish()
+        .set_default()
 }

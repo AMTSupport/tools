@@ -19,13 +19,20 @@
 #![feature(async_fn_in_trait)]
 
 use anyhow::Result;
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
+use csv::{Writer, WriterBuilder};
 use endpoints::nable::endpoints::NSightEndpoint;
 use lib::cli::Flags;
 use lib::log;
+use macros::{EnumNames, EnumVariants};
 use rest::endpoints;
 use rest::endpoints::endpoint::Endpoint;
-use tracing::info;
+use rest::endpoints::nable::endpoints::Response;
+use rest::endpoints::nable::structs::xml::Items;
+use serde::{Serialize, Serializer};
+use std::fmt::Debug;
+use std::fs::File;
+use tracing::{debug, error, info};
 
 #[derive(Debug, Parser)]
 struct Cli {
@@ -44,65 +51,21 @@ enum Endpoints {
 
         #[command(subcommand)]
         request: <NSightEndpoint as Endpoint>::Request,
+
+        #[arg(short, long, default_value = "stdout")]
+        output: Output,
     },
+    Interactive,
 }
 
-// #[derive(Parser)]
-// struct Cli {
-//     #[command(subcommand)]
-//     subcommand: Commands,
-// }
-//
-// // TODO :: Verify endpoints and api keys are valid.
-// #[derive(Subcommand)]
-// enum Commands {
-//     Hudu {
-//         #[arg(short, long)]
-//         endpoint: String,
-//         #[arg(short, long)]
-//         api_key: String,
-//         #[command(flatten)]
-//         flags: Flags,
-//         #[command(subcommand)]
-//         subcommand: HuduCommands,
-//     },
-//     Nable {
-//         #[arg(short, long)]
-//         endpoint: String,
-//         #[arg(short, long)]
-//         api_key: String,
-//         #[command(flatten)]
-//         flags: Flags,
-//     },
-//     Manager {
-//         #[arg(long)]
-//         hudu_endpoint: String,
-//         #[arg(long)]
-//         hudu_api_key: String,
-//         #[arg(long)]
-//         nable_endpoint: String,
-//         #[arg(long)]
-//         nable_api_key: String,
-//         #[command(flatten)]
-//         flags: Flags,
-//         #[command(subcommand)]
-//         subcommand: ManagerCommands,
-//     },
-// }
-
-// pub struct Rules {
-//     password_max_age: Duration,
-//     // management_type: ManagementType,
-// }
-//
-// impl Default for Rules {
-//     fn default() -> Self {
-//         Self {
-//             password_max_age: Duration::days(90),
-//             // management_type: ManagementType::Unknown,
-//         }
-//     }
-// }
+#[derive(Default, Debug, Clone, ValueEnum, EnumVariants, EnumNames)]
+enum Output {
+    #[default]
+    Stdout,
+    // Json,
+    // PrettyJson,
+    CSV,
+}
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<()> {
@@ -110,14 +73,87 @@ async fn main() -> Result<()> {
     let _ = log::init("", cli.flags.verbose);
 
     match cli.endpoint {
-        Endpoints::Nable { args, request } => {
+        Endpoints::Nable { args, request, output } => {
+            // use endpoints::nable::driver::Driver;
+
+            // let driver = Driver::new().await?;
+            // driver.deploy_templates("8319").await?;
+
             let instance = NSightEndpoint::new(args);
             let response = instance.handle(request).await?;
 
-            info!("{:#?}", response);
-        }
-    }
+            match output {
+                Output::Stdout => {
+                    info!("{:#?}", response);
+                }
+                Output::CSV => {
+                    let file = File::create("output.csv").unwrap();
+                    let writer = WriterBuilder::new().has_headers(true).from_writer(file);
+                    fn write(mut writer: Writer<File>, items: &[impl Serialize + Debug]) {
+                        if items.is_empty() {
+                            return;
+                        }
 
+                        items.iter().for_each(|i| {
+                            debug!("Serializing: {:#?}", i);
+                            writer.serialize(i).unwrap();
+                        });
+
+                        writer.flush().unwrap();
+                    };
+
+                    match response {
+                        Response::Clients(clients) => write(writer, &clients.items.items),
+                        Response::Sites(sites) => write(writer, &sites.items.items),
+                        Response::Templates(templates) => write(writer, &templates.items.items),
+                        Response::Servers(servers) => write(writer, &servers.items.items),
+                        Response::Workstations(workstations) => write(writer, &workstations.items.items),
+                    };
+                }
+            }
+        }
+        _ => todo!("Implement interactive mode"),
+        // Endpoints::Interactive => {
+        //     struct InteractiveConfiguration {
+        //         running: bool,
+        //         output: Output,
+        //         history: Vec<String>,
+        //     }
+        //
+        //     let mut config = InteractiveConfiguration {
+        //         running: true,
+        //         output: Output::default(),
+        //         history: Vec::new(),
+        //     };
+        //
+        //     while config.running {
+        //         let input = inquire::Text::new("Command: ").prompt()?;
+        //         match input.to_lowercase().as_str() {
+        //             "exit" | "q" | "quit" | "close" => {
+        //                 running = false;
+        //             }
+        //             "help" | "h" | "?" => {
+        //                 info!(r#"Commands:
+        //                 "#\texit, q, quit, close - Exits the program.");
+        //                 println!("\thelp, h, ? - Displays this help message.");
+        //                 println!("\tquery, q - Queries the Nable API.");
+        //             }
+        //             "history" | "hist" => info!("History: {}", config.history.join("\n")),
+        //             "output" => {
+        //                 let output = inquire::Select::new("Output: ", Output::get_variants()).prompt()?;
+        //                 config.output = output;
+        //                 info!("Output set to {output:#?}", output = config.output);
+        //             }
+        //             _ => {
+        //                 error!("Unknown command.");
+        //                 continue;
+        //             }
+        //         }
+        //
+        //         config.history.push(input);
+        //     }
+        // }
+    }
 
     // match cli.subcommand {
     //     Commands::Hudu {

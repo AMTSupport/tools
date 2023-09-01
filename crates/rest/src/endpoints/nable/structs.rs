@@ -15,29 +15,95 @@
  */
 
 use anyhow::Context;
-use quick_xml::events::Event;
-use quick_xml::Reader;
-use serde::{Deserialize, Deserializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use std::any::Any;
+use std::str::FromStr;
+
+pub mod cdata {
+    use serde::{Deserialize, Serialize};
+    use std::cell::{LazyCell, OnceCell};
+    use std::error::Error;
+    use std::ops::{Deref, DerefMut};
+    use std::str::FromStr;
+    use std::sync::LazyLock;
+
+    #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+    pub struct CData<T: FromStr> {
+        #[serde(rename(deserialize = "$text"))]
+        text: String,
+
+        #[serde(skip)]
+        phantom: std::marker::PhantomData<T>,
+    }
+
+    impl<T: FromStr> CData<T> {
+        pub fn get(&self) -> anyhow::Result<T> {
+            self.text.trim().parse().map_err(|_| {
+                anyhow::anyhow!(
+                    "Unable to parse the string [{}] into type [{}]",
+                    self.text,
+                    std::any::type_name::<T>(),
+                )
+            })
+        }
+    }
+
+    // impl<T: FromStr> Deref for CData<T> {
+    //     type Target = T;
+    //
+    //     fn deref(&self) -> &Self::Target {
+    //         &self.get().unwrap()
+    //     }
+    // }
+
+    // impl<T: FromStr> DerefMut for CData<T> {
+    //     fn deref_mut(&mut self) -> &mut Self::Target {
+    //         &mut self.get().unwrap()
+    //     }
+    // }
+
+    // mod __serde {
+    //     use std::any::type_name_of_val;
+    //     use serde::{Deserializer, Serializer};
+    //     use super::*;
+    //
+    //     fn serialize<T: FromStr + Serialize, S: Serializer>(value: &CData<T>, serializer: S) -> Result<S::Ok, S::Error> {
+    //         value.value.serialize(serializer)
+    //     }
+    //
+    //     fn deserialize<T: FromStr, D: Deserializer<'_>>(deserializer: D) -> Result<CData<T>, D::Error> {
+    //         let value = String::deserialize(deserializer)?;
+    //         let value = value.trim().parse().map_err(|_| {
+    //             serde::de::Error::custom(format!(
+    //                 "Unable to parse the string [{}] into type [{}]",
+    //                 value,
+    //                 type_name_of_val(&value),
+    //             ))
+    //         })?;
+    //         Ok(CData { value })
+    //     }
+    // }
+}
 
 pub mod xml {
-    use serde::Deserialize;
+    use serde::{Deserialize, Serialize};
 
-    #[derive(PartialEq, Debug, Deserialize)]
+    #[derive(PartialEq, Debug, Serialize, Deserialize)]
     pub struct Items<I> {
-        #[serde(rename = "$value")]
+        #[serde(rename(deserialize = "$value"))]
         pub items: I,
     }
 
-    #[derive(PartialEq, Debug, Deserialize)]
+    #[derive(PartialEq, Debug, Serialize, Deserialize)]
     #[serde(rename = "result")]
     pub struct XMLResult<I: Sized> {
-        #[serde(rename = "@created")]
+        #[serde(rename(deserialize = "@created"))]
         pub created: String,
-        #[serde(rename = "@host")]
+        #[serde(rename(deserialize = "@host"))]
         pub host: String,
-        #[serde(rename = "@status")]
+        #[serde(rename(deserialize = "@status"))]
         pub status: String,
-        #[serde(rename = "$value")]
+        #[serde(rename(deserialize = "$value"))]
         pub items: Items<I>,
     }
 }
@@ -45,28 +111,29 @@ pub mod xml {
 pub mod client {
     use anyhow::Context;
 
+    use crate::endpoints::nable::structs::cdata::CData;
     use chrono::{NaiveDate, TimeZone};
-    use serde::{Deserialize, Deserializer};
+    use serde::{Deserialize, Deserializer, Serialize};
 
     pub type Clients = Vec<Client>;
 
     /// Derived from https://documentation.n-able.com/remote-management/userguide/Content/listing_clients_.htm
-    #[derive(PartialEq, Debug, Deserialize)]
+    #[derive(PartialEq, Debug, Serialize, Deserialize)]
     #[serde(rename = "client")]
     pub struct Client {
-        #[serde(rename = "name", deserialize_with = "super::deserialise_cdata")]
-        pub identity_name: String,
+        #[serde(rename = "name")]
+        pub identity_name: CData<String>,
         #[serde(rename = "clientid")]
         pub identity_id: usize,
 
-        #[serde(rename = "dashboard_username", deserialize_with = "super::deserialise_cdata_opt")]
-        pub client_login_username: Option<String>,
+        #[serde(rename = "dashboard_username")]
+        pub client_login_username: Option<CData<String>>,
 
         pub view_dashboard: bool,
         pub view_wkstsn_assets: bool,
 
-        #[serde(rename = "timezone", deserialize_with = "super::deserialise_cdata_opt")]
-        pub meta_timezone: Option<String>,
+        #[serde(rename = "timezone")]
+        pub meta_timezone: Option<CData<String>>,
         #[serde(rename = "creation_date", deserialize_with = "crate::deserialise_date")]
         pub meta_creation: NaiveDate,
 
@@ -83,7 +150,7 @@ pub mod client {
     #[cfg(test)]
     mod test {
         use super::*;
-        use crate::nable::structs::xml::XMLResult;
+        use crate::endpoints::nable::structs::xml::XMLResult;
 
         const XML: &str = r#"
 <?xml version="1.0" encoding="ISO-8859-1"?>
@@ -135,12 +202,13 @@ pub mod client {
 }
 
 pub mod site {
+    use crate::endpoints::nable::structs::cdata::CData;
     use chrono::NaiveDate;
-    use serde::Deserialize;
+    use serde::{Deserialize, Serialize};
 
     pub type Sites = Vec<Site>;
 
-    #[derive(Debug, Deserialize)]
+    #[derive(Debug, Serialize, Deserialize)]
     pub struct Site {
         #[serde(rename = "name")]
         pub identity_name: String,
@@ -148,10 +216,8 @@ pub mod site {
         #[serde(rename = "siteid")]
         pub identity_id: usize,
 
-        #[serde(deserialize_with = "super::deserialise_cdata_opt")]
-        pub primary_router: Option<String>,
-        #[serde(deserialize_with = "super::deserialise_cdata_opt")]
-        pub secondary_router: Option<String>,
+        pub primary_router: Option<CData<String>>,
+        pub secondary_router: Option<CData<String>>,
 
         pub connection_ok: bool,
 
@@ -161,15 +227,16 @@ pub mod site {
 }
 
 pub mod template {
-    use serde::Deserialize;
+    use crate::endpoints::nable::structs::cdata::CData;
+    use serde::{Deserialize, Serialize};
 
     pub type Templates = Vec<Template>;
 
-    #[derive(Debug, Deserialize)]
+    #[derive(Debug, Serialize, Deserialize)]
     #[serde(rename = "installation_template")]
     pub struct Template {
-        #[serde(rename = "name", deserialize_with = "super::deserialise_cdata_opt")]
-        pub identity_name: Option<String>,
+        #[serde(rename = "name")]
+        pub identity_name: Option<CData<String>>,
 
         #[serde(rename = "templateid")]
         pub identity_id: usize,
@@ -177,135 +244,122 @@ pub mod template {
 }
 
 pub mod device {
-    use chrono::{DateTime, FixedOffset, NaiveDate, NaiveDateTime, NaiveTime, Utc};
-    use serde::Deserialize;
+    use crate::endpoints::nable::structs::cdata::CData;
+    use macros::CommonFields;
+    use serde::{Deserialize, Serialize};
+    use serde_with::{serde_as, BoolFromInt};
 
     pub type Servers = Vec<Device>;
     pub type Workstations = Vec<Device>;
 
-    #[derive(Debug, Deserialize)]
-    #[serde(rename = "server")]
+    #[derive(Debug, Serialize, Deserialize)]
     pub struct BaseDevice {
-        #[serde(rename = "name", deserialize_with = "super::deserialise_cdata")]
-        pub identity_name: String,
+        #[serde(rename(deserialize = "name"))]
+        pub identity_name: CData<String>,
 
         #[serde(alias = "workstationid", alias = "serverid")]
-        pub identity_id: usize,
+        pub identity_id: CData<usize>,
 
-        #[serde(rename = "guid", deserialize_with = "super::deserialise_cdata_opt")]
-        pub identity_guid: Option<String>,
+        #[serde(rename = "guid")]
+        pub identity_guid: Option<CData<String>>,
 
-        #[serde(rename = "description", deserialize_with = "super::deserialise_cdata_opt")]
-        pub meta_description: Option<String>,
+        #[serde(rename = "description")]
+        pub meta_description: Option<CData<String>>,
 
-        #[serde(rename = "agent_version", deserialize_with = "super::deserialise_cdata_opt")]
-        pub meta_agent_version: Option<String>,
+        #[serde(rename = "agent_version")]
+        pub meta_agent_version: Option<CData<String>>,
 
         #[serde(rename = "agent_mode")]
-        pub meta_agent_mode: usize,
+        pub meta_agent_mode: CData<usize>,
 
-        #[serde(rename = "install_date")]
-        pub meta_install_date: NaiveDate,
-
-        #[serde(rename = "last_boot_time", deserialize_with = "super::deserialise_cdata_opt")]
-        pub meta_boot_time: Option<String>,
+        // #[serde(rename = "install_date")]
+        // pub meta_install_date: NaiveDate,
+        #[serde(rename = "last_boot_time")]
+        pub meta_boot_time: Option<CData<String>>,
 
         #[serde(rename = "online")]
-        pub status_online: bool,
-
-        #[serde(rename = "active_247")]
-        pub checks_active: bool,
-
-        #[serde(rename = "check_interval_247")]
-        pub checks_interval: usize,
-
-        #[serde(rename = "status_247")]
-        pub checks_status: usize,
-
-        #[serde(rename = "local_date_247")]
-        pub checks_date: NaiveDate,
-
-        #[serde(rename = "local_time_247")]
-        pub checks_time: NaiveTime,
-
-        // #[serde(rename = "utc_time_247")]
-        // pub checks_time_utc: Option<NaiveDateTime>,
-        #[serde(rename = "dsc_active")]
-        pub daily_active: bool,
-
-        #[serde(rename = "dsc_hour")]
-        pub daily_hour: usize,
-
-        #[serde(rename = "dsc_status")]
-        pub daily_status: usize,
-
-        #[serde(rename = "dsc_local_date")]
-        pub daily_date: NaiveDate,
-
-        #[serde(rename = "dsc_local_time")]
-        pub daily_time: NaiveTime,
-
-        // #[serde(rename = "dsc_utc_time")]
-        // pub daily_time_utc: Option<NaiveDateTime>,
-
-        #[serde(rename = "tz_bias")]
-        pub timezone_bias: Option<isize>,
-        #[serde(rename = "tz_dst_bias")]
-        pub timezone_bias_daylight_saving: Option<isize>,
-        #[serde(rename = "tz_std_bias")]
-        pub timezone_bias_standard_bias: Option<isize>,
-        #[serde(rename = "tz_mode")]
-        pub timezone_bias_mode: Option<usize>,
-        #[serde(rename = "tz_dst_date")]
-        pub timezone_date_daylight_saving: Option<String>,
-        #[serde(rename = "tz_std_date")]
-        pub timezone_date_standard: Option<String>,
-        #[serde(rename = "atz_dst_date")]
-        pub timezone_date_daylight_saving_alt: Option<String>,
-
-        // pub utc_apt: Option<NaiveDateTime>,
-        pub utc_offset: Option<isize>,
-
-        #[serde(rename = "assetid")]
-        pub asset_id: Option<usize>,
-        #[serde(deserialize_with = "super::deserialise_cdata_opt")]
-        pub wins_name: Option<String>,
-        #[serde(deserialize_with = "super::deserialise_cdata_opt")]
-        pub user: Option<String>,
-        #[serde(deserialize_with = "super::deserialise_cdata_opt")]
-        pub domain: Option<String>,
-        pub role: Option<String>,
-        pub chassis_type: Option<isize>,
-        #[serde(deserialize_with = "super::deserialise_cdata_opt")]
-        pub manufacturer: Option<String>,
-        #[serde(deserialize_with = "super::deserialise_cdata_opt")]
-        pub model: Option<String>,
-        #[serde(deserialize_with = "super::deserialise_cdata_opt")]
-        pub device_serial: Option<String>,
-        #[serde(deserialize_with = "super::deserialise_cdata_opt")]
-        pub ip: Option<String>,
-        #[serde(deserialize_with = "super::deserialise_cdata_opt")]
-        pub external_ip: Option<String>,
-        #[serde(deserialize_with = "super::deserialise_cdata_opt")]
-        pub mac1: Option<String>,
-        #[serde(deserialize_with = "super::deserialise_cdata_opt")]
-        pub mac2: Option<String>,
-        #[serde(deserialize_with = "super::deserialise_cdata_opt")]
-        pub mac3: Option<String>,
-        pub processor_count: Option<usize>,
-        pub total_memory: Option<usize>,
-        pub os_type: usize,
-        #[serde(deserialize_with = "super::deserialise_cdata_opt")]
-        pub os: Option<String>,
-        pub service_pack: Option<f64>,
-        #[serde(deserialize_with = "super::deserialise_cdata_opt")]
-        pub os_serial_number: Option<String>,
-        #[serde(deserialize_with = "super::deserialise_cdata_opt")]
-        pub os_product_key: Option<String>,
-        // pub last_scan_time: Option<DateTime<Utc>>,
+        // #[serde_as(as = "BoolFromInt")]
+        pub status_online: CData<bool>,
+        // #[serde(rename = "active_247")]
+        // #[serde_as(as = "BoolFromInt")]
+        // pub checks_active: bool,
+        //
+        // #[serde(rename = "check_interval_247")]
+        // pub checks_interval: usize,
+        //
+        // #[serde(rename = "status_247")]
+        // pub checks_status: usize,
+        //
+        // // #[serde(rename = "local_date_247")]
+        // // pub checks_date: NaiveDate,
+        //
+        // // #[serde(rename = "local_time_247")]
+        // // pub checks_time: NaiveTime,
+        //
+        // // #[serde(rename = "utc_time_247")]
+        // // pub checks_time_utc: Option<NaiveDateTime>,
+        // #[serde(rename = "dsc_active")]
+        // #[serde_as(as = "BoolFromInt")]
+        // pub daily_active: bool,
+        //
+        // #[serde(rename = "dsc_hour")]
+        // pub daily_hour: usize,
+        //
+        // #[serde(rename = "dsc_status")]
+        // pub daily_status: usize,
+        //
+        // // #[serde(rename = "dsc_local_date")]
+        // // pub daily_date: NaiveDate,
+        //
+        // // #[serde(rename = "dsc_local_time")]
+        // // pub daily_time: NaiveTime,
+        //
+        // // #[serde(rename = "dsc_utc_time")]
+        // // pub daily_time_utc: Option<NaiveDateTime>,
+        // #[serde(rename = "tz_bias")]
+        // pub timezone_bias: Option<isize>,
+        // #[serde(rename = "tz_dst_bias")]
+        // pub timezone_bias_daylight_saving: Option<isize>,
+        // #[serde(rename = "tz_std_bias")]
+        // pub timezone_bias_standard_bias: Option<isize>,
+        // #[serde(rename = "tz_mode")]
+        // pub timezone_bias_mode: Option<usize>,
+        // #[serde(rename = "tz_dst_date")]
+        // pub timezone_date_daylight_saving: Option<String>,
+        // #[serde(rename = "tz_std_date")]
+        // pub timezone_date_standard: Option<String>,
+        // #[serde(rename = "atz_dst_date")]
+        // pub timezone_date_daylight_saving_alt: Option<String>,
+        //
+        // // pub utc_apt: Option<NaiveDateTime>,
+        // pub utc_offset: Option<isize>,
+        //
+        // #[serde(rename = "assetid")]
+        // pub asset_id: Option<usize>,
+        // pub wins_name: Option<CData>,
+        // pub user: Option<CData>,
+        // pub domain: Option<CData>,
+        // pub role: Option<String>,
+        // pub chassis_type: Option<isize>,
+        // pub manufacturer: Option<CData>,
+        // pub model: Option<CData>,
+        // pub device_serial: Option<CData>,
+        // pub ip: Option<CData>,
+        // pub external_ip: Option<CData>,
+        // pub mac1: Option<CData>,
+        // pub mac2: Option<CData>,
+        // pub mac3: Option<CData>,
+        // pub processor_count: Option<usize>,
+        // pub total_memory: Option<usize>,
+        // pub os_type: usize,
+        // pub os: Option<CData>,
+        // pub service_pack: Option<f64>,
+        // pub os_serial_number: Option<CData>,
+        // pub os_product_key: Option<CData>,
+        // // pub last_scan_time: Option<DateTime<Utc>>,
     }
 
-    #[derive(Debug, Deserialize)]
+    #[derive(Debug, Serialize, Deserialize, CommonFields)]
     #[serde(rename_all = "lowercase")]
     pub enum Device {
         Server {
@@ -326,58 +380,17 @@ pub mod device {
 
             remote_connection_type: usize,
 
-            #[serde(deserialize_with = "super::deserialise_cdata_opt")]
-            remote_address: Option<String>,
+            remote_address: Option<CData<String>>,
 
-            #[serde(deserialize_with = "super::deserialise_cdata_opt")]
-            remote_port: Option<String>,
+            remote_port: Option<CData<String>>,
 
-            #[serde(deserialize_with = "super::deserialise_cdata_opt")]
-            remote_username: Option<String>,
+            remote_username: Option<CData<String>>,
 
-            #[serde(deserialize_with = "super::deserialise_cdata_opt")]
-            remote_domain: Option<String>,
+            remote_domain: Option<CData<String>>,
         },
-        Workstation(BaseDevice),
-    }
-}
-
-fn deserialise_cdata<'de, D, T>(deserializer: D) -> Result<T, D::Error>
-where
-    D: Deserializer<'de>,
-    T: Deserialize<'de> + From<String>,
-{
-    let raw = String::deserialize(deserializer)?;
-    let mut reader = Reader::from_str(&raw);
-    reader.trim_text(true);
-
-    loop {
-        match reader.read_event().context("Read event for raw deserialization").unwrap() {
-            Event::Text(bytes) => {
-                let str = String::from_utf8_lossy(bytes.as_ref());
-                return T::try_from(str.to_string()).map_err(serde::de::Error::custom);
-            }
-            _ => break,
-        }
-    }
-
-    Err(serde::de::Error::custom(format!(
-        "Failed to deserialise raw string [{:?}] into type [{}]",
-        raw,
-        std::any::type_name::<T>()
-    )))
-}
-
-fn deserialise_cdata_opt<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
-where
-    D: Deserializer<'de>,
-    T: Deserialize<'de> + From<String>,
-{
-    return match String::deserialize(deserializer) {
-        Ok(s) => match s {
-            ref s if s.is_empty() || s == "none" => Ok(None),
-            _ => Ok(Some(T::try_from(s).map_err(serde::de::Error::custom)?)),
+        Workstation {
+            #[serde(flatten)]
+            base: BaseDevice,
         },
-        Err(_) => Ok(None),
-    };
+    }
 }
