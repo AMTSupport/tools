@@ -157,7 +157,7 @@ pub mod user {
     use macros::CommonFields;
 
     #[cfg_attr(test, derive(Dummy))]
-    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
     pub struct Attrs {
         #[serde(flatten)]
         pub identifier: super::identifier::Identifier,
@@ -178,7 +178,7 @@ pub mod user {
         pub last_auth_at: DateTime<Utc>,
     }
 
-    #[derive(Debug, Clone, Serialize, Deserialize, CommonFields)]
+    #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, CommonFields)]
     #[serde(rename_all = "SCREAMING_SNAKE_CASE", tag = "type")]
     pub enum User {
         Member {
@@ -267,7 +267,7 @@ pub mod account {
 
     /// This comes from the list of account gotten with `op list accounts`
     #[cfg_attr(test, derive(Dummy))]
-    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
     pub struct Short {
         #[cfg_attr(test, dummy(faker = "DomainSuffix()"))]
         pub url: String,
@@ -283,7 +283,7 @@ pub mod account {
     }
 
     #[cfg_attr(test, derive(Dummy))]
-    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
     pub struct Attrs {
         #[serde(flatten)]
         pub identifier: identifier::Identifier,
@@ -302,7 +302,7 @@ pub mod account {
     }
 
     #[cfg_attr(test, derive(Dummy))]
-    #[derive(Debug, Clone, Serialize, Deserialize, CommonFields)]
+    #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, CommonFields)]
     #[serde(rename_all = "SCREAMING_SNAKE_CASE", tag = "type")]
     pub enum Account {
         Individual {
@@ -502,7 +502,7 @@ pub mod file {
 // TODO -> Items may be a entire enum type per category with category being the enum variant
 pub mod item {
     use super::super::one_pux;
-    use crate::config::runtime::RuntimeConfig;
+    use crate::config::runtime::Runtime;
     use crate::sources::op::account::OnePasswordAccount;
     use anyhow::{Context, Result};
     use indicatif::{MultiProgress, ParallelProgressIterator, ProgressBar};
@@ -912,7 +912,7 @@ pub mod item {
         pub fn parse(
             vault: super::vault::Vault,
             account: &OnePasswordAccount,
-            config: &RuntimeConfig,
+            config: &Runtime,
             bars: (&ProgressBar, &MultiProgress),
         ) -> Result<Vec<Item>> {
             trace!("Requesting Items from {vault}");
@@ -1107,7 +1107,7 @@ pub mod item {
 }
 
 pub mod vault {
-    use crate::config::runtime::RuntimeConfig;
+    use crate::config::runtime::Runtime;
     use crate::sources::getter::CliGetter;
     use crate::sources::op::account::OnePasswordAccount;
     use crate::sources::op::cli::dated::Dated;
@@ -1178,7 +1178,7 @@ pub mod vault {
     }
 
     impl Vault {
-        pub async fn parse(account: &OnePasswordAccount, config: &RuntimeConfig) -> Result<Vec<Vault>> {
+        pub async fn parse(account: &OnePasswordAccount, runtime: &Runtime) -> Result<Vec<Vault>> {
             let attrs = account.attrs();
             let vaults = &attrs.vaults;
 
@@ -1195,7 +1195,7 @@ pub mod vault {
             let mut finished_vaults = vec![];
             for vault in vaults {
                 let args = [vault.id()];
-                let vault = Vault::get(config, account, &envs, &args);
+                let vault = Vault::get(runtime, account, &envs, &args);
 
                 match vault.await {
                     Ok(vault) => {

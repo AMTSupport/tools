@@ -16,11 +16,10 @@
 
 use crate::config::backend::Backend;
 use crate::config::backend::Backend::OnePassword;
-use crate::config::runtime::RuntimeConfig;
+use crate::config::runtime::Runtime;
 use crate::sources::auto_prune::Prune;
 use crate::sources::downloader::Downloader;
 use crate::sources::exporter::Exporter;
-use crate::sources::interactive::Interactive;
 use crate::sources::op::account::OnePasswordAccount;
 use crate::sources::op::one_pux;
 use anyhow::{anyhow, Context, Result};
@@ -31,27 +30,28 @@ use lib::fs::normalise_path;
 use lib::pathed::{ensure_directory_exists, ensure_permissions, Pathed};
 use serde::{Deserialize, Serialize};
 use serde_json::to_string_pretty;
+use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
 use std::{env, fs};
-use std::io::Write;
 use zip::write::FileOptions;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OnePasswordCore {
     pub account: OnePasswordAccount,
 }
 
 impl OnePasswordCore {
-    pub fn data_dir(config: &RuntimeConfig) -> Result<PathBuf> {
+    pub fn data_dir(config: &Runtime) -> Result<PathBuf> {
         let path = Self::base_dir(config)?.join("data");
-        let path = ensure_directory_exists(path)?;
-        ensure_permissions(path, Self::PERMISSIONS)
+        ensure_directory_exists(&path)?;
+        ensure_permissions(&path, Self::PERMISSIONS)?;
+        Ok(path)
     }
 }
 
-impl Pathed<RuntimeConfig> for OnePasswordCore {
+impl Pathed<Runtime> for OnePasswordCore {
     const NAME: &'static str = "1Password";
 
     fn get_unique_name(&self) -> String {
@@ -74,7 +74,7 @@ impl Downloader for OnePasswordCore {
         }
     );
 
-    fn base_command(config: &RuntimeConfig) -> Result<Command> {
+    fn base_command(config: &Runtime) -> Result<Command> {
         let mut command = Command::new(Self::binary(config)?);
         command.arg("--cache").args(["--config", Self::data_dir(config)?.to_str().context("Convert path to &str")?]);
 
@@ -84,11 +84,6 @@ impl Downloader for OnePasswordCore {
 
 #[async_trait]
 impl Exporter for OnePasswordCore {
-    async fn interactive(config: &RuntimeConfig) -> Result<Vec<Backend>> {
-        let account = OnePasswordAccount::interactive(config).await?;
-        Ok(vec![OnePassword(OnePasswordCore { account })])
-    }
-
     // TODO :: Export of extra stuff like logos in the zip
     // TODO :: I'm unsure if that's even possible though.
     /// Creates a 1PUX compatible export,
@@ -96,7 +91,7 @@ impl Exporter for OnePasswordCore {
     /// The name of this file is in format of "1Password-{uuid of the account exporting it}-{%Y%m%d-%H%M%S}.1pux"
     async fn export(
         &mut self,
-        config: &RuntimeConfig,
+        runtime: &Runtime,
         main_bar: &ProgressBar,
         progress_bar: &MultiProgress,
     ) -> Result<()> {
@@ -106,7 +101,7 @@ impl Exporter for OnePasswordCore {
         let account = &self.account;
         let file_name = format!("1PasswordExport-{}.1pux", Local::now().format("%Y%m%d-%H%M%S"));
 
-        let file = self.account.unique_dir(config)?.join(file_name);
+        let file = self.account.unique_dir(runtime)?.join(file_name);
         let file = normalise_path(file);
 
         let file = fs::File::create_new(file).context("Create export file")?;
@@ -118,7 +113,7 @@ impl Exporter for OnePasswordCore {
         zip.start_file("export.attributes", options).context("Start writer for attrs.")?;
         zip.write_all(serialised.as_bytes()).context("Write attrs to zip file.")?;
 
-        let (export, errors) = match Export::from(account, config, (main_bar, progress_bar)).await {
+        let (export, errors) = match Export::from(account, runtime, (main_bar, progress_bar)).await {
             Err(e) => {
                 zip.finish().context("Finish export file")?;
                 return Err(e);
@@ -147,7 +142,7 @@ impl Exporter for OnePasswordCore {
 }
 
 impl Prune for OnePasswordCore {
-    fn files(&self, config: &RuntimeConfig) -> Result<Vec<PathBuf>> {
+    fn files(&self, config: &Runtime) -> Result<Vec<PathBuf>> {
         use std::path::MAIN_SEPARATOR;
 
         let glob = format!(
@@ -157,4 +152,12 @@ impl Prune for OnePasswordCore {
 
         glob::glob(&glob).with_context(|| format!("Glob for files in {}", glob)).map(|glob| glob.flatten().collect())
     }
+}
+
+#[cfg(feature = "ui-cli")]
+pub(crate) async fn interactive(config: &Runtime) -> Result<Vec<Backend>> {
+    use crate::sources::interactive::Interactive;
+
+    let account = OnePasswordAccount::interactive(config).await?;
+    Ok(vec![OnePassword(OnePasswordCore { account })])
 }

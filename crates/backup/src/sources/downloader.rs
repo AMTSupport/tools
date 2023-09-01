@@ -14,7 +14,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::config::runtime::RuntimeConfig;
+use crate::config::runtime::Runtime;
 use crate::sources::download;
 use crate::sources::exporter::Exporter;
 use anyhow::{anyhow, Context, Result};
@@ -34,16 +34,16 @@ pub trait Downloader: Exporter {
     const BINARY: &'static str;
     const URL: &'static str;
 
-    fn binary(config: &RuntimeConfig) -> Result<PathBuf> {
+    fn binary(config: &Runtime) -> Result<PathBuf> {
         Ok(Self::base_dir(config)?.join(Self::BINARY))
     }
 
-    fn base_command(config: &RuntimeConfig) -> Result<Command> {
+    fn base_command(config: &Runtime) -> Result<Command> {
         Ok(Command::new(Self::binary(config)?))
     }
 
     async fn download_cli(
-        config: &RuntimeConfig,
+        config: &Runtime,
         main_bar: &ProgressBar,
         multi_bar: &MultiProgress,
     ) -> Result<()> {

@@ -9,6 +9,9 @@ keywords = ["backup"]
 default = ["sources-s3", "sources-bitwarden", "sources-1password"]
 binary-downloader = ["bytes", "rand", "const_format"]
 
+ui-tui = ["ratatui", "crossterm"]
+ui-cli = ["indicatif", "inquire"]
+
 sources-s3 = ["opendal", "futures"]
 sources-bitwarden = ["binary-downloader"]
 sources-1password = ["binary-downloader", "zip"]
@@ -22,8 +25,12 @@ tokio = { workspace = true }
 
 # Cli & UI
 clap = { workspace = true }
-indicatif = { workspace = true, features = ["rayon"] }
-inquire = { workspace = true }
+indicatif = { workspace = true, features = ["rayon"], optional = true }
+inquire = { workspace = true, features = ["path"], optional = true }
+
+# TUI
+ratatui = { workspace = true, features = ["all-widgets"], optional = true }
+crossterm = { workspace = true, features = [], optional = true }
 
 # Data / Serialization
 serde = { workspace = true }
@@ -45,6 +52,7 @@ glob = "0.3.1"
 async-trait = "0.1.68"
 tokio-stream = "0.1.14"
 readable-regex = "0.1.0-alpha1"
+paste = "1.0.14"
 
 futures = { version = "0.3.28", optional = true } # Needed by opendal
 opendal = { version = "0.37.0", features = ["services-s3", "rustls"], optional = true }
@@ -73,4 +81,5 @@ rand = "0.8"
 
 # Fs & IO
 tempdir = "0.3.7"
+assert_fs = "1.0.13"
 

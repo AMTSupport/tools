@@ -15,73 +15,64 @@
  */
 
 use crate::config::backend::Backend;
-use crate::config::runtime::RuntimeConfig;
+use crate::config::runtime::Runtime;
 use crate::sources::bitwarden::BitWardenCore;
 use crate::sources::downloader::Downloader;
 use crate::sources::op::core::OnePasswordCore;
-use crate::sources::s3::S3Core;
 use anyhow::Result;
 use async_trait::async_trait;
-use clap::ValueEnum;
 use indicatif::{MultiProgress, ProgressBar};
 use lib::pathed::Pathed;
+use macros::{EnumNames, EnumVariants};
 use serde::{Deserialize, Serialize};
-use std::fmt::{Debug, Display, Formatter};
+use std::fmt::Debug;
+use crate::sources::{bitwarden, op, s3};
 
 #[async_trait]
-pub trait Exporter: Pathed<RuntimeConfig> {
+pub trait Exporter: Pathed<Runtime> {
     /// Used to attempt to interactively interactive a new exporter.
-    async fn interactive(config: &RuntimeConfig) -> Result<Vec<Backend>>;
+    // async fn interactive(config: &Runtime) -> Result<Vec<Backend>>;
 
     // TODO :: Maybe return a reference to file/files which were exported?
     /// This method will export the backup data into memory,
     /// and then write it to the backup directory.
     async fn export(
         &mut self,
-        config: &RuntimeConfig,
+        runtime: &Runtime,
         main_bar: &ProgressBar,
         progress_bar: &MultiProgress,
     ) -> Result<()>;
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ValueEnum)]
+#[derive(Debug, Clone, Serialize, Deserialize, EnumVariants, EnumNames)]
 pub enum ExporterSource {
     S3,
     BitWarden,
     OnePassword,
 }
 
-impl Display for ExporterSource {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::S3 => write!(f, "S3"),
-            Self::BitWarden => write!(f, "BitWarden"),
-            Self::OnePassword => write!(f, "1Password"),
-        }
-    }
-}
-
 impl ExporterSource {
-    pub async fn create(&self, config: &RuntimeConfig) -> Result<Vec<Backend>> {
+    pub async fn create(&self, runtime: &Runtime) -> Result<Vec<Backend>> {
         match self {
-            Self::S3 => S3Core::interactive(config).await,
+            Self::S3 => s3::interactive(runtime).await,
             Self::BitWarden => {
                 let bars = MultiProgress::new();
                 let main_bar = bars.add(ProgressBar::new_spinner());
                 main_bar.set_message("Setting up BitWarden CLI");
-                BitWardenCore::download_cli(config, &main_bar, &bars).await?;
+                BitWardenCore::download_cli(runtime, &main_bar, &bars).await?;
                 main_bar.finish_and_clear();
 
-                BitWardenCore::interactive(config).await
+                #[cfg(feature = "ui-cli")]
+                bitwarden::interactive(runtime).await
             }
             Self::OnePassword => {
                 let bars = MultiProgress::new();
                 let main_bar = bars.add(ProgressBar::new_spinner());
                 main_bar.set_message("Setting up 1Password CLI");
-                OnePasswordCore::download_cli(config, &main_bar, &bars).await?;
+                OnePasswordCore::download_cli(runtime, &main_bar, &bars).await?;
                 main_bar.finish_and_clear();
 
-                OnePasswordCore::interactive(config).await
+                op::core::interactive(runtime).await
             }
         }
     }

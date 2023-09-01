@@ -15,11 +15,10 @@
  */
 
 use crate::config::backend::Backend;
-use crate::config::runtime::RuntimeConfig;
+use crate::config::runtime::Runtime;
 use crate::sources::auto_prune::Prune;
 use crate::sources::download_to;
 use crate::sources::exporter::Exporter;
-use crate::{continue_loop, env_or_prompt};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use futures::{Stream, TryStreamExt};
@@ -35,26 +34,52 @@ use opendal::{Builder, Operator, OperatorBuilder};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::string::ToString;
 use std::time::UNIX_EPOCH;
 use tracing::{debug, error, info, trace};
+use crate::builder;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct S3Base {
-    pub object: PathBuf,
+// #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+// pub struct S3Base {
+//     pub object: PathBuf,
+//
+//     /// Keeps a serializable map of the operators data,
+//     /// since we can't serialize the operator itself.
+//     #[serde(flatten)]
+//     pub backend: HashMap<String, String>,
+// }
 
-    /// Keeps a serializable map of the operators data,
-    /// since we can't serialize the operator itself.
-    #[serde(flatten)]
-    pub backend: HashMap<String, String>,
+builder!(S3Backend = [
+    root => PathBuf,
+    bucket => String,
+    region => String,
+    endpoint => String,
+    access_key_id => String,
+    secret_access_key => String,
+]);
+
+impl From<S3Backend> for HashMap<String, String> {
+    fn from(value: S3Backend) -> HashMap<String, String> {
+        HashMap::from([
+            ("root", value.root.to_str().unwrap()),
+            ("bucket", &*value.bucket),
+            ("region", &*value.region),
+            ("endpoint", &*value.endpoint),
+            ("access_key_id", &*value.access_key_id),
+            ("secret_access_key", &*value.secret_access_key),
+        ])
+        .into_iter()
+        .map(|(k, v)| (k.to_string(), v.to_string()))
+        .collect()
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct S3Core {
     #[serde(skip)]
     pub(crate) op: Option<Operator>,
+
     #[serde(flatten)]
-    pub base: S3Base,
+    pub base: S3Backend,
 }
 
 impl PartialEq for S3Core {
@@ -68,7 +93,8 @@ impl Eq for S3Core {}
 impl S3Core {
     fn op(&mut self) -> &Operator {
         self.op.get_or_insert_with(|| {
-            let backend = S3::from_map(self.base.backend.clone()).build().unwrap();
+            let map = self.base.clone().into();
+            let backend = S3::from_map(map).build().unwrap();
             OperatorBuilder::new(backend).layer(LoggingLayer::default()).finish()
         })
     }
@@ -76,127 +102,44 @@ impl S3Core {
 
 #[async_trait]
 impl Prune for S3Core {
-    fn files(&self, config: &RuntimeConfig) -> Result<Vec<PathBuf>> {
+    fn files(&self, config: &Runtime) -> Result<Vec<PathBuf>> {
         use std::path::MAIN_SEPARATOR;
 
         let glob = format!(
             "{root}{MAIN_SEPARATOR}{bucket}{MAIN_SEPARATOR}*",
             root = normalise_path(S3Core::base_dir(config)?).display(),
-            bucket = self.base.object.display()
+            bucket = self.base.root.display()
         );
 
-        glob::glob(&glob)
-            .with_context(|| format!("Failed to glob: {}", glob))
-            .map(|p| p.flatten().collect())
+        glob::glob(&glob).with_context(|| format!("Failed to glob: {}", glob)).map(|p| p.flatten().collect())
     }
 }
 
-impl Pathed<RuntimeConfig> for S3Core {
+impl Pathed<Runtime> for S3Core {
     const NAME: &'static str = "S3";
 
     fn get_unique_name(&self) -> String {
-        self.base.backend["root"].clone()
+        self.base.root.display().to_string()
     }
 }
 
 #[async_trait]
 impl Exporter for S3Core {
-    async fn interactive(_config: &RuntimeConfig) -> Result<Vec<Backend>> {
-        let not_empty_or_ascii = |str: &str, msg: &str| match str
-            .chars()
-            .any(|c| !c.is_ascii_alphanumeric() && c != '-' && c != '_')
-            || str.is_empty()
-        {
-            false => Ok(Validation::Valid),
-            true => Ok(Validation::Invalid(msg.into())),
-        };
-
-        let bucket = env_or_prompt("S3_BUCKET", move |str: &_| {
-            not_empty_or_ascii(
-                str,
-                "Bucket name must be alphanumeric, and can only contain dashes and underscores.",
-            )
-        })?;
-
-        // TODO Validators
-        let region = env_or_prompt("S3_REGION", |_: &_| Ok(Validation::Valid))?;
-        let endpoint = env_or_prompt("S3_ENDPOINT", |_: &_| Ok(Validation::Valid))?;
-        let key_id = env_or_prompt("S3_ACCESS_KEY_ID", |_: &_| Ok(Validation::Valid))?;
-        let secret_key = env_or_prompt("S3_SECRET_ACCESS_KEY", |_: &_| Ok(Validation::Valid))?;
-
-        let base_accessor = HashMap::from([
-            ("bucket".to_string(), bucket),
-            ("region".to_string(), region),
-            ("endpoint".to_string(), endpoint),
-            ("access_key_id".to_string(), key_id),
-            ("secret_access_key".to_string(), secret_key), // TODO :: This is not secure at all, maybe use platform specific keychain?
-        ]);
-
-        let base = S3Base {
-            object: PathBuf::from(""),
-            backend: base_accessor,
-        };
-
-        let prompt = inquire::Text::new("What's the path of the object you want to export?")
-            .with_validator(|path: &str| match path.is_empty() || !path.ends_with('/') {
-                true => Ok(Validation::Invalid("Path must end with /".into())),
-                false => Ok(Validation::Valid),
-            });
-
-        // TODO :: Auto suggest for object paths
-        let mut exporters = vec![];
-        while continue_loop(&exporters, "object to export") {
-            match prompt.clone().prompt()? {
-                object_path if object_path.is_empty() => {
-                    info!("Assuming wanted to cancel additional object.");
-                    continue;
-                }
-                object_path => {
-                    let mut base = base.clone();
-                    base.backend.insert("root".to_string(), object_path.clone());
-                    base.object = PathBuf::from(&object_path);
-
-                    let operator = match Operator::from_map::<S3>(base.backend.clone()) {
-                        Ok(b) => b.layer(LoggingLayer::default()).finish(),
-                        Err(e) => {
-                            error!("Failed to interactive operator: {}", e);
-                            continue;
-                        }
-                    };
-
-                    exporters.push(Backend::S3(S3Core {
-                        op: Some(operator),
-                        base,
-                    }));
-                }
-            }
-        }
-
-        Ok(exporters)
-    }
-
     // TODO :: Validate files
-    async fn export(
-        &mut self,
-        config: &RuntimeConfig,
-        main_bar: &ProgressBar,
-        progress_bar: &MultiProgress,
-    ) -> Result<()> {
+    async fn export(&mut self, runtime: &Runtime, main_bar: &ProgressBar, progress_bar: &MultiProgress) -> Result<()> {
         let progress_state = progress_bar.insert_after(main_bar, spinner());
         progress_state.set_message("Initialising S3 exporter...");
 
-        let object = self.base.object.clone();
-        let output = normalise_path(Self::base_dir(config)?.join(&object));
-        let existing_files = self.files(config)?;
+        let object = self.base.root.clone();
+        let output = normalise_path(Self::base_dir(runtime)?.join(&object));
+        let existing_files = self.files(runtime)?;
         let op = self.op();
 
         progress_state.set_message("Requesting objects from S3...");
 
         // TODO :: Should this be recursive?
-        let mut layer = op.list_with("/").await.context(format!(
-            "Failed to list objects in {}",
-            &object.to_str().unwrap()
-        ))?;
+        let mut layer =
+            op.list_with("/").await.context(format!("Failed to list objects in {}", &object.to_str().unwrap()))?;
 
         progress_state.set_message("Processing objects from S3...");
         progress_state.set_length(layer.size_hint().1.unwrap_or(0) as u64);
@@ -249,14 +192,14 @@ impl Exporter for S3Core {
             progress_state.set_message(format!("Checking if {:#} would survive rules...", &filename));
 
             let existing = existing_files.iter().map(|p| p.as_path()).collect::<Vec<&Path>>();
-            if !config.config.rules.would_survive(&existing, &path, meta.clone().into()).await {
+            if !runtime.config.rules.would_survive(&existing, &path, meta.clone().into()).await {
                 debug!("File would not survive rules, skipping.");
                 progress_state.inc(1);
                 continue;
             }
 
             trace!("Checking if {} exists", &path.to_str().unwrap());
-            let host_path = normalise_path(config.directory.join(&path));
+            let host_path = normalise_path(runtime.directory.join(&path));
             if host_path.exists() && meta.content_length() == host_path.metadata().unwrap().len() {
                 debug!("Skipping export of {} as it already exists", &path.to_str().unwrap());
                 progress_state.inc(1);
@@ -281,4 +224,78 @@ impl Exporter for S3Core {
 
         Ok(())
     }
+}
+
+#[cfg(feature = "ui-cli")]
+pub(crate) async fn interactive(_runtime: &Runtime) -> Result<Vec<Backend>> {
+    use crate::ui::cli::{continue_loop, env_or_prompt};
+
+    let not_empty_or_ascii =
+        |str: &str, msg: &str| match str.chars().any(|c| !c.is_ascii_alphanumeric() && c != '-' && c != '_')
+            || str.is_empty()
+        {
+            false => Ok(Validation::Valid),
+            true => Ok(Validation::Invalid(msg.into())),
+        };
+
+    let bucket = env_or_prompt("S3_BUCKET", move |str: &_| {
+        not_empty_or_ascii(
+            str,
+            "Bucket name must be alphanumeric, and can only contain dashes and underscores.",
+        )
+    })?;
+
+    // TODO Validators
+    let region = env_or_prompt("S3_REGION", |_: &_| Ok(Validation::Valid))?;
+    let endpoint = env_or_prompt("S3_ENDPOINT", |_: &_| Ok(Validation::Valid))?;
+    let key_id = env_or_prompt("S3_ACCESS_KEY_ID", |_: &_| Ok(Validation::Valid))?;
+    let secret_key = env_or_prompt("S3_SECRET_ACCESS_KEY", |_: &_| Ok(Validation::Valid))?;
+
+    let base_accessor = HashMap::from([
+        ("bucket".to_string(), bucket),
+        ("region".to_string(), region),
+        ("endpoint".to_string(), endpoint),
+        ("access_key_id".to_string(), key_id),
+        ("secret_access_key".to_string(), secret_key), // TODO :: This is not secure at all, maybe use platform specific keychain?
+    ]);
+
+    let base = S3BackendBuilder::default();
+    let base =
+        base_accessor.into_iter().try_fold(base, |mut base, (k, v)| base.set_field(&*k, &*v).and_then(|_| Ok(base)))?;
+
+    let prompt =
+        inquire::Text::new("What's the path of the object you want to export?").with_validator(|path: &str| {
+            match path.is_empty() || !path.ends_with('/') {
+                true => Ok(Validation::Invalid("Path must end with /".into())),
+                false => Ok(Validation::Valid),
+            }
+        });
+
+    // TODO :: Auto suggest for object paths
+    let mut exporters = vec![];
+    while continue_loop(&exporters, "object to export") {
+        match prompt.clone().prompt()? {
+            object_path if object_path.is_empty() => {
+                info!("Assuming wanted to cancel additional object.");
+                continue;
+            }
+            object_path => {
+                let base = base.clone().set_root(PathBuf::from(object_path));
+                let operator = match Operator::from_map::<S3>(base.clone().build()?.into()) {
+                    Ok(b) => b.layer(LoggingLayer::default()).finish(),
+                    Err(e) => {
+                        error!("Failed to interactive operator: {}", e);
+                        continue;
+                    }
+                };
+
+                exporters.push(Backend::S3(S3Core {
+                    op: Some(operator),
+                    base: base.build()?,
+                }));
+            }
+        }
+    }
+
+    Ok(exporters)
 }

@@ -14,7 +14,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::config::runtime::RuntimeConfig;
+use crate::config::runtime::Runtime;
 use crate::sources::downloader::Downloader;
 use async_trait::async_trait;
 use serde::de::DeserializeOwned;
@@ -57,7 +57,7 @@ where
 
     #[instrument(ret, err)]
     async fn get<F: CommandFiller>(
-        config: &RuntimeConfig,
+        config: &Runtime,
         filler: &F,
         envs: &[(&str, &str)],
         args: &[&str],
@@ -73,7 +73,7 @@ where
 
     #[instrument(ret, err)]
     async fn _get(
-        config: &RuntimeConfig,
+        config: &Runtime,
         envs: &[(&str, &str)],
         args: &[&str],
     ) -> anyhow::Result<T> {

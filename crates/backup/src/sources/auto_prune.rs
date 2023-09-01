@@ -14,7 +14,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::config::runtime::RuntimeConfig;
+use crate::config::runtime::Runtime;
 use anyhow::Result;
 use indicatif::MultiProgress;
 use std::path::PathBuf;
@@ -24,7 +24,7 @@ pub trait Prune {
     /// The files which should be possible to prune.
     /// The files returned by this method will be parsed,
     /// Against the `AutoPrune` struct to determine if they should be removed.
-    fn files(&self, config: &RuntimeConfig) -> Result<Vec<PathBuf>>;
+    fn files(&self, config: &Runtime) -> Result<Vec<PathBuf>>;
 
     /// The main prune function.
     /// This function has a common implementation for all sources,
@@ -33,7 +33,7 @@ pub trait Prune {
     /// * `rules` - The `AutoPrune` struct which contains the rules for pruning.
     /// # Returns
     /// A `Result` with the `Vec<PathBuf>` of the files which were removed.
-    fn prune(&self, _config: &RuntimeConfig, _progress_bar: &MultiProgress) -> Result<Vec<PathBuf>> {
+    fn prune(&self, _config: &Runtime, _progress_bar: &MultiProgress) -> Result<Vec<PathBuf>> {
         // let files = self.files(config).sort_by(|a, b| {
         //     fn chrono(path: &PathBuf) -> Result<DateTime<FixedOffset>> {
         //         let meta = path.metadata().context("Get meta for comparing times")?;

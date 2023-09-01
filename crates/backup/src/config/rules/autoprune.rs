@@ -161,7 +161,7 @@ impl Tag {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AutoPrune {
     /// How many hours of backups should be kept.
     pub hours: usize,

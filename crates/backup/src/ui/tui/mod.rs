@@ -14,12 +14,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::config::runtime::Runtime;
-use async_trait::async_trait;
-use anyhow::Result;
-
-#[async_trait]
-pub trait Interactive<T> {
-    /// Creates a new async function which will prompt the user for the required information to create the exporter;
-    async fn interactive(config: &Runtime) -> Result<T>;
-}
+pub mod tui;
+pub mod event;
+pub mod handler;
+pub mod ui;

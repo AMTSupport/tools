@@ -30,62 +30,10 @@
 #![feature(lazy_cell)]
 #![feature(result_flattening)]
 #![feature(async_fn_in_trait)]
+#![feature(fn_traits)]
+#![feature(stmt_expr_attributes)]
 
-extern crate core;
-
-use inquire::validator::StringValidator;
-use anyhow::{anyhow, Context, Result};
-use tracing::{trace, warn};
-
-pub mod application;
+pub mod app;
 pub mod config;
 pub mod sources;
-
-fn continue_loop<I>(vec: &Vec<I>, prompt_type: &str) -> bool {
-    if vec.is_empty() {
-        return true;
-    }
-
-    let should_continue =
-        inquire::Confirm::new(&format!("Do you want to add another {}?", prompt_type))
-            .with_default(true)
-            .prompt()
-            .with_context(|| format!("Prompting for additional {}", prompt_type));
-
-    match should_continue {
-        Ok(should_continue) => should_continue,
-        Err(err) => {
-            warn!(
-                "Failed to get confirmation for additional {}: {}",
-                prompt_type, err
-            );
-            false
-        }
-    }
-}
-
-// TODO:: Derive title from key
-fn env_or_prompt<V>(key: &str, validator: V) -> Result<String>
-where
-    V: StringValidator + 'static,
-{
-    match std::env::var(key) {
-        Ok(str) => match validator.validate(&str) {
-            Err(err) => Err(anyhow!("{} is set but invalid: {}", key, err)),
-            Ok(_) => {
-                trace!("Validated {} from env", key);
-                Ok(str)
-            }
-        },
-        _ => match inquire::Text::new(key) // TODO :: Pretty title
-            .with_validator(validator)
-            .prompt()
-        {
-            Err(err) => Err(anyhow!("Failed to get {} from user: {}", key, err)),
-            Ok(str) => {
-                trace!("Validated {} from user", key);
-                Ok(str)
-            }
-        },
-    }
-}
+pub mod ui;

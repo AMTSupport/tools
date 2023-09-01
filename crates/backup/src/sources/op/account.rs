@@ -14,7 +14,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::config::runtime::RuntimeConfig;
+use crate::config::runtime::Runtime;
 use crate::sources::downloader::Downloader;
 use crate::sources::getter::{CliGetter, CommandFiller};
 use crate::sources::interactive::Interactive;
@@ -32,20 +32,20 @@ use thiserror::Error;
 use tracing::{trace, warn};
 use lib::inquire::inquire_style;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Attrs {
     pub user: cli::user::User,
     pub account: cli::account::Account,
     pub vaults: Vec<cli::vault::Reference>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, CommonFields)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, CommonFields)]
 pub enum OnePasswordAccount {
     Personal { attrs: Attrs },
     Service { attrs: Attrs, token: String },
 }
 
-impl Pathed<RuntimeConfig> for OnePasswordAccount {
+impl Pathed<Runtime> for OnePasswordAccount {
     const NAME: &'static str = "1Password";
     const PERMISSIONS: u32 = 0o700;
 
@@ -75,7 +75,7 @@ pub enum Error {
 
 impl OnePasswordAccount {
     /// Creates a new command with the required environment variables & arguments for the account.
-    pub(crate) fn command(&self, config: &RuntimeConfig) -> Result<Command> {
+    pub(crate) fn command(&self, config: &Runtime) -> Result<Command> {
         let mut command = OnePasswordCore::base_command(config)?;
         let (fill_args, fill_envs) = self.fill();
         command.args(fill_args);
@@ -118,7 +118,7 @@ impl CommandFiller for OnePasswordAccount {
 
 #[async_trait]
 impl Interactive<OnePasswordAccount> for OnePasswordAccount {
-    async fn interactive(config: &RuntimeConfig) -> Result<OnePasswordAccount> {
+    async fn interactive(config: &Runtime) -> Result<OnePasswordAccount> {
         use inquire::{list_option::ListOption, validator::Validation, MultiSelect, Select, Text};
         let selection = Select::new(
             "What type of Account do you want to setup.",

@@ -24,7 +24,7 @@
 pub const ONE_PUX_VERSION: u8 = 3;
 
 pub mod export {
-    use crate::config::runtime::RuntimeConfig;
+    use crate::config::runtime::Runtime;
     use crate::sources::op::account::OnePasswordAccount;
     use crate::sources::op::cli;
     use anyhow::{anyhow, Result};
@@ -48,7 +48,7 @@ pub mod export {
         // TODO -> Better error handling
         pub async fn from(
             value: &OnePasswordAccount,
-            config: &RuntimeConfig,
+            config: &Runtime,
             bars: (&ProgressBar, &MultiProgress),
         ) -> Result<(Self, Vec<anyhow::Error>)> {
             let vaults = cli::vault::Vault::parse(value, config).await?;
