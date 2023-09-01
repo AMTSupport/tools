@@ -1,0 +1,11 @@
+deny = [
+    "unsafe_code",
+    "unused_imports",
+    "unused_features",
+    "clippy::unwrap_used",
+    "clippy::unwrap_in_result",
+    "clippy::get_unwrap",
+    "clippy::expect_used",
+    "clippy::option_env_unwrap",
+    "clippy::panic"
+]
