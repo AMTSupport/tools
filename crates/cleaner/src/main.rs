@@ -20,17 +20,15 @@
 use anyhow::Result;
 use cleaner::application::application;
 use cleaner::config::runtime::Runtime;
-use lib::helper::required_elevated_privileges;
-use lib::log;
+use lib::helper::require_elevated_privileges;
 use std::sync::LazyLock;
 
 static RUNTIME: LazyLock<Runtime> = LazyLock::new(|| Runtime::new().unwrap());
 
-#[tokio::main]
+#[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<()> {
-    let _ = log::init(env!["CARGO_PKG_NAME"], RUNTIME.cli.flags.verbose);
-    let _ = required_elevated_privileges().is_some_and(|code| code.exit());
-
+    let _guard = lib::log::init(env!("CARGO_PKG_NAME"), RUNTIME.cli.flags.verbose);
+    let _ = require_elevated_privileges().is_some_and(|code| code.exit());
     application(&RUNTIME).await?;
 
     Ok(())

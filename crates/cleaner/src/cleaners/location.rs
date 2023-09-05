@@ -22,7 +22,16 @@ use tracing::{debug, error, instrument, trace, warn};
 #[derive(Debug, Clone)]
 pub enum Location {
     Environment(String),
+
+    /// A globbing collection of paths.
+    ///
+    /// This can be used to specify a glob such as `C:\Users\*\AppData\Local\Temp\*`.
+    /// Or to specify a full path such as `/home/racci/.cache/`.
     Globbing(String),
+
+    /// A sub-location of another location.
+    ///
+    /// This can be used to specify a location which is determined from the contents of another location.
     Sub(&'static Location, String),
 }
 

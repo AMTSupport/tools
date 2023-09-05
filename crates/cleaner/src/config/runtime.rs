@@ -15,19 +15,15 @@
  */
 
 use super::cli::Cli;
-use anyhow::{Context, Error};
-use clap::Parser;
-use lib::anyhow::Result;
+use anyhow::Error;
+use anyhow::Result;
 use std::sync::RwLock;
-use tracing::dispatcher::DefaultGuard;
 use tracing::error;
-use tracing_subscriber::util::SubscriberInitExt;
 
 #[derive(Debug)]
 pub struct Runtime {
     pub cli: Cli,
     pub errors: RwLock<Vec<Error>>,
-    pub logger: DefaultGuard,
 }
 
 impl Runtime
@@ -35,16 +31,18 @@ where
     Self: Send + Sync + 'static,
 {
     pub fn new() -> Result<Self> {
-        let cli = Cli::try_parse().context("Failed to parse CLI arguments")?;
-        let errors = RwLock::new(Vec::new());
-        let logger = tracing_subscriber::fmt()
-            .with_max_level(tracing::Level::TRACE)
-            .without_time()
-            .pretty()
-            .finish()
-            .set_default();
+        use clap::{CommandFactory, Parser};
+        use std::process::exit;
 
-        Ok(Self { cli, errors, logger })
+        let cli = Cli::parse();
+        if let Some(complete) = cli.complete {
+            complete.complete(&mut Cli::command());
+            exit(0);
+        }
+
+        let errors = RwLock::new(Vec::new());
+
+        Ok(Self { cli, errors })
     }
 
     pub fn submit_error(&mut self, error: Error) {

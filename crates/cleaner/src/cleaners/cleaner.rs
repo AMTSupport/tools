@@ -17,16 +17,18 @@
 use crate::cleaners::location::Location;
 use crate::config::runtime::Runtime;
 use crate::rule::Rules;
-use macros::{CommonFields, Delegation, EnumVariants};
+use async_trait::async_trait;
+use clap::ValueEnum;
+use macros::{CommonFields, Delegation, EnumNames, EnumVariants};
 use rayon::prelude::*;
 use std::fmt::Debug;
 use std::io;
 use std::path::PathBuf;
-use clap::ValueEnum;
 use thiserror::Error;
+use tokio_stream::StreamExt;
 use tracing::{trace, warn};
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, EnumVariants, Delegation, ValueEnum)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Delegation, EnumVariants, ValueEnum, EnumNames)]
 #[delegate(trait = CleanerInternal)]
 pub enum Cleaner {
     #[delegate(path = crate::cleaners::impls::log::LogCleaner)]
@@ -51,10 +53,53 @@ pub enum Cleaner {
     // OldWindows,
 }
 
-pub trait CleanerInternal: Send + Sync + Debug + 'static {
+// #[automatically_derived]
+// impl Cleaner {
+//     #[automatically_derived]
+//     pub type Delegate = Box<( dyn CleanerInternal )>;
+// }
+// const _: () = {
+//     use std::sync::LazyLock   as _LazyLock;
+//     use std::ops::Deref   as _Deref;
+//     #[allow(non_upper_case_globals)]
+//     static Logs_INSTANCE: _LazyLock<Cleaner::Delegate> = _LazyLock::new(|| Box::new(crate::cleaners::impls::log::LogCleaner::new()));
+//     #[allow(non_upper_case_globals)]
+//     static Browsers_INSTANCE: _LazyLock<Cleaner::Delegate> = _LazyLock::new(|| Box::new(crate::cleaners::impls::browser::BrowserCleaner::new()));
+//     #[allow(non_upper_case_globals)]
+//     static Shaders_INSTANCE: _LazyLock<Cleaner::Delegate> = _LazyLock::new(|| Box::new(crate::cleaners::impls::shader::ShaderCleaner::new()));
+//     #[allow(non_upper_case_globals)]
+//     static Thumbnails_INSTANCE: _LazyLock<Cleaner::Delegate> = _LazyLock::new(|| Box::new(crate::cleaners::impls::thumbnail::ThumbnailCleaner::new()));
+//     #[allow(non_upper_case_globals)]
+//     static Temp_INSTANCE: _LazyLock<Cleaner::Delegate> = _LazyLock::new(|| Box::new(crate::cleaners::impls::temp::TempCleaner::new()));
+//     #[allow(non_upper_case_globals)]
+//     static Downloads_INSTANCE: _LazyLock<Cleaner::Delegate> = _LazyLock::new(|| Box::new(crate::cleaners::impls::downloads::DownloadsCleaner::new()));
+//     #[allow(non_upper_case_globals)]
+//     static Trash_INSTANCE: _LazyLock<Cleaner::Delegate> = _LazyLock::new(|| Box::new(crate::cleaners::impls::trash::TrashCleaner::new()));
+//     impl std::ops::Deref for Cleaner {
+//         type Target = Cleaner::Delegate;
+//         #[automatically_derived]
+//         fn deref(&self) -> &Self::Target {
+//             match self {
+//                 Cleaner::Logs => &*Logs_INSTANCE,
+//                 Cleaner::Browsers => &*Browsers_INSTANCE,
+//                 Cleaner::Shaders => &*Shaders_INSTANCE,
+//                 Cleaner::Thumbnails => &*Thumbnails_INSTANCE,
+//                 Cleaner::Temp => &*Temp_INSTANCE,
+//                 Cleaner::Downloads => &*Downloads_INSTANCE,
+//                 Cleaner::Trash => &*Trash_INSTANCE
+//             }
+//         }
+//     }
+// };
+
+#[async_trait]
+pub trait CleanerInternal: Debug + Send + Sync + 'static {
     fn new() -> Self
     where
-        Self: Sized;
+        Self: Sized + Default,
+    {
+        Self::default()
+    }
 
     fn rules(&self) -> Rules;
 
@@ -65,15 +110,69 @@ pub trait CleanerInternal: Send + Sync + Debug + 'static {
         true
     }
 
-    fn clean(&self, runtime: &'static Runtime) -> CleanupResult;
+    async fn clean(&self, runtime: &'static Runtime) -> CleanupResult;
 }
 
 #[derive(Debug, CommonFields)]
 pub enum CleanupResult {
-    Cleaned(Cleaner, Vec<CleanedFile>),
-    Partial(Cleaner, Vec<CleanedFile>, Vec<MissedFile>),
-    Skipped(Cleaner, String),
-    Failed(Cleaner, anyhow::Error),
+    Cleaned {
+        cleaner: Cleaner,
+        cleaned: Vec<CleanedFile>,
+    },
+    Partial {
+        cleaner: Cleaner,
+        cleaned: Vec<CleanedFile>,
+        missed: Vec<MissedFile>,
+    },
+    Skipped {
+        cleaner: Cleaner,
+        reason: SkipReason,
+    },
+    Failed {
+        cleaner: Cleaner,
+        source: anyhow::Error,
+    },
+}
+
+impl CleanupResult {
+    pub fn size(&self) -> u64 {
+        match self {
+            Self::Cleaned { cleaned, .. } => cleaned.iter().map(|f| f.size).sum(),
+            Self::Partial { cleaned, .. } => cleaned.iter().map(|f| f.size).sum(),
+            _ => 0,
+        }
+    }
+
+    pub fn cleaned_count(&self) -> u64 {
+        match self {
+            Self::Cleaned { cleaned, .. } => cleaned.len() as u64,
+            Self::Partial { cleaned, .. } => cleaned.len() as u64,
+            _ => 0,
+        }
+    }
+
+    pub fn missed_count(&self) -> u64 {
+        match self {
+            Self::Partial { missed, .. } => missed.len() as u64,
+            _ => 0,
+        }
+    }
+
+    pub fn missed_size(&self) -> u64 {
+        match self {
+            Self::Partial { missed, .. } => missed.iter().map(|f| f.field_1()).sum(),
+            _ => 0,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Error)]
+pub enum SkipReason {
+    #[error("the cleaner is not supported on this platform.")]
+    Unsupported,
+
+    #[error("there are no files that can be cleaned.")]
+    NoFiles,
 }
 
 impl CleanupResult {
@@ -83,12 +182,29 @@ impl CleanupResult {
         }
 
         match self {
-            Self::Cleaned(source, cleaned) => Self::Partial(source, cleaned, new_missed),
-            Self::Partial(source, cleaned, mut missed) => {
+            Self::Cleaned { cleaner, cleaned } => Self::Partial {
+                cleaner,
+                cleaned,
+                missed: new_missed,
+            },
+            Self::Partial {
+                cleaner,
+                cleaned,
+                mut missed,
+            } => {
                 missed.extend(new_missed);
-                Self::Partial(source, cleaned, missed)
+                Self::Partial {
+                    cleaner,
+                    cleaned,
+                    missed,
+                }
             }
-            _ => self,
+            Self::Skipped { cleaner, reason } if reason == SkipReason::NoFiles => Self::Partial {
+                cleaner,
+                cleaned: vec![],
+                missed: new_missed,
+            },
+            Self::Skipped { .. } | Self::Failed { .. } => self,
         }
     }
 
@@ -98,13 +214,21 @@ impl CleanupResult {
         }
 
         match self {
-            Self::Cleaned(source, mut cleaned) => {
+            Self::Cleaned { cleaner, mut cleaned } => {
                 cleaned.extend(passed);
-                Self::Cleaned(source, cleaned)
+                Self::Cleaned { cleaner, cleaned }
             }
-            Self::Partial(source, mut cleaned, missed) => {
+            Self::Partial {
+                cleaner,
+                mut cleaned,
+                missed,
+            } => {
                 cleaned.extend(passed);
-                Self::Partial(source, cleaned, missed)
+                Self::Partial {
+                    cleaner,
+                    cleaned,
+                    missed,
+                }
             }
             _ => self,
         }
@@ -144,45 +268,73 @@ pub(super) fn collect_locations(iter: Vec<Location>, rules: Rules) -> (Vec<PathB
     )
 }
 
-pub(super) fn clean_files(source: Cleaner, files: Vec<PathBuf>, runtime: &'static Runtime) -> CleanupResult {
+pub(super) async fn clean_files(cleaner: Cleaner, files: Vec<PathBuf>, runtime: &'static Runtime) -> CleanupResult {
     if files.is_empty() {
-        return CleanupResult::Skipped(source, "No files to clean".into());
+        return CleanupResult::Skipped {
+            cleaner,
+            reason: SkipReason::NoFiles,
+        };
     }
 
     let mut cleaned = vec![];
     let mut missed = vec![];
-    for file in files {
+    let mut result_stream = tokio_stream::iter(files).map(|file| {
         let metadata = match file.metadata() {
             Ok(m) => m,
             Err(e) => {
                 warn!("Failed to get metadata for file: {e}");
-                missed.push(MissedFile::Other(file, 0, e));
-                continue;
+                return Err(MissedFile::Other(file, 0, e));
             }
         };
 
         if runtime.cli.flags.dry_run {
-            cleaned.push(CleanedFile {
+            return Ok(CleanedFile {
                 path: file,
                 size: metadata.len(),
             });
-            continue;
         }
 
         match std::fs::remove_file(&file) {
-            Ok(_) => cleaned.push(CleanedFile {
+            Ok(_) => Ok(CleanedFile {
                 path: file,
                 size: metadata.len(),
             }),
-            Err(e) => {
-                warn!("Failed to remove file: {e}");
-                missed.push(MissedFile::Other(file, metadata.len(), e));
-            }
+            Err(e) => match e.kind() {
+                io::ErrorKind::ExecutableFileBusy => Err(MissedFile::InUse(file, metadata.len())),
+                io::ErrorKind::PermissionDenied => Err(MissedFile::Permission(file, metadata.len())),
+                _ => {
+                    warn!("Failed to remove file due to unknown error: {e}");
+                    Err(MissedFile::Other(file, metadata.len(), e))
+                }
+            },
+        }
+    });
+
+    while let Some(result) = result_stream.next().await {
+        match result {
+            Ok(cleaned_file) => cleaned.push(cleaned_file),
+            Err(missed_file) => missed.push(missed_file),
         }
     }
 
     match missed.is_empty() {
-        true => CleanupResult::Cleaned(source, cleaned),
-        false => CleanupResult::Partial(source, cleaned, missed),
+        true => CleanupResult::Cleaned { cleaner, cleaned },
+        false => CleanupResult::Partial {
+            cleaner,
+            cleaned,
+            missed,
+        },
     }
+}
+
+pub(super) async fn basic_files<C: CleanerInternal>(
+    relational: Cleaner,
+    cleaner: &C,
+    runtime: &'static Runtime,
+) -> CleanupResult {
+    let (passed, failed) = collect_locations(cleaner.locations(), cleaner.rules());
+    let passed_result = clean_files(relational, passed, &runtime).await;
+    let final_result = passed_result.extend_missed(failed);
+
+    final_result
 }

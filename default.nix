@@ -68,7 +68,7 @@ let
     doCheck = false;
 
     RUST_LOG = "info";
-    RUST_LOG_SPAN_EVENTS = "none";
+    RUST_LOG_SPAN_EVENTS = null;
   };
 
   developmentArgs = commonArgs // {

@@ -14,7 +14,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::cleaners::cleaner::{Cleaner, CleanerInternal, CleanupResult};
+use async_trait::async_trait;
+use crate::cleaners::cleaner::{basic_files, Cleaner, CleanerInternal, CleanupResult};
+use crate::cleaners::impls::USERS;
 use crate::cleaners::location::Location;
 use crate::config::runtime::Runtime;
 use crate::rule::Rules;
@@ -22,26 +24,23 @@ use crate::rule::Rules;
 #[derive(Default, Debug, Clone, Copy)]
 pub struct BrowserCleaner;
 
+// TODO: Support all profiles for browsers. (I only use firefox)
+#[async_trait]
 impl CleanerInternal for BrowserCleaner {
-    fn new() -> Self
-    where
-        Self: Sized,
-    {
-        Self::default()
-    }
-
     fn rules(&self) -> Rules {
         vec![]
     }
 
     #[cfg(unix)]
     fn locations(&self) -> Vec<Location> {
-        vec![]
+        vec![
+            Location::Sub(&USERS, format!(".cache/mozilla/firefox/*/cache2/*")),
+            Location::Sub(&USERS, format!(".cache/google-chrome/Default/Cache/*")),
+        ]
     }
 
     #[cfg(windows)]
     fn locations(&self) -> Vec<Location> {
-        use super::USERS;
         let prefix = "AppData/Local/";
 
         vec![
@@ -55,13 +54,7 @@ impl CleanerInternal for BrowserCleaner {
         ]
     }
 
-    fn clean(&self, runtime: &'static Runtime) -> CleanupResult {
-        use crate::cleaners::cleaner::{clean_files, collect_locations};
-
-        let (passed, failed) = collect_locations(self.locations(), self.rules());
-        let passed_result = clean_files(Cleaner::Browsers, passed, &runtime);
-        let final_result = passed_result.extend_missed(failed);
-
-        final_result
+    async fn clean(&self, runtime: &'static Runtime) -> CleanupResult {
+        basic_files(Cleaner::Browsers, self, runtime).await
     }
 }

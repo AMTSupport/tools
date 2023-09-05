@@ -12,18 +12,18 @@ inquire = { workspace = true }
 # Logging & Errors
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
-tracing-appender = "0.2.2"
-tracing-journald = "0.3.0"
-tracing-error = "0.2.0"
+tracing-appender = { version = "0.2.2" }
 thiserror = { workspace = true }
 anyhow = { workspace = true }
 
 exitcode = "1.1.2"
-sysexits = "0.6.0"
+sysexits = "0.7.1"
 cfg-if = "1.0"
 
 [target.'cfg(unix)'.dependencies]
-nix = { version = "0.26.2" }
+tracing-journald = "0.3.0"
+rustix = { version = "0.38.11", features = ["process"] }
 
 [target.'cfg(windows)'.dependencies]
 is_elevated = "0.1.2"
+winres = "0.1.12"

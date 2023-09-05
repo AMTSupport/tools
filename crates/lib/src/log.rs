@@ -14,40 +14,40 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use tracing::dispatcher::DefaultGuard;
-use tracing::level_filters::LevelFilter;
+use std::env;
+use std::io::stdout;
+use tracing::{subscriber, Level};
+use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::fmt::format::FmtSpan;
-use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::fmt::writer::MakeWriterExt;
+use tracing_subscriber::fmt::Layer;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::Registry;
 
-pub fn init(_named: &str, verbosity: u8) -> DefaultGuard {
+#[inline]
+pub fn init(named: &str, verbosity: u8) -> WorkerGuard {
     let (level, span) = match verbosity {
-        0 => (LevelFilter::INFO, FmtSpan::NONE),
-        1 => (LevelFilter::DEBUG, FmtSpan::NONE),
-        2 => (LevelFilter::TRACE, FmtSpan::NONE),
-        _ => (LevelFilter::TRACE, FmtSpan::FULL),
+        0 => (Level::INFO, FmtSpan::NONE),
+        1 => (Level::DEBUG, FmtSpan::NONE),
+        2 => (Level::TRACE, FmtSpan::NONE),
+        3 => (Level::TRACE, FmtSpan::ACTIVE),
+        _ => (Level::TRACE, FmtSpan::FULL),
     };
 
-    tracing_subscriber::fmt()
-        .without_time()
-        .with_thread_names(verbosity > 2)
-        .with_thread_ids(verbosity > 2)
-        .with_level(verbosity > 0)
-        .with_line_number(verbosity > 0)
-        .with_max_level(level)
-        .with_span_events(span.clone())
-        .with_target(true)
-        .finish()
-        .init();
+    let file_appender = tracing_appender::rolling::daily(env::temp_dir().join("logs"), named);
+    let (file_writer, guard) = tracing_appender::non_blocking(file_appender);
 
-    tracing_subscriber::fmt()
-        .without_time()
-        .with_thread_names(verbosity > 2)
-        .with_thread_ids(verbosity > 2)
-        .with_level(verbosity > 0)
-        .with_line_number(verbosity > 0)
-        .with_max_level(level)
-        .with_span_events(span)
-        .with_target(true)
-        .finish()
-        .set_default()
+    let registry = Registry::default().with(Layer::default().with_writer(file_writer)).with(
+        Layer::default()
+            .without_time()
+            .with_span_events(span)
+            .with_writer(stdout.with_max_level(level))
+            .with_target(verbosity > 0)
+            .with_line_number(verbosity > 1)
+            .with_thread_names(verbosity > 2)
+            .with_thread_ids(verbosity > 2),
+    );
+    subscriber::set_global_default(registry).expect("Failed to set global default");
+
+    guard
 }

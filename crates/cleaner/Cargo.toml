@@ -12,9 +12,11 @@ macros = { path = "../macros" }
 
 # Runtimes
 tokio = { workspace = true }
+tokio-stream = { workspace = true }
 
 # Cli & UI
 clap = { workspace = true }
+clap_complete = { workspace = true }
 indicatif = { workspace = true }
 inquire = { workspace = true }
 
@@ -23,9 +25,10 @@ chrono = { version = "0.4.24" }
 glob = "0.3.1"
 rayon = "1.7"
 michie = "3.0.2"
-async-trait = "0.1.71"
 lazy_static = "1.4.0"
 downcast-rs = "1.2.0"
+async-trait = "0.1.73"
+paste = "1.0.14"
 
 # Logging & Errors
 tracing = { workspace = true }
@@ -35,3 +38,12 @@ anyhow = { workspace = true }
 
 [target.'cfg(unix)'.dependencies]
 permissions = "0.4.1"
+
+[dev-dependencies]
+# Logging & Errors
+env_logger = "*"
+test-log = { version = "0.2.12", features = ["trace"] }
+tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "fmt"] }
+
+# Fs & IO
+assert_fs = "1.0.13"

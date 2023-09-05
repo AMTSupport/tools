@@ -19,11 +19,11 @@ use cfg_if::cfg_if;
 use std::sync::LazyLock;
 
 pub mod browser;
+pub mod downloads;
 pub mod log;
 pub mod shader;
-pub mod thumbnail;
 pub mod temp;
-pub mod downloads;
+pub mod thumbnail;
 pub mod trash;
 
 cfg_if! {
@@ -37,8 +37,8 @@ cfg_if! {
         pub static WINDIR: LazyLock<PathBuf> = LazyLock::new(|| env_dir("windir".into()).expect("This is always set on Windows"));
         pub static USERS: LazyLock<Location> = LazyLock::new(|| {
             let mut path = env_dir("SystemDrive".to_owned()).unwrap();
-            path.push("Users");
-            path.push("*\\");
+            path.push("\\Users");
+            path.push("*");
             Location::Globbing(path.to_string_lossy().to_string())
         });
     } else {

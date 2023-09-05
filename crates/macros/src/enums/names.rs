@@ -32,6 +32,8 @@ pub fn names(input: DeriveInput) -> TokenStream {
     quote! {
         #[automatically_derived]
         impl #name {
+            pub const NAMES: &'static [&'static str] = &[#(stringify!(#variant_names)),*];
+
             #[automatically_derived]
             pub const fn name(&self) -> &'static str {
                 match self {
@@ -49,15 +51,14 @@ pub fn names(input: DeriveInput) -> TokenStream {
         }
 
         #[automatically_derived]
-        impl TryFrom<&str> for #name {
-            #[automatically_derived]
-            type Error = anyhow::Error;
+        impl std::str::FromStr for #name {
+            type Err = anyhow::Error;
 
             #[automatically_derived]
-            fn try_from(name: &str) -> Result<Self, Self::Error> {
-                match name.to_lowercase().as_str() {
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                match s.to_lowercase().as_str() {
                     #(#lowercase_names => Ok(#name::#variant_names)),*,
-                    _ => Err(anyhow::anyhow!("Unknown variant name: {}", name)),
+                    _ => Err(anyhow::anyhow!("Unknown variant name: {}", s)),
                 }
             }
         }

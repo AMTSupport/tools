@@ -65,7 +65,7 @@ pub fn normalise_path(path: PathBuf) -> PathBuf {
 
     // Fast line for empty path.
     if path.is_empty() {
-        return SYSTEM_DRIVE.clone()
+        return SYSTEM_DRIVE.clone();
     }
 
     let path = path.replace(OTHER_PATH_SEPARATOR, PATH_SEPARATOR.to_string().as_str());
@@ -80,12 +80,7 @@ pub fn normalise_path(path: PathBuf) -> PathBuf {
         let drive = p.next().expect("Get drive root");
         let p = p.map(|v| v.replace(':', "_")).collect::<Vec<String>>().join(PATH_SEPARATOR.to_string().as_str());
 
-        format!(
-            "{drive}{sep}{path}",
-            drive = drive.to_string(),
-            sep = PATH_SEPARATOR,
-            path = p
-        )
+        format!("{drive}{PATH_SEPARATOR}{p}",)
     } else {
         let p = p.collect::<Vec<&str>>().join(PATH_SEPARATOR.to_string().as_str());
         format!("/{p}")

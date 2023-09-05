@@ -16,20 +16,32 @@
 
 use crate::cleaners::cleaner::Cleaner;
 use clap::Parser;
+use clap_complete::dynamic::shells::CompleteCommand;
 use lib::cli::Flags;
-use macros::runtime_cli;
 
 #[derive(Parser, Debug)]
 #[command(name = env!["CARGO_PKG_NAME"], version, author, about)]
-#[runtime_cli]
 pub struct Cli {
-    // Allows a user to interact with the application.
-    #[arg(short, long)]
-    pub interactive: bool,
-
-    #[arg(short, long, default_value = "Cleaner::get_variants()")]
-    pub cleaners: Vec<Cleaner>,
-
     #[command(flatten)]
     pub flags: Flags,
+
+    #[command(subcommand)]
+    pub complete: Option<CompleteCommand>,
+
+    #[arg(
+        ignore_case = true,
+        default_values_t = Cleaner::get_variants(),
+        last = true
+    )]
+    pub cleaners: Vec<Cleaner>,
+}
+
+impl Default for Cli {
+    fn default() -> Self {
+        Self {
+            cleaners: Cleaner::get_variants(),
+            flags: Flags::default(),
+            complete: None,
+        }
+    }
 }

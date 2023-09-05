@@ -29,5 +29,3 @@ pub mod pathed;
 pub mod progress;
 pub mod runtime;
 
-#[cfg(unix)]
-pub use nix;

@@ -25,7 +25,7 @@ pub fn elevated_privileges() -> bool {
          if #[cfg(windows)] {
             is_elevated::is_elevated()
         } else if #[cfg(unix)] {
-            nix::unistd::geteuid().is_root()
+            rustix::process::getegid().is_root()
         } else {
             warn!("Unsupported platform, assuming not elevated");
             false
@@ -33,7 +33,7 @@ pub fn elevated_privileges() -> bool {
     }
 }
 
-pub fn required_elevated_privileges() -> Option<ExitCode> {
+pub fn require_elevated_privileges() -> Option<ExitCode> {
     let code = elevated_privileges();
 
     if !code {

@@ -14,8 +14,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::cleaners::cleaner::Cleaner::Logs;
-use crate::cleaners::cleaner::{CleanerInternal, CleanupResult};
+use async_trait::async_trait;
+use crate::cleaners::cleaner::{basic_files, Cleaner, CleanerInternal, CleanupResult};
 use crate::cleaners::location::Location;
 use crate::config::runtime::Runtime;
 use crate::rule::{age::Since, Rule, Rules};
@@ -24,14 +24,8 @@ use chrono::Duration;
 #[derive(Default, Debug, Clone, Copy)]
 pub struct LogCleaner;
 
+#[async_trait]
 impl CleanerInternal for LogCleaner {
-    fn new() -> Self
-    where
-        Self: Sized,
-    {
-        Self::default()
-    }
-
     /// Clean logs older than 14 days;
     /// We don't want to clean logs immediately, as they may be useful for debugging.
     fn rules(&self) -> Rules {
@@ -57,13 +51,7 @@ impl CleanerInternal for LogCleaner {
         ]
     }
 
-    fn clean(&self, runtime: &'static Runtime) -> CleanupResult {
-        use crate::cleaners::cleaner::{clean_files, collect_locations};
-
-        let (passed, failed) = collect_locations(self.locations(), self.rules());
-        let passed_result = clean_files(Logs, passed, &runtime);
-        let final_result = passed_result.extend_missed(failed);
-
-        final_result
+    async fn clean(&self, runtime: &'static Runtime) -> CleanupResult {
+        basic_files(Cleaner::Logs, self, runtime).await
     }
 }

@@ -233,8 +233,8 @@ pub fn delegate_trait(input: TokenStream) -> TokenStream {
 
             let path = meta.value()?.parse::<Path>()?;
             let const_ident = Ident::new(&format!("{}_INSTANCE", ident), ident.span());
-            let r#const = quote! { #[allow(non_upper_case_globals)] const #const_ident: LazyLock<Box<dyn #delegate_type>> = LazyLock::new(|| Box::new(#path::new())); };
-            let arm = quote! { #enum_name::#ident => #enum_name::#const_ident };
+            let r#const = quote! { #[allow(non_upper_case_globals)] static #const_ident: _LazyLock<#enum_name::Delegate> = _LazyLock::new(|| Box::new(#path::new())); };
+            let arm = quote! { #enum_name::#ident => &*#const_ident };
             consts.push(r#const);
             delegation_arms.push(arm);
             Ok(())
@@ -248,21 +248,30 @@ pub fn delegate_trait(input: TokenStream) -> TokenStream {
     // Generate the output code
     let expanded = quote! {
         #[automatically_derived]
-        use std::collections::HashMap;
-        #[automatically_derived]
-        use std::sync::LazyLock;
-        #[automatically_derived]
-        use std::ops::Deref;
-        #[automatically_derived]
         impl #enum_name {
+            #[automatically_derived]
+            pub type Delegate = Box<(dyn #delegate_type)>;
+        }
+
+        const _: () = {
+            use std::sync::LazyLock as _LazyLock;
+            use std::ops::Deref as _Deref;
+
             #(#consts)*
 
-            pub fn delegate(&self) -> LazyLock<Box<dyn #delegate_type>, fn() -> Box<dyn #delegate_type>> {
-                match self {
-                    #(#delegation_arms),*
+            #[automatically_derived]
+            impl std::ops::Deref for #enum_name {
+                type Target = #enum_name::Delegate;
+
+                #[automatically_derived]
+                fn deref(&self) -> &Self::Target {
+                    match self {
+                        #(#delegation_arms),*
+                    }
                 }
             }
-        }
+        };
+
     };
 
     // Return the generated code as a TokenStream

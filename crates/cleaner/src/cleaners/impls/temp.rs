@@ -14,9 +14,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use lib::fs::SYSTEM_DRIVE;
-use crate::cleaners::cleaner::Cleaner::Temp;
-use crate::cleaners::cleaner::{CleanerInternal, CleanupResult};
+use async_trait::async_trait;
+use crate::cleaners::cleaner::{basic_files, Cleaner, CleanerInternal, CleanupResult};
 use crate::cleaners::location::Location;
 use crate::config::runtime::Runtime;
 use crate::rule::Rules;
@@ -24,15 +23,8 @@ use crate::rule::Rules;
 #[derive(Default, Debug, Clone, Copy)]
 pub struct TempCleaner;
 
-// TODO - Browser Shader Cache
+#[async_trait]
 impl CleanerInternal for TempCleaner {
-    fn new() -> Self
-    where
-        Self: Sized,
-    {
-        Self::default()
-    }
-
     fn rules(&self) -> Rules {
         vec![]
     }
@@ -50,17 +42,10 @@ impl CleanerInternal for TempCleaner {
         vec![
             Location::Sub(&USERS, format!("{prefix}Temp/*")),
             Location::Globbing(WINDIR.join("Temp/*").to_string_lossy().into()),
-            Location::Globbing(SYSTEM_DRIVE.join("/[Tt]e?mp/*").to_string_lossy().into()),
         ]
     }
 
-    fn clean(&self, runtime: &'static Runtime) -> CleanupResult {
-        use crate::cleaners::cleaner::{clean_files, collect_locations};
-
-        let (passed, failed) = collect_locations(self.locations(), self.rules());
-        let passed_result = clean_files(Temp, passed, &runtime);
-        let final_result = passed_result.extend_missed(failed);
-
-        final_result
+    async fn clean(&self, runtime: &'static Runtime) -> CleanupResult {
+        basic_files(Cleaner::Temp, self, runtime).await
     }
 }
