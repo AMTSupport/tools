@@ -47,7 +47,7 @@ pub fn init(named: &str, verbosity: u8) -> WorkerGuard {
             .with_thread_names(verbosity > 2)
             .with_thread_ids(verbosity > 2),
     );
-    subscriber::set_global_default(registry).expect("Failed to set global default");
+    subscriber::set_global_default(registry).expect("Failed to set global default subscriber");
 
     guard
 }

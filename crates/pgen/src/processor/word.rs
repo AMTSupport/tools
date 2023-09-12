@@ -14,20 +14,29 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#![feature(lazy_cell)]
-#![feature(const_for)]
-#![feature(const_option)]
-#![feature(async_fn_in_trait)]
-#![feature(result_option_inspect)]
-#![feature(associated_type_defaults)]
+use crate::rules::action::Action;
+use std::collections::BTreeSet;
+use std::fmt::Display;
 
-pub mod cli;
-pub mod fs;
-pub mod helper;
-pub mod log;
-pub mod pathed;
-pub mod runtime;
+#[derive(Debug)]
+pub struct Word<'a> {
+    pub index: usize,
+    pub word: &'a str,
+    pub actions: BTreeSet<Action>,
+}
 
-#[cfg(any(feature = "ui-gui", feature = "ui-tui", feature = "ui-cli"))]
-pub mod ui;
+impl<'a> Word<'a> {
+    pub fn new(index: usize, word: &'a str) -> Self {
+        Self {
+            index,
+            word,
+            actions: BTreeSet::new(),
+        }
+    }
+}
 
+impl Display for Word<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}@{} w/ {:#?}", self.index, self.word, self.actions)
+    }
+}

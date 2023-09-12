@@ -47,42 +47,6 @@ pub mod cdata {
             })
         }
     }
-
-    // impl<T: FromStr> Deref for CData<T> {
-    //     type Target = T;
-    //
-    //     fn deref(&self) -> &Self::Target {
-    //         &self.get().unwrap()
-    //     }
-    // }
-
-    // impl<T: FromStr> DerefMut for CData<T> {
-    //     fn deref_mut(&mut self) -> &mut Self::Target {
-    //         &mut self.get().unwrap()
-    //     }
-    // }
-
-    // mod __serde {
-    //     use std::any::type_name_of_val;
-    //     use serde::{Deserializer, Serializer};
-    //     use super::*;
-    //
-    //     fn serialize<T: FromStr + Serialize, S: Serializer>(value: &CData<T>, serializer: S) -> Result<S::Ok, S::Error> {
-    //         value.value.serialize(serializer)
-    //     }
-    //
-    //     fn deserialize<T: FromStr, D: Deserializer<'_>>(deserializer: D) -> Result<CData<T>, D::Error> {
-    //         let value = String::deserialize(deserializer)?;
-    //         let value = value.trim().parse().map_err(|_| {
-    //             serde::de::Error::custom(format!(
-    //                 "Unable to parse the string [{}] into type [{}]",
-    //                 value,
-    //                 type_name_of_val(&value),
-    //             ))
-    //         })?;
-    //         Ok(CData { value })
-    //     }
-    // }
 }
 
 pub mod xml {

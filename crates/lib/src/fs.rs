@@ -46,7 +46,7 @@ cfg_if! {
     } else if #[cfg(unix)] {
         pub const PATH_SEPARATOR: char = '/';
         pub const OTHER_PATH_SEPARATOR: char = '\\';
-        pub const SYSTEM_DRIVE: LazyLock<PathBuf> = LazyLock::new(|| PathBuf::from(PATH_SEPARATOR.to_string()));
+        pub static SYSTEM_DRIVE: LazyLock<PathBuf> = LazyLock::new(|| PathBuf::from(PATH_SEPARATOR.to_string()));
     }
 }
 

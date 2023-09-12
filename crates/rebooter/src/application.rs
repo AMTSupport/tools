@@ -39,7 +39,7 @@ pub struct Cli {
 
 #[instrument(ret, err)]
 pub async fn run(runtime: Runtime) -> Result<ExitCode> {
-    if let Some(code) = lib::helper::required_elevated_privileges() {
+    if let Some(code) = lib::helper::require_elevated_privileges() {
         return Err(Error::PrivilegeError(code).into());
     }
 

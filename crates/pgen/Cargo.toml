@@ -10,17 +10,35 @@ keywords = ["generator", "password"]
 description = "A password generator written in Rust"
 
 [dependencies]
-tokio = { version = "1.28.1", features = ["rt", "macros", "sync"]}
 lib = { path = "../lib" }
-async-trait = "0.1.68"
-clap = { version = "4.2.7", features = ["derive", "cargo"] }
-simplelog = { version = "0.12.1", features = ["paris"] }
-serde = { version = "1.0.163", features = ["derive"] }
-anyhow = "1.0.71"
-serde_json = "1.0.59"
-rand = "0.8.5"
-rust-embed="6.4.0"
-strum = "0.24.0"
-strum_macros = "0.24"
-dirs = "5.0.1"
-toml = "0.7.4"
+macros = { path = "../macros" }
+
+# Runtimes
+tokio = { workspace = true }
+#tokio-stream = { workspace = true }
+
+# Cli & UI
+clap = { workspace = true }
+#clap_complete = { workspace = true }
+
+# Data
+rand = { workspace = true, small_rng = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+rust-embed = { workspace = true }
+
+# Logging & Errors
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+#thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+derivative = { version = "2.2.0", features = [] }
+
+[dev-dependencies]
+# Logging & Errors
+env_logger = "*"
+test-log = { version = "0.2.12", features = ["trace"] }
+tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "fmt"] }
+
+regex = "1.9.5"

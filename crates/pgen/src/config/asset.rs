@@ -16,9 +16,9 @@
 
 use anyhow::Context;
 use rust_embed::RustEmbed;
-use simplelog::{debug, error, info};
 use std::collections::HashMap;
 use std::sync::LazyLock;
+use tracing::{debug, error, info};
 
 pub(crate) static WORDS: LazyLock<HashMap<usize, Vec<String>>> = LazyLock::new(get_words);
 
@@ -29,11 +29,13 @@ pub struct Asset;
 fn get_words() -> HashMap<usize, Vec<String>> {
     let start = std::time::Instant::now();
 
-    let asset_file = Asset::get("words.json").context("Find words.json asset file.").expect("Failed to find words.json asset file.");
-    let words_vec = serde_json::from_slice::<Vec<Vec<String>>>(&asset_file.data)
-        .context("Parse words.json asset into Vec");
+    let asset_file =
+        Asset::get("words.json").context("Find words.json asset file.").expect("Failed to find words.json asset file.");
+    let words_vec =
+        serde_json::from_slice::<Vec<Vec<String>>>(&asset_file.data).context("Parse words.json asset into Vec");
     let words_map = serde_json::from_slice::<HashMap<usize, Vec<String>>>(&asset_file.data)
-        .context("Parse words.json asset into Map").expect("Failed to parse words.json asset into Map");
+        .context("Parse words.json asset into Map")
+        .expect("Failed to parse words.json asset into Map");
 
     match words_vec {
         Ok(_) => info!("Parsed as Vec<Vec<String>>"),

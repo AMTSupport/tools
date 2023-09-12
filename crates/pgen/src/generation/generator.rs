@@ -14,14 +14,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::config::separator::CHARS;
-use crate::config::transformation::Transformation;
-use crate::{config::asset::WORDS, config::rules::Rules, config::separator::SeparatorMode};
 use anyhow::Result;
-use async_trait::async_trait;
-use rand::{rngs::StdRng, Rng, SeedableRng, thread_rng};
-use simplelog::{debug, trace};
-use std::sync::Arc;
+use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
+use tracing::{debug, trace};
 
 pub struct Generator {
     pub rules: Rules,
@@ -33,14 +28,13 @@ pub struct Insertion {
     pub value: String,
 }
 
-#[async_trait]
 pub trait GeneratorFunctions: Sized {
     fn new(rules: Rules) -> Result<Self>;
 
     async fn generate<'r>(&mut self) -> Result<Vec<String>>;
 
-    async fn get_words(
-        seed: &mut StdRng,
+    async fn get_words<R: RngCore>(
+        seed: &mut R,
         word_count: &usize,
         word_length_min: &usize,
         word_length_max: &usize,
@@ -52,7 +46,6 @@ pub trait GeneratorFunctions: Sized {
     async fn get_chars(&self, amount: &usize) -> Vec<char>;
 }
 
-#[async_trait]
 impl GeneratorFunctions for Generator {
     fn new(rules: Rules) -> Result<Self> {
         trace!("Initialising generator state");
@@ -87,11 +80,12 @@ impl GeneratorFunctions for Generator {
             // let password = Arc::new(tokio::sync::RwLock::new(String::with_capacity(
             //     max_length.clone(),
             // )));
+            let mut seed = seed.clone();
             let mut handles = Vec::with_capacity(4);
 
             handles.push(tokio::spawn(async move {
                 let words = Generator::get_words(
-                    &mut thread_rng(),
+                    &mut seed,
                     &rules.word_count,
                     &rules.word_length_min,
                     &rules.word_length_max,
@@ -99,8 +93,7 @@ impl GeneratorFunctions for Generator {
                 )
                 .await;
 
-                let mut for_separator =
-                    Vec::with_capacity(separator_count(&rules.word_count, &rules.separator_mode));
+                let mut for_separator = Vec::with_capacity(separator_count(&rules.word_count, &rules.separator_mode));
                 let mut last_index = 0;
                 let mut insertions = vec![];
                 for (index, word) in words.iter().enumerate() {
@@ -206,8 +199,8 @@ impl GeneratorFunctions for Generator {
         Ok(outputs)
     }
 
-    async fn get_words(
-        seed: &mut StdRng,
+    async fn get_words<R: RngCore>(
+        seed: &mut R,
         word_count: &usize,
         word_length_min: &usize,
         word_length_max: &usize,
@@ -227,10 +220,7 @@ impl GeneratorFunctions for Generator {
                 count = possible_words.len()
             );
 
-            let word = possible_words
-                .get(seed.gen_range(0..possible_words.len()))
-                .unwrap()
-                .clone();
+            let word = possible_words.get(seed.gen_range(0..possible_words.len())).unwrap().clone();
             trace!("Selected word: {word}");
 
             let word = transformation.transform(word);
