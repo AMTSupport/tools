@@ -40,7 +40,7 @@ pub async fn main() -> Result<()> {
     use lib::log;
 
     let cli = AppCli::parse();
-    let _ = log::init("backup-interactive", cli.flags.verbose);
+    let _guard = log::init("backup-interactive", cli.flags.verbose);
     rayon::ThreadPoolBuilder::new().num_threads(22).build_global().unwrap();
 
     let mut ui = CliUI::new(cli.action, cli.destination.as_ref().map(|pb| pb.as_path()))?;
