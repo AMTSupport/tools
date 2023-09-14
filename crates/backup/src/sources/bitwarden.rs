@@ -20,7 +20,6 @@ use crate::sources::downloader::Downloader;
 use crate::sources::exporter::Exporter;
 use crate::sources::getter::CliGetter;
 use anyhow::{Result, anyhow, Context};
-use async_trait::async_trait;
 use const_format::formatcp;
 use indicatif::{MultiProgress, ProgressBar};
 use lib::fs::normalise_path;
@@ -98,7 +97,6 @@ impl Prune for BitWardenCore {
     }
 }
 
-#[async_trait]
 impl Exporter for BitWardenCore {
     async fn export(
         &mut self,
@@ -169,7 +167,7 @@ impl Display for Organisation {
 #[cfg(feature = "ui-cli")]
 pub(crate) async fn interactive(config: &Runtime) -> Result<Vec<Backend>> {
     use inquire::{Password, Text};
-    use lib::inquire::inquire_style;
+    use lib::ui::cli::ui_inquire::inquire_style;
 
     let username = Text::new("BitWarden Username")
         .with_render_config(inquire_style())

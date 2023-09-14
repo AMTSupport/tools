@@ -14,7 +14,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use std::process::ExitCode;
 use iced::alignment::Vertical;
 use iced::theme::Palette;
 use iced::widget::{column, text, Column, Container};
@@ -22,6 +21,7 @@ use iced::window::Position;
 use iced::window::{Action, Mode};
 use iced::{alignment::Horizontal, executor, widget, window, Application, Color, Command, Element, Settings};
 use iced_aw::native::modal;
+use std::process::ExitCode;
 use tracing::trace;
 
 #[derive(Default)]
@@ -154,19 +154,19 @@ impl Application for Informer {
 
         use iced_aw::{modal, Card};
 
-        modal::Modal::new(true, Container::new(content).into(), || {
-            Card::new(
-                widget::Text::new("My Modal").into(),
-                widget::Text::new("This is a modal!").into(),
-            )
-            .foot(footer.into())
-            .max_width(300.0)
-            .on_close(Message::Exit("Modal closed".into()))
+        let overlay = Card::new(
+            widget::Text::new("My Modal").into(),
+            widget::Text::new("This is a modal!").into(),
+        )
+        .foot(footer.into())
+        .max_width(300.0)
+        .on_close(Message::Exit("Modal closed".into()))
+        .into();
+
+        modal::Modal::new(Container::new(content).into(), overlay)
+            .backdrop(Message::Event("Backdrop clicked".into()))
+            .on_esc(Message::Event("Esc pressed".into()))
             .into()
-        })
-        .backdrop(Message::Event("Backdrop clicked".into()))
-        .on_esc(Message::Event("Esc pressed".into()))
-        .into()
 
         // container(content)
         //     .width(Length::FillPortion(30))

@@ -13,9 +13,9 @@ path = "src/lib.rs"
 [features]
 default = ["ui-tui"]
 
-ui-tui = ["ratatui", "crossterm"]
-ui-cli = ["indicatif", "inquire"]
-ui-gui = ["iced", "iced_aw"]
+ui-tui = ["lib/ui-tui", "ratatui", "crossterm"]
+ui-cli = ["lib/ui-cli", "indicatif", "inquire"]
+ui-gui = ["lib/ui-gui", "iced", "iced_aw"]
 
 [dependencies]
 lib = { path = "../lib" }

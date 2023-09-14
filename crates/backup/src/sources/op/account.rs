@@ -20,7 +20,6 @@ use crate::sources::getter::{CliGetter, CommandFiller};
 use crate::sources::interactive::Interactive;
 use crate::sources::op::cli;
 use crate::sources::op::core::OnePasswordCore;
-use async_trait::async_trait;
 use futures_util::TryFutureExt;
 use anyhow::{anyhow, Context, Result};
 use lib::pathed::Pathed;
@@ -30,7 +29,7 @@ use std::fmt::{Debug, Display, Formatter};
 use std::process::Command;
 use thiserror::Error;
 use tracing::{trace, warn};
-use lib::inquire::inquire_style;
+use lib::ui::cli::ui_inquire::inquire_style;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Attrs {
@@ -116,7 +115,6 @@ impl CommandFiller for OnePasswordAccount {
     }
 }
 
-#[async_trait]
 impl Interactive<OnePasswordAccount> for OnePasswordAccount {
     async fn interactive(config: &Runtime) -> Result<OnePasswordAccount> {
         use inquire::{list_option::ListOption, validator::Validation, MultiSelect, Select, Text};

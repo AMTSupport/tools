@@ -35,11 +35,12 @@ indicatif = { version = "0.17.6", features = ["improved_unicode", "in_memory"] }
 inquire = { git = "https://github.com/anwarhahjjeffersongeorge/inquire-filepath/", branch = "filepath-select" }
 
 # GUI
-iced = { git = "https://github.com/iced-rs/iced.git", branch = "master", features = ["tokio"] }
-iced_aw = { version = "^0.6.0", features = ["modal", "card"] }
+iced = { version = "0.10.0", features = ["tokio"] }
+iced_aw = { version = "^0.7.0", features = ["modal", "card"] }
+iced_runtime = { version = "0.1.1" }
 
 # TUI
-ratatui = { version = "0.22.0" }
+ratatui = { version = "0.23.0" }
 
 # Data / Serialization
 serde = { version = "^1.0.183", features = ["derive"] }

@@ -23,7 +23,6 @@ use crate::sources::exporter::Exporter;
 use crate::sources::op::account::OnePasswordAccount;
 use crate::sources::op::one_pux;
 use anyhow::{anyhow, Context, Result};
-use async_trait::async_trait;
 use const_format::formatcp;
 use indicatif::{MultiProgress, ProgressBar};
 use lib::fs::normalise_path;
@@ -82,7 +81,6 @@ impl Downloader for OnePasswordCore {
     }
 }
 
-#[async_trait]
 impl Exporter for OnePasswordCore {
     // TODO :: Export of extra stuff like logos in the zip
     // TODO :: I'm unsure if that's even possible though.

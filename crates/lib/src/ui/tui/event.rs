@@ -82,7 +82,7 @@ pub trait EventHandler {
     /// This function will always block the current thread if
     /// there is no data available and it's possible for more data to be sent.
     fn next(&self) -> Result<Event> {
-        Ok(self.receiver.recv()?)
+        Ok(self.receiver().recv()?)
     }
 
     fn sender(&self) -> &mpsc::Sender<Event>;

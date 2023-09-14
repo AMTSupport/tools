@@ -14,20 +14,20 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+use crate::builder;
 use crate::config::backend::Backend;
 use crate::config::runtime::Runtime;
 use crate::sources::auto_prune::Prune;
 use crate::sources::download_to;
 use crate::sources::exporter::Exporter;
 use anyhow::{Context, Result};
-use async_trait::async_trait;
 use futures::{Stream, TryStreamExt};
 use futures_util::StreamExt;
 use indicatif::{MultiProgress, ProgressBar};
 use inquire::validator::Validation;
 use lib::fs::normalise_path;
 use lib::pathed::Pathed;
-use lib::progress::{download, spinner};
+use lib::ui::cli::progress::{download, spinner};
 use opendal::layers::LoggingLayer;
 use opendal::services::S3;
 use opendal::{Builder, Operator, OperatorBuilder};
@@ -36,7 +36,6 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
 use tracing::{debug, error, info, trace};
-use crate::builder;
 
 // #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 // pub struct S3Base {
@@ -100,7 +99,6 @@ impl S3Core {
     }
 }
 
-#[async_trait]
 impl Prune for S3Core {
     fn files(&self, config: &Runtime) -> Result<Vec<PathBuf>> {
         use std::path::MAIN_SEPARATOR;
@@ -123,7 +121,6 @@ impl Pathed<Runtime> for S3Core {
     }
 }
 
-#[async_trait]
 impl Exporter for S3Core {
     // TODO :: Validate files
     async fn export(&mut self, runtime: &Runtime, main_bar: &ProgressBar, progress_bar: &MultiProgress) -> Result<()> {

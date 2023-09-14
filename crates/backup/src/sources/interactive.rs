@@ -15,10 +15,8 @@
  */
 
 use crate::config::runtime::Runtime;
-use async_trait::async_trait;
 use anyhow::Result;
 
-#[async_trait]
 pub trait Interactive<T> {
     /// Creates a new async function which will prompt the user for the required information to create the exporter;
     async fn interactive(config: &Runtime) -> Result<T>;

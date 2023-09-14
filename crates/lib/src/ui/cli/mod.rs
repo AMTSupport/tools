@@ -20,6 +20,9 @@ use tracing::{trace, warn};
 
 pub(crate) mod action;
 pub mod cli;
+pub mod progress;
+#[path = "inquire.rs"]
+pub mod ui_inquire;
 
 pub fn continue_loop<I>(vec: &Vec<I>, prompt_type: &str) -> bool {
     if vec.is_empty() {
@@ -34,10 +37,7 @@ pub fn continue_loop<I>(vec: &Vec<I>, prompt_type: &str) -> bool {
     match should_continue {
         Ok(should_continue) => should_continue,
         Err(err) => {
-            warn!(
-                "Failed to get confirmation for additional {}: {}",
-                prompt_type, err
-            );
+            warn!("Failed to get confirmation for additional {}: {}", prompt_type, err);
             false
         }
     }

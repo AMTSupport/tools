@@ -16,7 +16,6 @@
 
 use crate::config::runtime::Runtime;
 use crate::sources::downloader::Downloader;
-use async_trait::async_trait;
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
 use thiserror::Error;
@@ -46,7 +45,6 @@ pub(super) trait CommandFiller: Debug + Send + Sync + 'static {
 /// * `B` - The downloader to use.
 /// * `T` - The type to parse the json response into.
 /// * `A` - The type for the const args.
-#[async_trait]
 pub(super) trait CliGetter<B, T, A>
 where
     B: Downloader,

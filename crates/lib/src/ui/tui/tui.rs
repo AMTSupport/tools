@@ -16,9 +16,9 @@
 
 use crate::ui::tui::event::EventHandler;
 use anyhow::Result;
-use crossterm::event::{DisableMouseCapture, EnableMouseCapture};
+use crossterm::event::{DisableMouseCapture, EnableMouseCapture, KeyEvent};
 use crossterm::terminal::{self, EnterAlternateScreen, LeaveAlternateScreen};
-use ratatui::prelude::{Backend, CrosstermBackend};
+use ratatui::prelude::CrosstermBackend;
 use ratatui::Terminal;
 use std::io;
 use std::io::Stdout;
@@ -49,7 +49,9 @@ pub trait Tui<'a> {
     type Events: EventHandler;
 
     /// Constructs a new instance of [`Tui`].
-    fn new(events: Self::Events, args: Self::Args) -> Result<Self>;
+    fn new(events: Self::Events, args: Self::Args) -> Result<Self>
+    where
+        Self: Sized;
 
     /// Initializes the terminal interface.
     ///
@@ -77,12 +79,6 @@ pub trait Tui<'a> {
         Ok(())
     }
 
-    /// [`Draw`] the terminal interface by [`rendering`] the widgets.
-    ///
-    /// [`Draw`]: tui::Terminal::draw
-    /// [`rendering`]: crate::ui:render
-    fn draw(&mut self, app: &mut Self::App) -> Result<()>;
-
     /// Exits the terminal interface.
     ///
     /// It disables the raw mode and reverts back the terminal properties.
@@ -92,7 +88,16 @@ pub trait Tui<'a> {
         Ok(())
     }
 
+    /// [`Draw`] the terminal interface by [`rendering`] the widgets.
+    ///
+    /// [`Draw`]: tui::Terminal::draw
+    /// [`rendering`]: crate::ui:render
+    fn draw(&mut self, app: &mut Self::App) -> Result<()>;
+
+    fn handle_key_events(&mut self, key_event: KeyEvent, app: &mut Self::App) -> Result<()>;
+
     fn get_terminal(&mut self) -> &mut Terminal<CrosstermBackend<Stdout>>;
+
     fn set_terminal(
         &mut self,
         terminal: Terminal<CrosstermBackend<Stdout>>,
@@ -101,11 +106,11 @@ pub trait Tui<'a> {
 
 pub trait Paged {
     fn next(&mut self) {
-        self.set_index((self.get_page() + 1) % self.pages());
+        self.set_page((self.get_page() + 1) % self.pages());
     }
 
     fn prev(&mut self) {
-        self.set_index((self.get_page() - 1) % self.pages());
+        self.set_page((self.get_page() - 1) % self.pages());
     }
 
     fn pages(&self) -> usize;

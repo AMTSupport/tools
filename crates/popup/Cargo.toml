@@ -3,6 +3,11 @@ name = "popup"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+default = ["ui-gui"]
+
+ui-gui = ["iced", "iced_aw", "iced_runtime"]
+
 [dependencies]
 lib = { path = "../lib" }
 
@@ -24,6 +29,7 @@ anyhow = { workspace = true }
 # GUI
 iced = { workspace = true, optional = true }
 iced_aw = { workspace = true, optional = true }
+iced_runtime = { workspace = true, optional = true }
 
 #native-windows-gui = { version = "1.0.13", features = ["all"] }
 #native-windows-derive = "1.0.3"

@@ -26,12 +26,8 @@ pub struct Runtime {
 
 impl Runtime {
     pub async fn new() -> Result<Self> {
-        let cli = match Cli::try_parse() {
-            Ok(cli) => cli,
-            Err(err) => return Err(Error::CliError(err).into()),
-        };
-
-        let _ = lib::log::init(env!("CARGO_CRATE_NAME"), cli.flags.verbose);
+        let cli = Cli::parse();
+        let _guard = lib::log::init(env!("CARGO_CRATE_NAME"), cli.flags.verbose);
 
         if cli.flags.dry_run {
             info!("Dry run enabled, no actions will be taken");

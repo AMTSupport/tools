@@ -18,9 +18,9 @@ use crate::runtime::Runtime;
 use anyhow::Result;
 use clap::Parser;
 use lib::cli::Flags;
+use sysexits::ExitCode;
 use thiserror::Error;
-use tracing::{instrument, Instrument};
-use lib::sysexits::ExitCode;
+use tracing::instrument;
 
 #[derive(Debug, Error)]
 pub enum Error {
@@ -38,12 +38,12 @@ pub struct Cli {
 }
 
 #[instrument(ret, err)]
-pub async fn run(runtime: Runtime) -> Result<ExitCode> {
+pub async fn run(_runtime: Runtime) -> Result<ExitCode> {
     if let Some(code) = lib::helper::require_elevated_privileges() {
         return Err(Error::PrivilegeError(code).into());
     }
 
-    let requires_reboot = super::requires_restart();
+    // let requires_reboot = requires_restart();
 
     Ok(ExitCode::Ok)
 }

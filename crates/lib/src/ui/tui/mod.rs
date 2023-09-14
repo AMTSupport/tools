@@ -15,8 +15,4 @@
  */
 
 pub mod event;
-pub mod handler;
-pub mod inquire;
-pub mod progress;
 pub mod tui;
-pub mod ui;

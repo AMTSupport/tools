@@ -18,18 +18,16 @@ use crate::config::runtime::Runtime;
 use crate::sources::download;
 use crate::sources::exporter::Exporter;
 use anyhow::{anyhow, Context, Result};
-use async_trait::async_trait;
 use futures_util::StreamExt;
 use indicatif::{MultiProgress, ProgressBar};
 use lib::fs::create_parents;
-use lib::progress;
+use lib::ui::cli::progress;
 use std::fs::File;
 use std::io::copy;
 use std::path::PathBuf;
 use std::process::Command;
 use tracing::{debug, trace};
 
-#[async_trait]
 pub trait Downloader: Exporter {
     const BINARY: &'static str;
     const URL: &'static str;
@@ -42,11 +40,7 @@ pub trait Downloader: Exporter {
         Ok(Command::new(Self::binary(config)?))
     }
 
-    async fn download_cli(
-        config: &Runtime,
-        main_bar: &ProgressBar,
-        multi_bar: &MultiProgress,
-    ) -> Result<()> {
+    async fn download_cli(config: &Runtime, main_bar: &ProgressBar, multi_bar: &MultiProgress) -> Result<()> {
         let target = Self::binary(config)?;
         create_parents(&target)?;
 
