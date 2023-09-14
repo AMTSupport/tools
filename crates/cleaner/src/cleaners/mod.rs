@@ -40,7 +40,7 @@ fn env_path(env: String) -> Result<PathBuf> {
     env::var(&env)
         .inspect(|env_var| trace!("Using environment variable: {}", env_var))
         .map_err(|_e| CleanerError::EnvError(env.to_owned(), format!("Getting value from {env}")).into())
-        .map(|var| PathBuf::from(var))
+        .map(PathBuf::from)
 }
 
 #[instrument]

@@ -22,7 +22,7 @@ use tracing::{debug, error, info};
 pub async fn application(runtime: &'static Runtime) -> anyhow::Result<()> {
     info!("Starting cleaner");
 
-    let results = run_cleaners(&runtime).await;
+    let results = run_cleaners(runtime).await;
     write_result(results);
 
     // let cleaners =
@@ -224,8 +224,8 @@ pub async fn run_cleaners(runtime: &'static Runtime) -> Vec<CleanupResult> {
     let mut results = vec![];
 
     let mut cleaner_stream = tokio_stream::iter(&runtime.cli.cleaners).map(|cleaner_ref| {
-        let cleaner_ref = cleaner_ref.clone();
-        let runtime = &*runtime;
+        let cleaner_ref = *cleaner_ref;
+        let runtime = runtime;
 
         tokio::runtime::Handle::current().clone().spawn(async move {
             let cleaner_time = Instant::now();
@@ -237,7 +237,7 @@ pub async fn run_cleaners(runtime: &'static Runtime) -> Vec<CleanupResult> {
                     reason: SkipReason::Unsupported,
                 };
             }
-            let result = cleaner.clean(&runtime).await;
+            let result = cleaner.clean(runtime).await;
             debug!("Cleaner {cleaner:?} took {:?}", cleaner_time.elapsed());
             result
         })

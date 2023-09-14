@@ -18,10 +18,10 @@ use anyhow::Result;
 use assert_fs::fixture::ChildPath;
 use assert_fs::{prelude::*, NamedTempFile, TempDir};
 use cleaner::cleaners::location::*;
-use std::borrow::Borrow;
+
 use std::sync::LazyLock;
 use std::{env, path::PathBuf};
-use tracing::info;
+
 
 #[test_log::test(test)]
 fn test_environment_variable_exists() -> Result<()> {
@@ -84,7 +84,7 @@ fn test_sub_location() -> Result<()> {
     // Create a temporary directory and add some files
     let temp_dir1 = NamedTempFile::new(DIR_PREFIX)?;
     let temp_dir2 = NamedTempFile::new(DIR_PREFIX)?;
-    for temp_dir in vec![&temp_dir1, &temp_dir2] {
+    for temp_dir in [&temp_dir1, &temp_dir2] {
         ChildPath::new(temp_dir.join("file1.txt")).touch()?;
         ChildPath::new(temp_dir.join("file2.txt")).touch()?;
         ChildPath::new(temp_dir.join("otherfile.txt")).touch()?;

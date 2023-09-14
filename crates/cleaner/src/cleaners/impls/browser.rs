@@ -34,8 +34,8 @@ impl CleanerInternal for BrowserCleaner {
     #[cfg(unix)]
     fn locations(&self) -> Vec<Location> {
         vec![
-            Location::Sub(&USERS, format!(".cache/mozilla/firefox/*/cache2/*")),
-            Location::Sub(&USERS, format!(".cache/google-chrome/Default/Cache/*")),
+            Location::Sub(&USERS, ".cache/mozilla/firefox/*/cache2/*".to_string()),
+            Location::Sub(&USERS, ".cache/google-chrome/Default/Cache/*".to_string()),
         ]
     }
 

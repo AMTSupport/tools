@@ -54,7 +54,7 @@ macro_rules! test {
     ($name:ident, $body:expr) => {
         #[test_log::test(tokio::test)]
         async fn $name() {
-            use crate::cleaners::impls::setup as _setup;
+            use $crate::cleaners::impls::setup as _setup;
 
             let runtime = _setup::setup();
             $body

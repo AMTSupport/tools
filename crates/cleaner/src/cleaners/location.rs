@@ -109,7 +109,7 @@ fn globbing(pattern: &str) -> Paths {
             require_literal_leading_dot: false,
         },
     )
-    .expect(&*format!("Pattern error in globbing {pattern}"))
+    .unwrap_or_else(|_| panic!("Pattern error in globbing {pattern}"))
 }
 
 #[instrument]
@@ -120,7 +120,7 @@ fn sub(location: &Location, sub_location: &String) -> Vec<PathBuf> {
     let mut paths = Vec::new();
 
     for parent in &parents {
-        let mut subs = globbing(&*parent.join(&sub_location).display().to_string()).into_iter();
+        let mut subs = globbing(&parent.join(sub_location).display().to_string());
         while let Some(Ok(sub)) = subs.next() {
             debug!("Subbed {} with {}", parent.display(), sub.display());
             match sub.exists() {
