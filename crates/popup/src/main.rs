@@ -16,11 +16,10 @@
 
 use iced::alignment::Vertical;
 use iced::theme::Palette;
-use iced::widget::{column, text, Column, Container};
+use iced::widget::{button, column, row, text, text_input, Column, Container};
 use iced::window::Position;
 use iced::window::{Action, Mode};
-use iced::{alignment::Horizontal, executor, widget, window, Application, Color, Command, Element, Settings};
-use iced_aw::native::modal;
+use iced::{alignment::Horizontal, executor, widget, window, Application, Color, Command, Element, Length, Settings};
 use std::process::ExitCode;
 use tracing::trace;
 
@@ -83,26 +82,15 @@ impl Application for Informer {
     }
 
     fn view(&self) -> Element<Message> {
-        let content = Container::new(
-            Column::new()
-                .push(
-                    text("AMT - Informer")
-                        .size(18)
-                        .horizontal_alignment(Horizontal::Center)
-                        .vertical_alignment(Vertical::Top),
-                )
-                .push(
-                    // TODO - Add icon
-                    text("Automated Message from AMT")
-                        .size(16)
-                        .horizontal_alignment(Horizontal::Center)
-                        .vertical_alignment(Vertical::Center),
-                )
-                .push("")
-                .push(self.message.split("\n").fold(column![], |column, line| {
-                    column.push(text(line.trim()).size(24).horizontal_alignment(Horizontal::Center))
-                })),
-        );
+        let content = column![
+            text("AMT - Informer").size(18).horizontal_alignment(Horizontal::Center).vertical_alignment(Vertical::Top),
+            text("Automated Message from AMT")
+                .size(16)
+                .horizontal_alignment(Horizontal::Center)
+                .vertical_alignment(Vertical::Center),
+            "",
+            text(self.message.trim()).size(24).horizontal_alignment(Horizontal::Center)
+        ];
         // .align_items(Alignment::Center)
         // .height(Length::Shrink)
         // .width(Length::Shrink)
@@ -158,12 +146,11 @@ impl Application for Informer {
             widget::Text::new("My Modal").into(),
             widget::Text::new("This is a modal!").into(),
         )
-        .foot(footer.into())
+        .foot(footer)
         .max_width(300.0)
-        .on_close(Message::Exit("Modal closed".into()))
-        .into();
+        .on_close(Message::Exit("Modal closed".into()));
 
-        modal::Modal::new(Container::new(content).into(), overlay)
+        modal::Modal::new(content, Some(overlay))
             .backdrop(Message::Event("Backdrop clicked".into()))
             .on_esc(Message::Event("Esc pressed".into()))
             .into()
@@ -191,7 +178,7 @@ impl Application for Informer {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<ExitCode> {
-    lib::log::init("informer", 3)?;
+    let _guard = lib::log::init("informer", 3);
 
     let settings = Settings {
         id: None,
@@ -238,6 +225,6 @@ fn toast() {
 }
 
 #[cfg(unix)]
-fn toast() -> ! {
-    unimplemented!("not implemented on unix")
+fn toast() {
+    todo!("not implemented on unix")
 }
