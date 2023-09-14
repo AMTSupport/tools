@@ -16,6 +16,7 @@
 
 use macros::EnumNames;
 use std::assert_matches::assert_matches;
+use std::str::FromStr;
 
 #[derive(Debug, EnumNames)]
 enum Test {
@@ -33,19 +34,19 @@ fn get_name() {
 
 #[test]
 fn try_from() {
-    assert_matches!(Test::try_from("Apple"), Ok(Test::Apple));
-    assert_matches!(Test::try_from("Banana"), Ok(Test::Banana));
-    assert_matches!(Test::try_from("Cherry"), Ok(Test::Cherry));
+    assert_matches!(Test::from_str("Apple"), Ok(Test::Apple));
+    assert_matches!(Test::from_str("Banana"), Ok(Test::Banana));
+    assert_matches!(Test::from_str("Cherry"), Ok(Test::Cherry));
 }
 
 #[test]
 fn try_from_different_case() {
-    assert_matches!(Test::try_from("aPpLe"), Ok(Test::Apple));
-    assert_matches!(Test::try_from("banana"), Ok(Test::Banana));
-    assert_matches!(Test::try_from("CHERRY"), Ok(Test::Cherry));
+    assert_matches!(Test::from_str("aPpLe"), Ok(Test::Apple));
+    assert_matches!(Test::from_str("banana"), Ok(Test::Banana));
+    assert_matches!(Test::from_str("CHERRY"), Ok(Test::Cherry));
 }
 
 #[test]
 fn try_from_unknown() {
-    assert_matches!(Test::try_from("Orange"), Err(_));
+    assert_matches!(Test::from_str("Orange"), Err(_));
 }
