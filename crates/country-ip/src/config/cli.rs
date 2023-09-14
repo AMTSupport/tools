@@ -31,8 +31,11 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum CliAction {
-    #[cfg(feature = "gui")]
+    #[cfg(feature = "ui-gui")]
     GUI,
+
+    #[cfg(feature = "ui-tui")]
+    TUI,
 
     /// Get a random IP address for a country.
     /// or a random country if no country is specified

@@ -3,7 +3,7 @@ name = "country-ip"
 version = "0.1.0"
 edition = "2021"
 categories = ["command-line-utilities", "utilities", "cli", "library", "lib"]
-keywords = ["random", "ip", "ip-address", "ipv4", "testing", "geoip", "geo", "country"]
+keywords = ["random", "ip", "testing", "geo", "country"]
 description = "A command line utility to generate random IP addresses from a given country."
 
 [lib]
@@ -11,8 +11,11 @@ name = "country_ip"
 path = "src/lib.rs"
 
 [features]
-default = []
-gui = ["iced", "iced_aw"]
+default = ["ui-tui"]
+
+ui-tui = ["ratatui", "crossterm"]
+ui-cli = ["indicatif", "inquire"]
+ui-gui = ["iced", "iced_aw"]
 
 [dependencies]
 lib = { path = "../lib" }
@@ -20,9 +23,20 @@ macros = { path = "../macros" }
 
 # Runtimes
 tokio = { workspace = true }
+tokio-stream = { workspace = true }
 
 # Cli & UI
 clap = { workspace = true }
+indicatif = { workspace = true, optional = true }
+inquire = { workspace = true, optional = true }
+
+# TUI
+ratatui = { workspace = true, features = ["all-widgets"], optional = true }
+crossterm = { workspace = true, features = [], optional = true }
+
+# GUI
+iced = { workspace = true, optional = true }
+iced_aw = { workspace = true, optional = true }
 
 # Networking
 reqwest = { workspace = true, features = ["stream"] }
@@ -42,10 +56,6 @@ async-trait = "0.1.72"
 
 # Countries
 keshvar = { version = "0.3.0", features = ["search-iso-short-name"] }
-
-# GUI
-iced = { workspace = true, optional = true }
-iced_aw = { workspace = true, optional = true }
 
 # Testing
 [dev-dependencies]

@@ -3,11 +3,26 @@ name = "lib"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+default = []
+
+ui-tui = ["ratatui", "crossterm"]
+ui-cli = ["indicatif", "inquire"]
+ui-gui = ["iced", "iced_aw"]
+
 [dependencies]
 # Cli & UI
-clap = { workspace = true, default-features = false, features = ["derive", "std"] }
-indicatif = { workspace = true }
-inquire = { workspace = true }
+clap = { workspace = true }
+indicatif = { workspace = true, optional = true }
+inquire = { workspace = true, optional = true }
+
+# TUI
+ratatui = { workspace = true, features = ["all-widgets"], optional = true }
+crossterm = { workspace = true, optional = true }
+
+# GUI
+iced = { workspace = true, optional = true }
+iced_aw = { workspace = true, optional = true }
 
 # Logging & Errors
 tracing = { workspace = true }

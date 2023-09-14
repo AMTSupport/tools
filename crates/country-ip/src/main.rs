@@ -23,6 +23,7 @@ use country_ip::config::runtime::Runtime;
 use country_ip::registry::Registry;
 use country_ip::{get_record_db, RecordDB};
 use futures::{FutureExt, StreamExt, TryStreamExt};
+use iced::Application;
 use keshvar::{Alpha2, Alpha3, Country, CountryIterator};
 use lib::runtime::runtime::Runtime as _;
 use rand::thread_rng;
@@ -38,16 +39,23 @@ pub enum Errors {
     InvalidCountryCode(String),
 }
 
-static RUNTIME: LazyLock<Runtime> = LazyLock::new(|| Runtime::new().unwrap());
+static RUNTIME: LazyLock<Runtime> = LazyLock::new(|| Runtime::new(()).unwrap());
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let runtime = &*RUNTIME;
 
     match &runtime.cli.action {
-        #[cfg(feature = "gui")]
+        #[cfg(feature = "ui-gui")]
         CliAction::GUI => {
             use country_ip::gui::application::CountryIPApp;
+            use iced::{Application, Settings};
+
+            CountryIPApp::run(Settings::default()).map_err(|e| anyhow!(e))
+        }
+        #[cfg(feature = "ui-tui")]
+        CliAction::TUI => {
+            use country_ip::ui::tui::application::CountryIPApp;
             use iced::{Application, Settings};
 
             CountryIPApp::run(Settings::default()).map_err(|e| anyhow!(e))

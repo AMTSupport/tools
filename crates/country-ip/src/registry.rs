@@ -22,7 +22,6 @@ use anyhow::{Context, Result};
 use async_trait::async_trait;
 use keshvar::{Alpha2, Country, Region, SubRegion};
 use macros::EnumVariants;
-use rayon::prelude::{ParallelBridge, ParallelIterator};
 use std::collections::HashMap;
 use std::io::BufRead;
 use std::net::IpAddr;

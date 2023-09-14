@@ -31,10 +31,11 @@ use tracing::{info, instrument};
 
 pub mod config;
 pub mod db_ip;
-#[cfg(feature = "gui")]
+#[cfg(feature = "ui-gui")]
 pub mod gui;
 pub mod record;
 pub mod registry;
+mod ui;
 
 #[instrument]
 pub async fn get_record_db(country: &Country) -> anyhow::Result<Box<dyn RecordDB>> {
@@ -77,4 +78,3 @@ pub trait RecordDB: Send + Sync + Debug {
             .map(|record| record.random())
     }
 }
-
