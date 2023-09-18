@@ -15,31 +15,15 @@
  */
 
 #![feature(exclusive_range_pattern)]
-/*
- * Copyright (C) 2023 James Draycott <me@racci.dev>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, version 3.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
 #![feature(async_fn_in_trait)]
 
-use std::convert::Infallible;
 use clap::{Parser, Subcommand};
 use lib::cli::Flags;
 use lib::ui::cli::cli::{AsyncCliUI, CliResult, CliUI};
-use rpgen::processor::processor::Processor;
-use rpgen::rules::rule::Rule;
-use rpgen::rules::rules::Rules;
-use rpgen::{config, random_words};
+use memorable_pass::processor::processor::Processor;
+use memorable_pass::rules::rule::Rule;
+use memorable_pass::rules::rules::Rules;
+use memorable_pass::{config, random_words};
 use tokio::runtime::Handle;
 use tracing::{debug, info};
 
@@ -99,8 +83,6 @@ impl CliUI for App {
 
 impl AsyncCliUI for App {
     async fn handle_command(&mut self, command: Self::OneShotCommand) -> CliResult<()> {
-        let _guard = lib::log::init(env!("CARGO_PKG_NAME"), command.flags.verbose);
-
         self.rules.replace(command.rules);
         let passwords = generate(self.rules.as_ref().unwrap()).await;
         info!(

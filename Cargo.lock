@@ -363,6 +363,7 @@ dependencies = [
  "env_logger",
  "fake",
  "filetime",
+ "fs-err",
  "futures",
  "futures-util",
  "glob",
@@ -376,10 +377,12 @@ dependencies = [
  "ratatui",
  "rayon",
  "readable-regex",
+ "regex",
  "reqwest",
  "serde",
  "serde_json",
  "tempdir",
+ "tempfile",
  "test-log",
  "thiserror",
  "tokio",
@@ -2697,6 +2700,7 @@ dependencies = [
  "is_elevated",
  "ratatui",
  "rustix 0.38.11",
+ "shlex",
  "sysexits",
  "thiserror",
  "tracing",
@@ -2944,6 +2948,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5a634b1c61a95585bd15607c6ab0c4e5b226e695ff2800ba0cdccddf208c406c"
 dependencies = [
  "autocfg",
+]
+
+[[package]]
+name = "memorable-pass"
+version = "0.1.1"
+dependencies = [
+ "anyhow",
+ "clap",
+ "derivative",
+ "env_logger",
+ "lib",
+ "macros",
+ "rand 0.8.5",
+ "regex",
+ "rust-embed",
+ "serde",
+ "serde_json",
+ "test-log",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -4421,27 +4446,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rpgen"
-version = "0.1.1"
-dependencies = [
- "anyhow",
- "clap",
- "derivative",
- "env_logger",
- "lib",
- "macros",
- "rand 0.8.5",
- "regex",
- "rust-embed",
- "serde",
- "serde_json",
- "test-log",
- "tokio",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "rsa"
 version = "0.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4861,9 +4865,9 @@ dependencies = [
 
 [[package]]
 name = "shlex"
-version = "1.1.0"
+version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43b2853a4d09f215c24cc5489c992ce46052d359b5109343cbafbf26bc62f8a3"
+checksum = "a7cee0529a6d40f580e7a5e6c495c8fbfe21b7b52795ed4bb5e62cdf92bc6380"
 
 [[package]]
 name = "signal-hook"

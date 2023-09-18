@@ -5,7 +5,8 @@ default-members = [
     "crates/macros",
     "crates/backup",
     "crates/cleaner",
-    "crates/country-ip"
+    "crates/country-ip",
+    "crates/memorable-pass",
 ]
 resolver = "2"
 

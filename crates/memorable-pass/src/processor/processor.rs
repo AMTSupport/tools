@@ -42,7 +42,7 @@ impl<'a> Processor<'a> {
             let mut mut_word = word.word.to_string();
             let mut start_end = (0usize, mut_word.len());
             for action in word.actions.iter().rev() {
-                info!("Applying rule: {action:?} to range {start_end:?}");
+                debug!("Applying rule: {action:?} to range {start_end:?}");
 
                 match action {
                     Action::Addition(_, position, addition) => match position {
@@ -66,7 +66,7 @@ impl<'a> Processor<'a> {
                     }
                 }
 
-                info!("Applied rule: {action:?}; result: {mut_word}, range {start_end:?}");
+                debug!("Applied rule: {action:?}; result: {mut_word}, range {start_end:?}");
             }
 
             result.push_str(&mut_word);

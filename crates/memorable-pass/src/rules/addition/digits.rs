@@ -27,33 +27,14 @@ use serde::{Deserialize, Serialize};
 #[derive(Default, Debug, Clone, Args, Serialize, Deserialize)]
 pub struct DigitAddition {
     /// The mode that is used to select where the digits are inserted
-    #[arg(long = "digit-mode", default_value = "sandwich-all")]
+    #[arg(long = "digit-mode", default_value = "after-all")]
     pub fill_mode: FillMode,
 
     /// The minimum number of digits to add to each filled area.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use regex::Regex;
-    /// use rpgen::rules::addition::digits::{DigitAddition, FillMode};
-    /// use rpgen::rules::rule::Rule;
-    ///
-    /// let rule = DigitAddition {
-    ///     minimum: 1,
-    ///     maximum: 6,
-    ///     fill_mode: FillMode::SandwichAll,
-    /// };
-    ///
-    /// let mut  processor = rpgen::processor::processor::Processor::new(vec!["hello", "world"]);
-    /// rule.process(&mut processor);
-    ///
-    /// // The result will be match the regex `r"\d{1,6}helloworld\d{1,6}"`
-    /// assert!(Regex::new(r"\d{1,6}helloworld\d{1,6}").unwrap().is_match(&*processor.finish()));
-    /// ```
     #[arg(long = "digit-minimum", default_value_t = 3, value_parser = clap::value_parser!(u8).range(1..=8))]
     pub minimum: u8,
 
+    /// The maximum number of digits to add to each filled area.
     #[arg(long = "digit-maximum", default_value_t = 3, value_parser = clap::value_parser!(u8).range(1..=8))]
     pub maximum: u8,
 }
