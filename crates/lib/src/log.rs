@@ -42,6 +42,7 @@ pub fn init(named: &str, verbosity: u8) -> WorkerGuard {
             .without_time()
             .with_span_events(span)
             .with_writer(stdout.with_max_level(level))
+            .with_ansi(!cfg!(windows))
             .with_target(verbosity > 0)
             .with_line_number(verbosity > 1)
             .with_thread_names(verbosity > 2)

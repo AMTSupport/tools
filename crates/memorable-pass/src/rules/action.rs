@@ -40,7 +40,7 @@ pub enum Action {
 }
 
 impl ActionCondition {
-    #[instrument]
+    #[instrument(level = "TRACE", skip(self), ret)]
     pub fn should_use(&self, word_index: usize, position: &Position, word_range: &(usize, usize)) -> bool {
         match self {
             Self::Always => true,
