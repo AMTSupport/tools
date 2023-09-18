@@ -29,7 +29,7 @@ impl Display for RebootReason {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let msg = match self {
             Self::SystemUpdate => "System updates require a reboot.".to_string(),
-            Self::Uptime(uptime, maximum) => format!("Uptime of {uptime} exeeds {maximum}"),
+            Self::Uptime(uptime, maximum) => format!("Uptime of {uptime} exceeds {maximum}"),
             Self::Custom(message) => message.clone(),
         };
 

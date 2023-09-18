@@ -38,7 +38,7 @@ pub fn regex(input: DeriveInput) -> TokenStream {
             /// This is case insensitive.
             #[automatically_derived]
             pub const REGEX: &'static str = concat!(
-                r"(?:(?i)(?x)",
+                r"((?i)(?x)",
                 #concatted,
                 r")",
             );
@@ -47,13 +47,13 @@ pub fn regex(input: DeriveInput) -> TokenStream {
             /// These are separated by a `-`, and will be in the order they are defined in the enum.
             #[automatically_derived]
             pub const MULTI_REGEX: &'static str = concat!(
-                r"(?:(?i)(?x)",
+                r"((?i)(?x)",
                 #concatted,
-                r"(?:-",
+                r")-(",
                 #concatted,
                 r"){0,",
                 #len,
-                r"})",
+                r"}",
             );
         }
     }

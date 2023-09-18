@@ -6,7 +6,7 @@ edition = "2021"
 [features]
 default = ["ui-cli"]
 
-#ui-tui = ["ratatui", "crossterm"]
+#ui-tui = ["ratatouille", "crossterm"]
 ui-cli = ["indicatif", "inquire"]
 
 [dependencies]

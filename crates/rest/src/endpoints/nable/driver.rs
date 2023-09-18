@@ -43,8 +43,8 @@ pub enum Error {
     #[error("Unable to login using provided credentials, please try again.")]
     UnableToLogin,
 
-    #[error("Unkown error: {0}")]
-    Unkown(#[from] anyhow::Error),
+    #[error("Unknown error: {0}")]
+    Unknown(#[from] anyhow::Error),
 }
 
 impl Driver {
