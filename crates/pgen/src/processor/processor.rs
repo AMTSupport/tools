@@ -79,7 +79,7 @@ impl<'a> Processor<'a> {
 mod tests {
     use super::*;
     use crate::rules::addition::digits::{DigitAddition, FillMode};
-    use crate::rules::addition::separator::{SeparatorAdition, SeparatorMode};
+    use crate::rules::addition::separator::{SeparatorAddition, SeparatorMode};
     use crate::rules::rule::Rule;
     use crate::rules::transformation::case::CaseTransformation;
     use regex::Regex;
@@ -91,7 +91,7 @@ mod tests {
         DigitAddition {
             minimum: 3,
             maximum: 3,
-            fill_mode: FillMode::SandwhichAll,
+            fill_mode: FillMode::SandwichAll,
         }
         .process(&mut processor);
 
@@ -102,7 +102,7 @@ mod tests {
     #[test_log::test(test)]
     fn all_rules_processor() {
         let mut processor = Processor::new(vec!["hello", "world"]);
-        SeparatorAdition {
+        SeparatorAddition {
             mode: SeparatorMode::Single,
             chars: "-".into(),
         }
@@ -111,7 +111,7 @@ mod tests {
         DigitAddition {
             minimum: 3,
             maximum: 3,
-            fill_mode: FillMode::SandwhichAll,
+            fill_mode: FillMode::SandwichAll,
         }
         .process(&mut processor);
 

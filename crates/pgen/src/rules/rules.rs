@@ -15,7 +15,7 @@
  */
 
 use crate::rules::addition::digits::DigitAddition;
-use crate::rules::addition::separator::SeparatorAdition;
+use crate::rules::addition::separator::SeparatorAddition;
 use crate::rules::transformation::case::CaseTransformation;
 use clap::Parser;
 use serde::{Deserialize, Serialize};
@@ -46,7 +46,7 @@ pub struct Rules {
     pub addition_digits: DigitAddition,
 
     #[command(flatten)]
-    pub addition_separator: SeparatorAdition,
+    pub addition_separator: SeparatorAddition,
 
     #[arg(long, default_value_t = CaseTransformation::default(), value_enum)]
     pub transformation_case: CaseTransformation,
@@ -94,7 +94,7 @@ impl Default for Rules {
             word_length_min: 5,
             word_length_max: 7,
             addition_digits: DigitAddition::default(),
-            addition_separator: SeparatorAdition::default(),
+            addition_separator: SeparatorAddition::default(),
             transformation_case: CaseTransformation::default(),
             amount: 3,
         }

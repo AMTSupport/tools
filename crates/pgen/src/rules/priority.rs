@@ -52,7 +52,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn comparisions() {
+    fn comparisons() {
         assert!(Priority::High > Priority::Medium);
         assert!(Priority::High > Priority::Low);
         assert!(Priority::Medium > Priority::Low);

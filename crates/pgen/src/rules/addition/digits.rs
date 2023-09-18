@@ -27,10 +27,10 @@ use serde::{Deserialize, Serialize};
 #[derive(Default, Debug, Clone, Args, Serialize, Deserialize)]
 pub struct DigitAddition {
     /// The mode that is used to select where the digits are inserted
-    #[arg(long = "digit-mode", default_value = "sandwhich-all")]
+    #[arg(long = "digit-mode", default_value = "sandwich-all")]
     pub fill_mode: FillMode,
 
-    /// The mimimum number of digits to add to each filled area.
+    /// The minimum number of digits to add to each filled area.
     ///
     /// # Example
     ///
@@ -42,7 +42,7 @@ pub struct DigitAddition {
     /// let rule = DigitAddition {
     ///     minimum: 1,
     ///     maximum: 6,
-    ///     fill_mode: FillMode::SandwhichAll,
+    ///     fill_mode: FillMode::SandwichAll,
     /// };
     ///
     /// let mut  processor = rpgen::processor::processor::Processor::new(vec!["hello", "world"]);
@@ -67,7 +67,7 @@ pub enum FillMode {
     /// [hello] -> "1hello1"
     /// [hello,world] -> "1hello11world1"
     /// ```
-    SandwhichEach,
+    SandwichEach,
 
     /// Add digits before the first and last words.
     ///
@@ -76,7 +76,7 @@ pub enum FillMode {
     /// [hello] -> "1hello1"
     /// [hello,world] -> "1helloworld1"
     #[default]
-    SandwhichAll,
+    SandwichAll,
 
     /// Add digits before each word.
     ///
@@ -124,8 +124,8 @@ impl FillMode {
     /// The returned vector is the positions to fill.
     pub fn positions(&self, first: bool, last: bool) -> Vec<Position> {
         match self {
-            Self::SandwhichEach => vec![Position::Start, Position::End],
-            Self::SandwhichAll => match (first, last) {
+            Self::SandwichEach => vec![Position::Start, Position::End],
+            Self::SandwichAll => match (first, last) {
                 (true, true) => vec![Position::Start, Position::End],
                 (true, false) => vec![Position::Start],
                 (false, true) => vec![Position::End],
@@ -183,12 +183,12 @@ mod tests {
     use regex::Regex;
 
     #[test]
-    fn fill_sandwhich_each() {
+    fn fill_sandwich_each() {
         let mut processor = Processor::new(vec!["hello", "world"]);
         DigitAddition {
             minimum: 3,
             maximum: 3,
-            fill_mode: FillMode::SandwhichEach,
+            fill_mode: FillMode::SandwichEach,
         }
         .process(&mut processor);
 
@@ -197,12 +197,12 @@ mod tests {
     }
 
     #[test]
-    fn fill_sandwhich_all() {
+    fn fill_sandwich_all() {
         let mut processor = Processor::new(vec!["hello", "world"]);
         DigitAddition {
             minimum: 3,
             maximum: 3,
-            fill_mode: FillMode::SandwhichAll,
+            fill_mode: FillMode::SandwichAll,
         }
         .process(&mut processor);
 

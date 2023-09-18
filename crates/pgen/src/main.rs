@@ -1,4 +1,3 @@
-#![feature(exclusive_range_pattern)]
 /*
  * Copyright (C) 2023 James Draycott <me@racci.dev>
  *
@@ -15,50 +14,189 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use clap::Parser;
+#![feature(exclusive_range_pattern)]
+/*
+ * Copyright (C) 2023 James Draycott <me@racci.dev>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+#![feature(async_fn_in_trait)]
+
+use std::convert::Infallible;
+use clap::{Parser, Subcommand};
 use lib::cli::Flags;
-use rpgen::random_words;
+use lib::ui::cli::cli::{AsyncCliUI, CliResult, CliUI};
 use rpgen::processor::processor::Processor;
-use rpgen::rules::rules::Rules;
-use tracing::{debug, info};
 use rpgen::rules::rule::Rule;
+use rpgen::rules::rules::Rules;
+use rpgen::{config, random_words};
+use tokio::runtime::Handle;
+use tracing::{debug, info};
 
 #[derive(Debug, Parser)]
 #[command(name = env!["CARGO_PKG_NAME"], version, author, about)]
-pub struct Cli {
+pub struct CliOneShot {
     #[command(flatten)]
     pub flags: Flags,
 
     #[command(flatten)]
     pub rules: Rules,
+
+    #[arg(long)]
+    pub repl: bool,
 }
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
-    let cli = Cli::parse();
-    let _guard = lib::log::init(env!("CARGO_PKG_NAME"), cli.flags.verbose);
+#[derive(Debug, Parser)]
+#[command(name = env!["CARGO_PKG_NAME"], version, author, about)]
+pub struct CliRepl {
+    #[command(flatten)]
+    pub flags: Flags,
 
-    debug!("CLI: {:#?}", cli);
+    #[command(subcommand)]
+    pub action: ReplCommand,
+}
 
-    let mut passwords = Vec::with_capacity(cli.rules.amount);
-    while passwords.len() < cli.rules.amount {
-        let words = random_words(
-            cli.rules.word_count,
-            cli.rules.word_length_min,
-            cli.rules.word_length_max,
-        ).await;
+#[derive(Debug, Subcommand)]
+pub enum ReplCommand {
+    Generate,
+    Rules(Rules),
+
+    Ping,
+    #[command(alias = "q")]
+    Quit,
+}
+
+pub struct App {
+    rules: Option<Rules>,
+}
+
+impl CliUI for App {
+    type OneShotCommand = CliOneShot;
+    type ReplCommand = CliRepl;
+
+    fn new(_args: Self::Args) -> CliResult<Self>
+    where
+        Self: Sized,
+    {
+        // Preload the words
+        Handle::current().spawn(async {
+            let _preload = &config::asset::WORDS;
+        });
+
+        Ok(Self { rules: None })
+    }
+}
+
+impl AsyncCliUI for App {
+    async fn handle_command(&mut self, command: Self::OneShotCommand) -> CliResult<()> {
+        let _guard = lib::log::init(env!("CARGO_PKG_NAME"), command.flags.verbose);
+
+        self.rules.replace(command.rules);
+        let passwords = generate(self.rules.as_ref().unwrap()).await;
+        info!(
+            "Generated passwords:\n\n{passwords}\n",
+            passwords = passwords.join("\n")
+        );
+
+        Ok(())
+    }
+
+    async fn handle_repl_command(&mut self, command: Self::ReplCommand) -> CliResult<bool> {
+        match command.action {
+            ReplCommand::Generate => {
+                let rules = self.rules.get_or_insert_with(|| {
+                    debug!("No rules set, using defaults");
+                    Rules::default()
+                });
+
+                let passwords = generate(&rules).await;
+                info!(
+                    "Generated passwords:\n\n{passwords}\n",
+                    passwords = passwords.join("\n")
+                );
+            }
+            ReplCommand::Rules(rules) => {
+                let previous_rules = self.rules.replace(rules);
+
+                if let Some(previous_rules) = previous_rules {
+                    debug!("Replacing previous rules.");
+                    debug!("Previous rules:\n\n{previous_rules:?}\n");
+                }
+            }
+            ReplCommand::Ping => {
+                info!("Pong!");
+            }
+            ReplCommand::Quit => {
+                info!("Quitting...");
+                return Ok(true);
+            }
+        }
+
+        Ok(false)
+    }
+}
+
+async fn generate(rules: &Rules) -> Vec<String> {
+    let mut passwords = Vec::with_capacity(rules.amount);
+    while passwords.len() < rules.amount {
+        let words = random_words(rules.word_count, rules.word_length_min, rules.word_length_max).await;
         let mut processor = Processor::new(words);
-        cli.rules.addition_digits.process(&mut processor);
-        cli.rules.addition_separator.process(&mut processor);
-        cli.rules.transformation_case.process(&mut processor);
+        rules.addition_digits.process(&mut processor);
+        rules.addition_separator.process(&mut processor);
+        rules.transformation_case.process(&mut processor);
 
         passwords.push(processor.finish());
     }
 
-    info!(
-        "Generated passwords:\n\n{passwords}\n",
-        passwords = passwords.join("\n")
-    );
+    passwords
+}
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    let mut app = App::new(())?;
+    let (repl, verbosity) = CliOneShot::try_parse().map(|cli| (cli.repl, cli.flags.verbose))?;
+    let _guard = lib::log::init(env!("CARGO_PKG_NAME"), verbosity);
+
+    match repl {
+        true => app.repl().await,
+        false => app.run().await,
+    }?;
+
+    // let cli = Cli::parse();
+    // let _guard = lib::log::init(env!("CARGO_PKG_NAME"), cli.flags.verbose);
+    //
+    // debug!("CLI: {:#?}", cli);
+    //
+    // let mut passwords = Vec::with_capacity(cli.rules.amount);
+    // while passwords.len() < cli.rules.amount {
+    //     let words = random_words(
+    //         cli.rules.word_count,
+    //         cli.rules.word_length_min,
+    //         cli.rules.word_length_max,
+    //     )
+    //     .await;
+    //     let mut processor = Processor::new(words);
+    //     cli.rules.addition_digits.process(&mut processor);
+    //     cli.rules.addition_separator.process(&mut processor);
+    //     cli.rules.transformation_case.process(&mut processor);
+    //
+    //     passwords.push(processor.finish());
+    // }
+    //
+    // info!(
+    //     "Generated passwords:\n\n{passwords}\n",
+    //     passwords = passwords.join("\n")
+    // );
 
     // match cli.command {
     //     Commands::Generate { flags, file, rules } => {

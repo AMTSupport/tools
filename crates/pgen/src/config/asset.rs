@@ -20,7 +20,7 @@ use std::collections::HashMap;
 use std::sync::LazyLock;
 use tracing::{debug, error, info};
 
-pub(crate) static WORDS: LazyLock<HashMap<usize, Vec<String>>> = LazyLock::new(get_words);
+pub static WORDS: LazyLock<HashMap<usize, Vec<String>>> = LazyLock::new(get_words);
 
 #[derive(RustEmbed)]
 #[folder = "assets"]

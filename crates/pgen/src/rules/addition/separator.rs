@@ -26,7 +26,7 @@ use serde::{Deserialize, Serialize};
 const POSSIBLE_CHARS: [char; 12] = ['!', '@', '$', '%', '.', '&', '*', '-', '+', '=', '?', ':'];
 
 #[derive(Debug, Clone, Hash, Ord, PartialOrd, Eq, PartialEq, Args, Serialize, Deserialize)]
-pub struct SeparatorAdition {
+pub struct SeparatorAddition {
     #[arg(long = "separator-mode", default_value = "single")]
     pub(crate) mode: SeparatorMode,
 
@@ -44,7 +44,7 @@ pub enum SeparatorMode {
     Random,
 }
 
-impl Default for SeparatorAdition {
+impl Default for SeparatorAddition {
     fn default() -> Self {
         Self {
             mode: SeparatorMode::Single,
@@ -53,7 +53,7 @@ impl Default for SeparatorAdition {
     }
 }
 
-impl Rule for SeparatorAdition {
+impl Rule for SeparatorAddition {
     type Passable = Option<char>;
 
     fn process_word(
@@ -117,9 +117,9 @@ mod tests {
     #[test_log::test(test)]
     fn separator_none() {
         let mut processor = Processor::new(vec!["hello", "world"]);
-        SeparatorAdition {
+        SeparatorAddition {
             mode: SeparatorMode::None,
-            ..SeparatorAdition::default()
+            ..SeparatorAddition::default()
         }
         .process(&mut processor);
 
@@ -130,9 +130,9 @@ mod tests {
     #[test]
     fn single() {
         let mut processor = Processor::new(vec!["hello", "world"]);
-        SeparatorAdition {
+        SeparatorAddition {
             mode: SeparatorMode::Single,
-            ..SeparatorAdition::default()
+            ..SeparatorAddition::default()
         }
         .process_with_passable(&mut processor, &mut Some('?'));
 
@@ -143,9 +143,9 @@ mod tests {
     #[test]
     fn random() {
         let mut processor = Processor::new(vec!["hello", "world"]);
-        SeparatorAdition {
+        SeparatorAddition {
             mode: SeparatorMode::Random,
-            ..SeparatorAdition::default()
+            ..SeparatorAddition::default()
         }
         .process_with_passable(&mut processor, &mut None);
 
