@@ -15,9 +15,9 @@
  */
 
 use crate::processor::word::Word;
-use crate::rules::action::Action;
+use crate::rules::action::{Action, ActionCondition};
 use crate::rules::position::Position;
-use tracing::{debug, info};
+use tracing::debug;
 
 pub struct Processor<'a> {
     pub(crate) words: Vec<Word<'a>>,
@@ -36,7 +36,7 @@ impl<'a> Processor<'a> {
     pub fn finish(&mut self) -> String {
         let mut result = String::new();
 
-        for word in self.words.iter() {
+        for (index, word) in self.words.iter().enumerate() {
             debug!("Word: {word:#?}");
 
             let mut mut_word = word.word.to_string();
@@ -45,17 +45,28 @@ impl<'a> Processor<'a> {
                 debug!("Applying rule: {action:?} to range {start_end:?}");
 
                 match action {
-                    Action::Addition(_, position, addition) => match position {
-                        Position::Start => {
-                            mut_word.insert_str(start_end.0, addition);
-                            start_end = (start_end.0 + addition.len(), start_end.1 + addition.len())
-                        }
-                        Position::End => {
-                            mut_word.insert_str(start_end.1, addition);
-                            start_end = (start_end.0, start_end.1 + addition.len())
-                        }
+                    Action::Addition(_, position, addition, condition) => match condition.should_use(index, position, &start_end) {
+                        false => debug!("Skipping rule as condition failed"),
+                        // ActionCondition::HasNoInput if start_end.0 != 0 || position.is_end() => {
+                        //     debug!("Skipping rule as it has no input and is not at the start of the word");
+                        //     continue
+                        // },
+                        // ActionCondition::HasInput if start_end.0 == 0 && position.is_start() => {
+                        //     debug!("Skipping rule as it has input and is at the start of the word");
+                        //     continue
+                        // },
+                        _ => match position {
+                            Position::Start => {
+                                mut_word.insert_str(start_end.0, addition);
+                                start_end = (start_end.0 + addition.len(), start_end.1 + addition.len())
+                            }
+                            Position::End => {
+                                mut_word.insert_str(start_end.1, addition);
+                                start_end = (start_end.0, start_end.1 + addition.len())
+                            }
+                        },
                     },
-                    Action::Transformation(_, transformation) => {
+                    Action::Transformation(_, condition, transformation) => {
                         let before = mut_word.len();
                         let ranged = &mut_word[start_end.0..start_end.1];
                         mut_word.replace_range(start_end.0..start_end.1, &*transformation(ranged));

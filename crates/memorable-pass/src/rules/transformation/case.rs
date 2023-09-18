@@ -15,7 +15,7 @@
  */
 
 use crate::processor::word::Word;
-use crate::rules::action::Action;
+use crate::rules::action::{Action, ActionCondition};
 use crate::rules::priority::Priority;
 use crate::rules::rule::Rule;
 use clap::{Parser, ValueEnum};
@@ -41,7 +41,7 @@ impl Rule for CaseTransformation {
         _passable: &mut Self::Passable,
     ) -> Vec<Action> {
         let copy = self.clone();
-        vec![Action::Transformation(Priority::High, move |str| match &copy {
+        vec![Action::Transformation(Priority::High, ActionCondition::Always, move |str| match &copy {
             CaseTransformation::None => str.to_string(),
             CaseTransformation::Uppercase => str.to_ascii_uppercase(),
             CaseTransformation::Capitalise => str.replacen(&str[0..1], &str[0..1].to_uppercase(), 1),

@@ -15,7 +15,7 @@
  */
 
 use crate::processor::word::Word;
-use crate::rules::action::Action;
+use crate::rules::action::{Action, ActionCondition};
 use crate::rules::position::Position;
 use crate::rules::priority::Priority;
 use crate::rules::rule::Rule;
@@ -94,6 +94,7 @@ impl Rule for SeparatorAddition {
                 position.positional_value(Priority::Low, Priority::Custom(100)),
                 position,
                 fn_char().to_string(),
+                ActionCondition::HasInput
             )
         })
         .collect()
@@ -109,7 +110,7 @@ mod tests {
 
     fn get_string(action: &Action) -> String {
         match action {
-            Action::Addition(_, _, string) => string.clone(),
+            Action::Addition(_, _, string, ..) => string.clone(),
             _ => String::new(),
         }
     }
@@ -137,7 +138,7 @@ mod tests {
         .process_with_passable(&mut processor, &mut Some('?'));
 
         let result = processor.finish();
-        assert_eq!("?hello?world?", result);
+        assert_eq!("^hello?world?$", result);
     }
 
     #[test]
@@ -152,6 +153,6 @@ mod tests {
         let result = processor.finish();
         let group = "[!@$%\\.&*\\-+=?:]";
         println!("{}", result);
-        assert_matches!(Regex::new(&*format!("{group}hello{group}world{group}")).unwrap().is_match(&result), true);
+        assert_matches!(Regex::new(&*format!("^hello{group}world{group}$")).unwrap().is_match(&result), true);
     }
 }

@@ -19,27 +19,53 @@ use crate::rules::priority::Priority;
 use crate::TransformationFn;
 use derivative::Derivative;
 use std::cmp::Ordering;
+use tracing::instrument;
+
+#[derive(Debug, Ord, PartialOrd, Eq, PartialEq)]
+pub enum ActionCondition {
+    Always,
+    HasInput,
+    HasNoInput,
+}
 
 #[derive(Derivative)]
 #[derivative(Debug, Ord = "feature_allow_slow_enum", Eq, PartialEq)]
 pub enum Action {
-    Addition(Priority, Position, String),
+    Addition(Priority, Position, String, ActionCondition),
     Transformation(
         Priority,
+        ActionCondition,
         #[derivative(Debug = "ignore", Ord = "ignore", PartialEq = "ignore")] TransformationFn,
     ),
+}
+
+impl ActionCondition {
+    #[instrument]
+    pub fn should_use(&self, word_index: usize, position: &Position, word_range: &(usize, usize)) -> bool {
+        match self {
+            Self::Always => true,
+            Self::HasInput => match position {
+                Position::Start => word_index > 0 || word_range.0 > 0,
+                Position::End => word_index > 0 || word_range.1 > 0,
+            },
+            Self::HasNoInput => match position {
+                Position::Start => word_index == 0 && word_range.0 == 0,
+                Position::End => word_index == 0 && word_range.0 == word_range.1,
+            },
+        }
+    }
 }
 
 impl PartialOrd for Action {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         match (self, other) {
-            (Self::Addition(pri1, pos1, _), Self::Addition(pri2, pos2, _)) => match pos1 == pos2 {
+            (Self::Addition(pri1, pos1, ..), Self::Addition(pri2, pos2, ..)) => match pos1 == pos2 {
                 true => pri1.partial_cmp(pri2),
                 false => pos1.partial_cmp(pos2),
             },
-            (Self::Transformation(pri1, _), Self::Transformation(pri2, _)) => pri1.partial_cmp(pri2),
-            (Self::Addition(_, _, _), Self::Transformation(_, _)) => Some(Ordering::Less),
-            (Self::Transformation(_, _), Self::Addition(_, _, _)) => Some(Ordering::Greater),
+            (Self::Transformation(pri1, ..), Self::Transformation(pri2, ..)) => pri1.partial_cmp(pri2),
+            (Self::Addition(..), Self::Transformation(..)) => Some(Ordering::Less),
+            (Self::Transformation(..), Self::Addition(..)) => Some(Ordering::Greater),
         }
     }
 }

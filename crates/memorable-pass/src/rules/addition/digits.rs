@@ -15,7 +15,7 @@
  */
 
 use crate::processor::word::Word;
-use crate::rules::action::Action;
+use crate::rules::action::{Action, ActionCondition};
 use crate::rules::position::Position;
 use crate::rules::priority::Priority;
 use crate::rules::rule::Rule;
@@ -151,7 +151,7 @@ impl Rule for DigitAddition {
                     digits.push(char::from_digit(digit, 10).unwrap());
                 }
 
-                Action::Addition(Priority::High, *position, digits)
+                Action::Addition(Priority::High, *position, digits, ActionCondition::Always)
             })
             .collect()
     }
