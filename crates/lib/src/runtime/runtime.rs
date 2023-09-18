@@ -62,7 +62,7 @@ pub trait Runtime<C: Cli>: Send + Sync + 'static {
         RwLock::new(Vec::new())
     }
 
-    fn sumbit_error(&mut self, error: Error) -> Result<()> {
+    fn submit_error(&mut self, error: Error) -> Result<()> {
         // If verbosity is greater than 0, print the error at runtime.
         if self.__get_cli().flags().verbose > 0 {
             error!("Error: {}", error);

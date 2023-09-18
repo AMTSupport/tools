@@ -18,8 +18,8 @@ use anyhow::{anyhow, Context, Result};
 use inquire::validator::StringValidator;
 use tracing::{trace, warn};
 
-pub(crate) mod action;
 pub mod cli;
+pub mod error;
 pub mod progress;
 #[path = "inquire.rs"]
 pub mod ui_inquire;

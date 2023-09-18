@@ -56,7 +56,7 @@ impl Rule {
 #[instrument]
 pub(super) fn meta(path: &Path) -> Result<Metadata> {
     path.metadata()
-        .inspect(|m| trace!("Metadata aquired for {}: {:?}", path.display(), m))
+        .inspect(|m| trace!("Metadata acquired for {}: {:?}", path.display(), m))
         .inspect_err(|_err| error!("Failed to get metadata for {}", path.display()))
         .map_err(|err| RuleError::MetadataError(err, path.to_path_buf()).into())
 }
