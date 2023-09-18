@@ -2962,13 +2962,16 @@ dependencies = [
  "macros",
  "rand 0.8.5",
  "regex",
+ "reqwest",
  "rust-embed",
  "serde",
  "serde_json",
  "test-log",
+ "thiserror",
  "tokio",
  "tracing",
  "tracing-subscriber",
+ "zip",
 ]
 
 [[package]]

@@ -59,7 +59,7 @@ let
       pname = name;
       inherit version;
 
-      src = craneLib.cleanCargoSource (craneLib.path ./.);
+      src = craneLib.path ./.;
       cargoLock = craneLib.path ./Cargo.lock;
       cargoExtraArgs = if workspace != null then "--package ${workspace}" else "";
     };
