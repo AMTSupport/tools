@@ -27,6 +27,7 @@ use std::io::BufRead;
 use std::net::IpAddr;
 use std::str::FromStr;
 use std::sync::LazyLock;
+use rayon::prelude::{ParallelBridge, ParallelIterator};
 use thiserror::Error;
 use tokio::sync::Mutex;
 use tracing::{debug, instrument};

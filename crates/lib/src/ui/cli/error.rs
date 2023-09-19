@@ -35,4 +35,7 @@ pub enum CliError {
 
     #[error("{0}")]
     Custom(String),
+
+    #[error("Failed with unknown error: {0}")]
+    Source(#[from] anyhow::Error),
 }

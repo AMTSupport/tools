@@ -14,39 +14,74 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+use crate::cli::Flags as CommonFlags;
 use crate::ui::cli::error::CliError;
 use crate::ui::{UiBuidableFiller, UiBuildable};
 use anyhow::Result;
-use clap::{CommandFactory, Parser};
+use clap::{CommandFactory, Parser, Subcommand};
 use inquire::Text;
 use std::fmt::Debug;
 use std::io::{stdout, Write};
 use tracing::{debug, error, instrument, trace};
 
+#[derive(Debug, Parser)]
+struct MaybeRepl<O: Subcommand> {
+    #[command(subcommand)]
+    pub oneshot: Option<O>,
+
+    #[arg(long, short = 'r', action = clap::ArgAction::SetTrue)]
+    pub repl: bool,
+
+    #[command(flatten)]
+    pub flags: CommonFlags,
+}
+
 pub type CliResult<T> = Result<T, CliError>;
 
 pub trait AsyncCliUI: CliUI + Send + Sync + 'static {
-    async fn handle_command(&mut self, command: Self::OneShotCommand) -> CliResult<()>;
+    async fn handle_command(&mut self, command: Self::OneShotCommand, flags: &CommonFlags) -> CliResult<()>;
 
-    async fn handle_repl_command(&mut self, command: Self::ReplCommand) -> CliResult<bool>;
+    async fn handle_repl_command(&mut self, command: Self::ReplCommand, flags: &CommonFlags) -> CliResult<bool>;
 
-    /// Run the CLI Application in a one-shot mode
+    /// Run the CLI Application.
+    ///
+    /// This will be run by parsing the std::env::args() with [`MaybeRepl`]
+    /// and then running the appropriate command.
+    ///
+    /// If the MaybeRepl has [`MaybeRepl::repl`] set to true,
+    /// and there is also a [`MaybeRepl::oneshot`] command,
+    /// then the oneshot command will be run once as a repl command.
     async fn run(&mut self) -> CliResult<()> {
-        let command = Self::OneShotCommand::parse();
-        match self.handle_command(command).await {
-            Ok(_) => Ok(()),
-            Err(err) => {
-                error!("Failed to handle command:\n{err}");
-                Err(err)
-            }
+        let command = MaybeRepl::<Self::OneShotCommand>::parse();
+        let mut has_run = false;
+
+        if let Some(action) = command.oneshot {
+            self.handle_command(action, &command.flags).await?;
+            has_run = true;
         }
+
+        if command.repl {
+            self.repl(None).await?;
+            has_run = true;
+        }
+
+        if !has_run {
+            MaybeRepl::<Self::OneShotCommand>::command().print_help().map_err(CliError::WriteError)?;
+        }
+
+        Ok(())
     }
 
     /// Run in REPL mode (Read-Eval-Print-Loop)
     ///
     /// This is a mode where the user can enter commands and have them executed
     /// in a loop until they exit.
-    async fn repl(&mut self) -> CliResult<()> {
+    async fn repl(&mut self, init: Option<(Self::ReplCommand, CommonFlags)>) -> CliResult<()> {
+        // Run the initial command if there is one.
+        if let Some((action, flags)) = init {
+            self.handle_repl_command(action, &flags).await?;
+        }
+
         loop {
             let line = readline()?;
             let line = line.trim();
@@ -100,7 +135,7 @@ pub trait AsyncCliUI: CliUI + Send + Sync + 'static {
                 use clap::FromArgMatches;
 
                 let parsed = Self::ReplCommand::from_arg_matches_mut(&mut matches).map_err(CliError::InvalidCommand)?;
-                self.handle_repl_command(parsed).await?;
+                self.handle_repl_command(parsed, &CommonFlags::default()).await?;
                 Ok(false)
             }
         }
@@ -109,10 +144,10 @@ pub trait AsyncCliUI: CliUI + Send + Sync + 'static {
 
 pub trait CliUI {
     /// The command that will be used in one-shot mode
-    type OneShotCommand: Parser;
+    type OneShotCommand: Subcommand;
 
     /// The command that will be used to parse REPL commands
-    type ReplCommand: Parser;
+    type ReplCommand: Parser + Subcommand;
 
     /// The arguments that will be used to create the CLI UI
     ///
@@ -147,8 +182,13 @@ fn readline() -> CliResult<String> {
     Ok(buffer)
 }
 
-impl<OSCmd, ReplCmd, A> UiBuidableFiller for dyn CliUI<OneShotCommand = OSCmd, ReplCommand = ReplCmd, Args = A> {
-    #[instrument]
+impl<OSCmd, ReplCmd, A> UiBuidableFiller for dyn CliUI<OneShotCommand = OSCmd, ReplCommand = ReplCmd, Args = A>
+where
+    OSCmd: Subcommand + Parser + CommandFactory + Debug,
+    ReplCmd: Subcommand + Parser + CommandFactory + Debug,
+    A: Debug,
+{
+    #[instrument(level = "TRACE", ret, err)]
     async fn fill<B: UiBuildable<V>, V: From<B> + Debug>() -> Result<V> {
         let mut builder = B::default();
         let mut required_values = B::REQUIRED_FIELDS.to_vec();
@@ -181,7 +221,7 @@ impl<OSCmd, ReplCmd, A> UiBuidableFiller for dyn CliUI<OneShotCommand = OSCmd, R
         builder.build()
     }
 
-    #[instrument]
+    #[instrument(level = "TRACE", ret, err)]
     async fn modify<B: UiBuildable<V>, V: From<B> + Debug>(mut builder: B) -> Result<V> {
         for field in B::REQUIRED_FIELDS {
             let current = builder.display(field);

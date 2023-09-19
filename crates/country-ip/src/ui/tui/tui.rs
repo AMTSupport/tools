@@ -18,6 +18,7 @@ use crate::ui::tui::handler::EventHandler;
 use ratatui::prelude::CrosstermBackend;
 use ratatui::Terminal;
 use std::io::Stdout;
+use crossterm::event::KeyEvent;
 use lib::ui::tui::tui;
 
 struct Tui<'a> {
@@ -37,7 +38,19 @@ impl tui::Tui for Tui {
         todo!()
     }
 
+    fn init(&mut self) -> anyhow::Result<()> {
+        todo!()
+    }
+
+    fn exit(&mut self) -> anyhow::Result<()> {
+        todo!()
+    }
+
     fn draw(&mut self, app: &mut Self::App) -> anyhow::Result<()> {
+        todo!()
+    }
+
+    fn handle_key_events(&mut self, key_event: KeyEvent, app: &mut Self::App) -> anyhow::Result<()> {
         todo!()
     }
 

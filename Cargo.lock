@@ -1064,6 +1064,7 @@ dependencies = [
  "macros",
  "rand 0.8.5",
  "ratatui",
+ "rayon",
  "reqwest",
  "test-log",
  "thiserror",
@@ -1071,6 +1072,7 @@ dependencies = [
  "tokio-stream",
  "tokio-util",
  "tracing",
+ "tracing-appender",
  "tracing-subscriber",
 ]
 
@@ -1198,10 +1200,31 @@ version = "1.1.5"
 source = "git+https://github.com/gootorov/rust-csv.git?branch=serde-flatten#31d1105f9ee50bf02dff178f20be4a1ec9fdff2d"
 dependencies = [
  "bstr 0.2.17",
- "csv-core",
+ "csv-core 0.1.10 (git+https://github.com/gootorov/rust-csv.git?branch=serde-flatten)",
  "itoa 0.4.8",
  "ryu",
  "serde",
+]
+
+[[package]]
+name = "csv"
+version = "1.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "626ae34994d3d8d668f4269922248239db4ae42d538b14c398b74a52208e8086"
+dependencies = [
+ "csv-core 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "itoa 1.0.9",
+ "ryu",
+ "serde",
+]
+
+[[package]]
+name = "csv-core"
+version = "0.1.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2b2466559f260f48ad25fe6317b3c8dac77b5bdb5763ac7d9d6103530663bc90"
+dependencies = [
+ "memchr",
 ]
 
 [[package]]
@@ -2955,7 +2978,9 @@ name = "memorable-pass"
 version = "0.1.1"
 dependencies = [
  "anyhow",
+ "bytes",
  "clap",
+ "csv 1.2.2",
  "derivative",
  "env_logger",
  "lib",
@@ -3812,6 +3837,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "26072860ba924cbfa98ea39c8c19b4dd6a4a25423dbdf219c1eca91aa0cf6964"
 
 [[package]]
+name = "planif"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5a046bd1cd27c084c89f1ed163bf424dd5623e73d24cfb0fe5243fe9e7cfedc3"
+dependencies = [
+ "windows 0.48.0",
+]
+
+[[package]]
 name = "png"
 version = "0.17.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4201,6 +4235,8 @@ dependencies = [
  "clap",
  "fake",
  "lib",
+ "macros",
+ "planif",
  "rand 0.8.5",
  "registry",
  "sysexits",
@@ -4209,7 +4245,6 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "uptime_lib",
- "windows 0.51.1",
 ]
 
 [[package]]
@@ -4413,7 +4448,7 @@ dependencies = [
  "anyhow",
  "chrono",
  "clap",
- "csv",
+ "csv 1.1.5",
  "env_logger",
  "http-cache-reqwest",
  "indicatif",
@@ -4762,9 +4797,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.105"
+version = "1.0.107"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "693151e1ac27563d6dbcec9dee9fbd5da8539b20fa14ad3752b2e6d363ace360"
+checksum = "6b420ce6e3d8bd882e9b243c6eed35dbc9a6110c9769e74b584e0d68d1f20c65"
 dependencies = [
  "indexmap 2.0.0",
  "itoa 1.0.9",
@@ -6409,25 +6444,6 @@ name = "windows"
 version = "0.48.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e686886bc078bc1b0b600cac0147aadb815089b6e4da64016cbd754b6342700f"
-dependencies = [
- "windows-targets 0.48.5",
-]
-
-[[package]]
-name = "windows"
-version = "0.51.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ca229916c5ee38c2f2bc1e9d8f04df975b4bd93f9955dc69fabb5d91270045c9"
-dependencies = [
- "windows-core",
- "windows-targets 0.48.5",
-]
-
-[[package]]
-name = "windows-core"
-version = "0.51.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f1f8cf84f35d2db49a46868f947758c7a1138116f7fac3bc844f43ade1292e64"
 dependencies = [
  "windows-targets 0.48.5",
 ]

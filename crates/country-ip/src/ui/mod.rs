@@ -14,4 +14,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-mod tui;
+#[cfg(feature = "ui-cli")]
+pub mod cli;
+#[cfg(feature = "ui-gui")]
+pub mod gui;
+#[cfg(feature = "ui-tui")]
+pub mod tui;

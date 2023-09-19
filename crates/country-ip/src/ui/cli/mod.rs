@@ -14,9 +14,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::config::cli::Cli;
-use macros::runtime;
-
-#[derive(Debug)]
-#[runtime(Cli)]
-pub struct Runtime {}
+pub mod ui;
+mod oneshot;
+mod repl;

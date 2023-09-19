@@ -11,10 +11,10 @@ name = "country_ip"
 path = "src/lib.rs"
 
 [features]
-default = ["ui-tui"]
+default = ["ui-cli"]
 
-ui-tui = ["lib/ui-tui", "ratatui", "crossterm"]
 ui-cli = ["lib/ui-cli", "indicatif", "inquire"]
+ui-tui = ["lib/ui-tui", "ratatui", "crossterm"]
 ui-gui = ["lib/ui-gui", "iced", "iced_aw"]
 
 [dependencies]
@@ -44,6 +44,7 @@ reqwest = { workspace = true, features = ["stream"] }
 # Logging & Errors
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
+tracing-appender = { workspace = true }
 thiserror = { workspace = true }
 anyhow = { workspace = true }
 
@@ -53,6 +54,7 @@ tokio-util = { version = "0.7.8", features = ["compat"] }
 futures = "0.3.28"
 cidr = "0.2.2"
 async-trait = "0.1.72"
+rayon = { workspace = true }
 
 # Countries
 keshvar = { version = "0.3.0", features = ["search-iso-short-name"] }

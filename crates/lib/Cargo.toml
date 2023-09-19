@@ -28,7 +28,7 @@ iced_aw = { workspace = true, optional = true }
 # Logging & Errors
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
-tracing-appender = { version = "0.2.2" }
+tracing-appender = { workspace = true }
 thiserror = { workspace = true }
 anyhow = { workspace = true }
 

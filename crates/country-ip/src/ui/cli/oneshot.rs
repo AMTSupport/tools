@@ -14,30 +14,13 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use clap::{Parser, Subcommand};
-use lib::cli::Flags;
+use clap::Subcommand;
 use std::net::IpAddr;
 
-#[derive(Parser, Debug)]
-#[command(name = env!["CARGO_PKG_NAME"], version, author, about)]
-pub struct Cli {
-    /// The command to run
-    #[command(subcommand)]
-    pub action: CliAction,
-
-    #[command(flatten)]
-    pub flags: Flags,
-}
-
-#[derive(Subcommand, Debug)]
-pub enum CliAction {
-    #[cfg(feature = "ui-gui")]
-    GUI,
-
-    #[cfg(feature = "ui-tui")]
-    TUI,
-
+#[derive(Debug, Subcommand)]
+pub enum OneshotAction {
     /// Get a random IP address for a country.
+    ///
     /// or a random country if no country is specified
     /// Countries must be specified as ISO 3166-1 alpha-2 or alpha-3 codes (e.g. US, USA, GB, GBR)
     Get {
@@ -49,11 +32,10 @@ pub enum CliAction {
     },
 
     /// Lookup an IP address and get the country it belongs to.
-    Lookup { addr: IpAddr },
-}
-
-impl lib::runtime::runtime::Cli for Cli {
-    fn flags(&self) -> &Flags {
-        &self.flags
-    }
+    Lookup {
+        /// The IP address to lookup.
+        ///
+        /// This can be either an IPv4 or IPv6 address.
+        addr: IpAddr,
+    },
 }
