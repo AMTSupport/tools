@@ -20,7 +20,7 @@ use keshvar::Alpha2;
 use macros::CommonFields;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::ops::RangeInclusive;
-use tracing::{debug, instrument};
+use tracing::instrument;
 
 #[derive(Debug, Clone, CommonFields)]
 pub enum Record {
@@ -47,7 +47,7 @@ pub enum Status {
 }
 
 impl Record {
-    #[instrument]
+    #[instrument(level = "TRACE", ret)]
     pub fn start(&self) -> IpAddr {
         match self {
             Record::RegistryRecord { value, .. } => *value,
@@ -55,38 +55,30 @@ impl Record {
         }
     }
 
-    #[instrument]
+    #[instrument(level = "TRACE", ret)]
     pub fn end(&self) -> IpAddr {
         match self {
             Record::DBRecord { end, .. } => *end,
-            Record::RegistryRecord { value, range, .. } => {
-                // TODO :: Fix this
-                let end = match value {
-                    IpAddr::V4(start) => {
-                        let bits = start.to_bits();
-                        let end = bits + (*range - 1);
-                        IpAddr::V4(Ipv4Addr::from(end))
-                    }
-                    IpAddr::V6(start) => {
-                        let cidr = Ipv6Inet::new(*start, *range as u8).unwrap();
-                        IpAddr::V6(cidr.last_address())
-                    }
-                };
-
-                debug!("{self:?}");
-                debug!("{value:?}");
-                debug!("{end:?}");
-                end
-            }
+            Record::RegistryRecord { value, range, .. } => match value {
+                IpAddr::V4(start) => {
+                    let bits = start.to_bits();
+                    let end = bits + (*range - 1);
+                    IpAddr::V4(Ipv4Addr::from(end))
+                }
+                IpAddr::V6(start) => {
+                    let cidr = Ipv6Inet::new(*start, *range as u8).unwrap();
+                    IpAddr::V6(cidr.last_address())
+                }
+            },
         }
     }
 
-    #[instrument]
+    #[instrument(level = "TRACE", ret)]
     pub fn range(&self) -> RangeInclusive<IpAddr> {
         self.start()..=self.end()
     }
 
-    #[instrument]
+    #[instrument(level = "TRACE", ret)]
     pub fn u128_range(&self) -> RangeInclusive<u128> {
         let start = match self.start() {
             IpAddr::V4(addr) => addr.to_bits() as u128,
@@ -99,12 +91,12 @@ impl Record {
         start..=end
     }
 
-    #[instrument]
+    #[instrument(level = "TRACE", ret)]
     pub fn contains(&self, ip: &IpAddr) -> bool {
         self.range().contains(ip)
     }
 
-    #[instrument]
+    #[instrument(level = "TRACE", ret)]
     pub fn random(&self) -> IpAddr {
         use rand::prelude::{Rng, SeedableRng, SmallRng};
 

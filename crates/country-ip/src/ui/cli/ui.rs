@@ -19,8 +19,9 @@ use super::repl::ReplAction;
 use lib::cli::Flags as CommonFlags;
 use lib::ui::cli::cli::{AsyncCliUI, CliResult, CliUI};
 use lib::ui::cli::error::CliError;
-use tracing::{error, info};
+use tracing::{error, info, info_span, instrument};
 use tracing_appender::non_blocking::WorkerGuard;
+use tracing_indicatif::span_ext::IndicatifSpanExt;
 
 #[derive(Debug)]
 pub struct CountryIPCli {
@@ -40,21 +41,28 @@ impl CliUI for CountryIPCli {
 }
 
 impl AsyncCliUI for CountryIPCli {
+    #[instrument(skip(self))]
     async fn handle_command(&mut self, command: Self::OneShotCommand, flags: &CommonFlags) -> CliResult<()> {
         if self._guard.is_none() {
             self._guard = Some(lib::log::init(env!("CARGO_PKG_NAME"), flags.verbose));
         }
 
+        let span = info_span!("feedback");
+        span.pb_set_style(&lib::ui::cli::progress::style_spinner());
+        span.pb_start();
+
         match command {
             OneshotAction::Get { country, ipv6 } => {
+                span.pb_set_message("Fetching country data...");
                 let country = crate::get_country(&country).map_err(|err| CliError::Source(err.into()))?;
+
+                span.pb_set_message("Getting IP Records...");
                 let random = crate::get(&country, &ipv6).await.map_err(|err| CliError::Source(err.into()))?;
-                info!(
-                    "Generated random IP address for {} => {random}",
-                    country.iso_short_name()
-                );
+
+                info!("{} => {random}", country.iso_short_name());
             }
             OneshotAction::Lookup { addr, .. } => {
+                span.pb_set_message("Looking up IP address...");
                 let ip = crate::lookup(&addr).await;
 
                 match ip {

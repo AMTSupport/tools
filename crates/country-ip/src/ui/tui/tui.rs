@@ -15,8 +15,8 @@
  */
 
 use crate::ui::tui::handler::EventHandler;
-use ratatui::prelude::CrosstermBackend;
-use ratatui::Terminal;
+use ratatouille::prelude::CrosstermBackend;
+use ratatouille::Terminal;
 use std::io::Stdout;
 use crossterm::event::KeyEvent;
 use lib::ui::tui::tui;

@@ -18,10 +18,10 @@ use crate::cli::Flags as CommonFlags;
 use crate::ui::cli::error::CliError;
 use crate::ui::{UiBuidableFiller, UiBuildable};
 use anyhow::Result;
-use clap::{CommandFactory, Parser, Subcommand};
+use clap::{CommandFactory, FromArgMatches, Parser, Subcommand};
 use inquire::Text;
 use std::fmt::Debug;
-use std::io::{stdout, Write};
+use std::io::{stdin, stdout, Write};
 use tracing::{debug, error, instrument, trace};
 
 #[derive(Debug, Parser)]
@@ -38,7 +38,7 @@ struct MaybeRepl<O: Subcommand> {
 
 pub type CliResult<T> = Result<T, CliError>;
 
-pub trait AsyncCliUI: CliUI + Send + Sync + 'static {
+pub trait AsyncCliUI: CliUI + Send + Sync {
     async fn handle_command(&mut self, command: Self::OneShotCommand, flags: &CommonFlags) -> CliResult<()>;
 
     async fn handle_repl_command(&mut self, command: Self::ReplCommand, flags: &CommonFlags) -> CliResult<bool>;
@@ -51,7 +51,10 @@ pub trait AsyncCliUI: CliUI + Send + Sync + 'static {
     /// If the MaybeRepl has [`MaybeRepl::repl`] set to true,
     /// and there is also a [`MaybeRepl::oneshot`] command,
     /// then the oneshot command will be run once as a repl command.
-    async fn run(&mut self) -> CliResult<()> {
+    async fn run(&mut self) -> CliResult<()>
+    where
+        Self: Sized,
+    {
         let command = MaybeRepl::<Self::OneShotCommand>::parse();
         let mut has_run = false;
 
@@ -76,7 +79,10 @@ pub trait AsyncCliUI: CliUI + Send + Sync + 'static {
     ///
     /// This is a mode where the user can enter commands and have them executed
     /// in a loop until they exit.
-    async fn repl(&mut self, init: Option<(Self::ReplCommand, CommonFlags)>) -> CliResult<()> {
+    async fn repl(&mut self, init: Option<(Self::ReplCommand, CommonFlags)>) -> CliResult<()>
+    where
+        Self: Sized,
+    {
         // Run the initial command if there is one.
         if let Some((action, flags)) = init {
             self.handle_repl_command(action, &flags).await?;
@@ -115,30 +121,10 @@ pub trait AsyncCliUI: CliUI + Send + Sync + 'static {
     async fn respond(&mut self, line: &str) -> CliResult<bool> {
         let args = shlex::split(line).ok_or_else(|| CliError::ParseError(line.into()))?;
         let mut matches = Self::ReplCommand::command().try_get_matches_from(&args).map_err(CliError::InvalidCommand)?;
+        let parsed = Self::ReplCommand::from_arg_matches_mut(&mut matches).map_err(CliError::InvalidCommand)?;
 
-        match matches.subcommand() {
-            // Some(("ping", _)) => {
-            //     writeln!(stdout(), "pong").map_err(CliError::WriteError)?;
-            //     stdout().flush().map_err(CliError::WriteError)?;
-            //     Ok(false)
-            // }
-            // Some(("quit", _)) | Some(("q", _)) => {
-            //     writeln!(stdout(), "Goodbye!").map_err(CliError::WriteError)?;
-            //     stdout().flush().map_err(CliError::WriteError)?;
-            //     Ok(true)
-            // }
-            // Some(("help", _)) | Some(("h", _)) => {
-            //     Self::ReplCommand::command().print_long_help().map_err(CliError::WriteError)?;
-            //     Ok(false)
-            // }
-            _ => {
-                use clap::FromArgMatches;
-
-                let parsed = Self::ReplCommand::from_arg_matches_mut(&mut matches).map_err(CliError::InvalidCommand)?;
-                self.handle_repl_command(parsed, &CommonFlags::default()).await?;
-                Ok(false)
-            }
-        }
+        self.handle_repl_command(parsed, &CommonFlags::default()).await?;
+        Ok(false)
     }
 }
 
@@ -167,11 +153,9 @@ pub trait CliUI {
         Self: Sized;
 }
 
+#[instrument(level = "TRACE", err, ret)]
 fn readline() -> CliResult<String> {
-    use std::io::stdin;
-
-    // Write a prompt to stdout and flush it.
-    write!(stdout(), "$ ").map_err(CliError::WriteError)?;
+    stdout().write(b"$ ").map_err(CliError::WriteError)?;
     stdout().flush().map_err(CliError::WriteError)?;
 
     // Read a line from stdin and return it.

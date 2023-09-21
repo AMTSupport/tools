@@ -14,13 +14,27 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#![feature(slice_take)]
-
-use country_ip::ui::cli::ui::CountryIPCli;
-use lib::ui::cli::cli::{AsyncCliUI, CliResult, CliUI};
-
 #[tokio::main]
-async fn main() -> CliResult<()> {
+#[cfg(feature = "ui-cli")]
+async fn main() -> lib::ui::cli::cli::CliResult<()> {
+    use country_ip::ui::cli::ui::CountryIPCli;
+    use lib::ui::cli::cli::{AsyncCliUI, CliUI};
+
     let mut ui = CountryIPCli::new(())?;
     ui.run().await
+}
+
+#[tokio::main]
+#[cfg(feature = "ui-tui")]
+async fn main() {
+    todo!("tui not implemented yet")
+}
+
+#[tokio::main]
+#[cfg(feature = "ui-gui")]
+async fn main() {
+    use country_ip::ui::gui::application::CountryIPApp;
+    use iced::{Application, Sandbox, Settings};
+
+    <CountryIPApp as Application>::run(Settings::default())
 }

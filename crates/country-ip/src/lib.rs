@@ -23,22 +23,21 @@
 
 use crate::record::Record;
 use crate::registry::Registry;
+use anyhow::{anyhow, Result};
 use async_trait::async_trait;
+use futures::StreamExt;
 use keshvar::{Alpha2, Alpha3, Country, CountryIterator};
 use rand::prelude::IteratorRandom;
+use rand::thread_rng;
 use std::fmt::Debug;
 use std::net::IpAddr;
-use tracing::{debug, info, instrument};
+use thiserror::Error;
+use tracing::{debug, error, instrument, warn};
 
 pub mod db_ip;
 pub mod record;
 pub mod registry;
 pub mod ui;
-
-use anyhow::{anyhow, Result};
-use futures::StreamExt;
-use rand::thread_rng;
-use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum Error {
@@ -46,15 +45,15 @@ pub enum Error {
     InvalidCountryCode(String),
 }
 
-#[instrument(level = "TRACE", ret, err)]
+#[instrument(level = "TRACE", ret, err, fields(country = %country.iso_short_name()))]
 pub async fn get_record_db(country: &Country) -> Result<Box<dyn RecordDB>> {
     match Registry::get_for(&country) {
         Ok(registry) => {
-            info!("Using registry {} for {}", registry.name(), country.iso_short_name());
+            debug!("Using registry {} for {}", registry.name(), country.iso_short_name());
             registry.get().await
         }
         Err(_) => {
-            info!(
+            debug!(
                 "No registry found for {}, falling back to DB-IP",
                 country.iso_short_name()
             );
@@ -64,7 +63,7 @@ pub async fn get_record_db(country: &Country) -> Result<Box<dyn RecordDB>> {
 }
 
 #[async_trait]
-pub trait RecordDB: Send + Sync + Debug {
+pub trait RecordDB: Send + Sync + Debug + Unpin {
     async fn lookup(&self, ip: &IpAddr) -> Option<Alpha2>;
 
     async fn filtered(&self, alpha: &Alpha2) -> Vec<&Record>;
@@ -88,6 +87,7 @@ pub trait RecordDB: Send + Sync + Debug {
     }
 }
 
+#[instrument(level = "TRACE", ret, err)]
 fn get_country(alpha: &Option<String>) -> std::result::Result<Country, Error> {
     alpha
         .as_ref()
@@ -99,12 +99,12 @@ fn get_country(alpha: &Option<String>) -> std::result::Result<Country, Error> {
             _ => unreachable!(),
         })
         .unwrap_or_else(|| {
-            info!("No country specified, generating random country");
+            warn!("No country specified, generating random country");
             CountryIterator::new().choose(&mut thread_rng()).ok_or_else(|| unreachable!())
         })
 }
 
-#[instrument(level = "TRACE", ret, err)]
+#[instrument(level = "TRACE", ret, err, fields(country = %country.iso_short_name()))]
 async fn get(country: &Country, use_ipv6: &bool) -> Result<IpAddr> {
     let alpha = country.alpha2();
     let record_db = get_record_db(&country).await?;
@@ -116,6 +116,7 @@ async fn get(country: &Country, use_ipv6: &bool) -> Result<IpAddr> {
     .ok_or_else(|| anyhow::anyhow!("No IP addresses found for {}", country.iso_short_name()))
 }
 
+#[instrument(level = "TRACE", ret, err)]
 async fn lookup(addr: &IpAddr) -> Result<Country> {
     let variants: Vec<Registry> = Registry::get_variants();
     let mut stream = futures::stream::iter(variants.iter()).map(|reg| reg.get()).buffer_unordered(variants.len());

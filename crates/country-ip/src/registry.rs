@@ -22,15 +22,15 @@ use anyhow::{Context, Result};
 use async_trait::async_trait;
 use keshvar::{Alpha2, Country, Region, SubRegion};
 use macros::EnumVariants;
+use rayon::prelude::{ParallelBridge, ParallelIterator};
 use std::collections::HashMap;
 use std::io::BufRead;
 use std::net::IpAddr;
 use std::str::FromStr;
 use std::sync::LazyLock;
-use rayon::prelude::{ParallelBridge, ParallelIterator};
 use thiserror::Error;
 use tokio::sync::Mutex;
-use tracing::{debug, instrument};
+use tracing::instrument;
 
 #[derive(Debug, Error)]
 pub enum RegistryErrors {
@@ -80,7 +80,7 @@ pub struct RegistryRecords {
 
 #[async_trait]
 impl RecordDB for RegistryRecords {
-    #[instrument]
+    #[instrument(level = "TRACE", ret)]
     async fn lookup(&self, ip: &IpAddr) -> Option<Alpha2> {
         self.inner
             .iter()
@@ -89,7 +89,7 @@ impl RecordDB for RegistryRecords {
             .map(|record| record.alpha().clone())
     }
 
-    #[instrument]
+    #[instrument(level = "TRACE", ret)]
     async fn filtered(&self, country: &Alpha2) -> Vec<&Record> {
         self.inner
             .iter()
@@ -106,7 +106,7 @@ impl RecordDB for RegistryRecords {
 static DOWNLOADED: LazyLock<Mutex<HashMap<Registry, RegistryRecords>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
 
 impl Registry {
-    #[instrument]
+    #[instrument(level = "TRACE", ret, err, fields(country = %country.iso_short_name()))]
     pub fn get_for(country: &Country) -> Result<Registry> {
         use Registry::*;
 
@@ -188,10 +188,10 @@ impl Registry {
         let target_name = self.target_name();
         let suffix = self.suffix();
 
-        format!("http://ftp.apnic.net/stats/{name}/delegated-{target_name}-{suffix}")
+        format!("https://ftp.apnic.net/stats/{name}/delegated-{target_name}-{suffix}")
     }
 
-    #[instrument]
+    #[instrument(level = "TRACE", err, ret)]
     pub async fn get(&self) -> Result<Box<dyn RecordDB>> {
         let records = match self.downloaded().await {
             Err(_) => {
@@ -204,13 +204,13 @@ impl Registry {
         Ok(Box::new(records))
     }
 
-    #[instrument]
+    #[instrument(level = "TRACE", ret)]
     async fn downloaded(&self) -> Result<RegistryRecords> {
         let ref map = DOWNLOADED.lock().await;
-        map.get(&self).ok_or(anyhow::anyhow!("Data not downloaded")).cloned()
+        map.get(self).ok_or(anyhow::anyhow!("Data not downloaded")).cloned()
     }
 
-    #[instrument]
+    #[instrument(level = "TRACE", ret, err)]
     async fn download(&self) -> Result<()> {
         let url = &self.url();
         let data = reqwest::get(&*url)
@@ -228,36 +228,22 @@ impl Registry {
             .filter(|line| !line.starts_with('#')) // Remove comments
             .map(|line| line.split('|').map(|s| s.into()).collect::<Vec<String>>()) // Split on pipe
             .filter_map(|split| {
-                debug!("Split: {split:?}");
-
                 let alpha = match &*split[1] {
-                    str if str.len() != 2 => {
-                        debug!("Invalid country code: {str}");
-                        return None;
-                    }
+                    str if str.len() != 2 => return None,
                     str => match Alpha2::try_from(str) {
                         Ok(alpha) => alpha,
-                        Err(e) => {
-                            debug!("Failed to parse country code: {e}");
-                            return None;
-                        }
+                        Err(_) => return None,
                     },
                 };
 
                 let value = match IpAddr::from_str(&*split[3]) {
                     Ok(value) => value,
-                    Err(e) => {
-                        debug!("Failed to parse IP address: {e}");
-                        return None;
-                    }
+                    Err(_) => return None,
                 };
 
                 let range = match u32::from_str(&*split[4]) {
                     Ok(range) => range,
-                    Err(e) => {
-                        debug!("Failed to parse range: {e}");
-                        return None;
-                    }
+                    Err(_) => return None,
                 };
 
                 let date = split[5].to_string();

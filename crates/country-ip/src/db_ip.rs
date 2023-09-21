@@ -42,7 +42,7 @@ impl DB {
     // TODO :: Get latest version from https://db-ip.com/db/download/ip-to-country-lite
     const URL: &'static str = "https://download.db-ip.com/free/dbip-country-lite-2023-08.csv.gz";
 
-    #[instrument]
+    #[instrument(level = "TRACE", ret, err)]
     async fn new() -> Result<Self> {
         let response = reqwest::get(Self::URL).await?;
         let stream = response
@@ -102,7 +102,7 @@ impl DB {
 
 #[async_trait]
 impl RecordDB for DB {
-    #[instrument]
+    #[instrument(level = "TRACE", ret)]
     async fn lookup(&self, ip: &IpAddr) -> Option<Alpha2> {
         for record in &self.0 {
             if &record.start() <= ip && &record.end() >= ip {
@@ -112,7 +112,7 @@ impl RecordDB for DB {
         None
     }
 
-    #[instrument]
+    #[instrument(level = "TRACE", ret)]
     async fn filtered(&self, alpha: &Alpha2) -> Vec<&Record> {
         self.0.iter().filter(|record| record.alpha() == alpha).collect::<Vec<&Record>>()
     }
