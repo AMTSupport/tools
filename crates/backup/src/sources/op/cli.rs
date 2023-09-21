@@ -145,7 +145,6 @@ pub mod dated {
 pub mod user {
     use crate::sources::getter::CliGetter;
     use crate::sources::op::core::OnePasswordCore;
-    use async_trait::async_trait;
     use chrono::{DateTime, Utc};
     use serde::{Deserialize, Serialize};
 
@@ -191,7 +190,6 @@ pub mod user {
         },
     }
 
-    #[async_trait]
     impl CliGetter<OnePasswordCore, User, [&'static str; 3]> for User {
         const ARGS: [&'static str; 3] = ["user", "get", "--me"];
     }
@@ -908,7 +906,7 @@ pub mod item {
                 .map(|o| o.stdout)
         }
 
-        #[instrument]
+        #[instrument(level = "TRACE")]
         pub fn parse(
             vault: super::vault::Vault,
             account: &OnePasswordAccount,
@@ -916,7 +914,7 @@ pub mod item {
             bars: (&ProgressBar, &MultiProgress),
         ) -> Result<Vec<Item>> {
             trace!("Requesting Items from {vault}");
-            let bar = bars.1.insert_after(bars.0, lib::progress::spinner_with_count());
+            let bar = bars.1.insert_after(bars.0, lib::ui::cli::progress::spinner_with_count());
 
             bar.set_message(format!("Requesting items from `{vault}` vault...",));
 

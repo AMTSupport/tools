@@ -87,7 +87,7 @@ impl Config {
     /// This will search for the following files in order:
     /// - $BACKUP_CONFIG
     /// - $PWD/settings.json
-    #[instrument]
+    #[instrument(level = "TRACE")]
     pub fn find(directory: Option<&Path>) -> Result<PathBuf> {
         use std::env;
 
@@ -109,7 +109,7 @@ impl Config {
             .map_err(Into::into)
     }
 
-    #[instrument]
+    #[instrument(level = "TRACE")]
     pub async fn load(path: &Path) -> Result<Self> {
         match path.exists() {
             false => Err(Error::NotFound(path.to_path_buf()).into()),
@@ -131,7 +131,7 @@ impl Config {
     ///
     /// This will create a file called `settings.json` in the given directory.
     /// If the file already exists, and the `mutated` flag is not set, this will not write to the file.
-    #[instrument]
+    #[instrument(level = "TRACE")]
     pub async fn save(&self) -> Result<()> {
         let path = match self.path {
             None => {

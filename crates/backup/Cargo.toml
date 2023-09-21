@@ -9,8 +9,8 @@ keywords = ["backup"]
 default = ["ui-cli", "sources-s3", "sources-bitwarden", "sources-1password"]
 binary-downloader = ["bytes", "rand", "const_format"]
 
-ui-tui = ["ratatui", "crossterm", "lib/ui-tui"]
 ui-cli = ["indicatif", "inquire", "lib/ui-cli"]
+ui-tui = ["ratatui", "crossterm", "lib/ui-tui"]
 
 sources-s3 = ["opendal", "futures"]
 sources-bitwarden = ["binary-downloader"]
@@ -22,7 +22,6 @@ macros = { path = "../macros" }
 
 # Runtimes
 tokio = { workspace = true }
-tokio-stream = { workspace = true }
 
 # Cli & UI
 clap = { workspace = true }
@@ -31,7 +30,7 @@ inquire = { workspace = true, features = ["path"], optional = true }
 
 # TUI
 ratatui = { workspace = true, features = ["all-widgets"], optional = true }
-crossterm = { workspace = true, features = [], optional = true }
+crossterm = { workspace = true, optional = true }
 
 # Data / Serialization
 serde = { workspace = true }
@@ -54,12 +53,13 @@ glob = "0.3.1"
 readable-regex = "0.1.0-alpha1"
 paste = "1.0.14"
 
-futures = { version = "0.3.28", optional = true } # Needed by opendal
 opendal = { version = "0.40.0", features = ["services-s3", "rustls"], optional = true }
 
-#tokio-util = { version = "0.7.8", features = ["full"] }
-futures-util = "0.3.28"
-rayon = "1.7"
+# Futures & Async
+futures = { workspace = true, optional = true }
+futures-util = { workspace = true }
+tokio-stream = { workspace = true }
+rayon = { workspace = true }
 
 # For downloading cli binaries
 bytes = { version = "1.5.0", optional = true }

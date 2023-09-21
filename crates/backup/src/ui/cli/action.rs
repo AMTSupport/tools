@@ -25,12 +25,11 @@ use anyhow::{anyhow, Context, Result};
 use inquire::validator::Validation;
 use inquire::{PathFilter, PathSelect, PathSelectionMode};
 use lib::pathed::ensure_directory_exists;
-use lib::progress::spinner;
+use lib::ui::cli::progress;
 use std::env;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
-use tokio::spawn;
-use tracing::{error, instrument, span, trace, Instrument};
+use tracing::{error, instrument, trace};
 
 #[derive(Debug, Clone, Copy, clap::Subcommand)]
 pub enum Action {
@@ -45,7 +44,7 @@ pub enum Action {
 }
 
 impl Action {
-    #[instrument]
+    #[instrument(level = "TRACE")]
     pub fn prepare(&self, destination: Option<&Path>) -> Result<Runtime> {
         match self {
             Action::Init => {
@@ -70,7 +69,6 @@ impl Action {
     /// Runs the action.
     pub async fn run(&self, runtime: &mut Runtime) -> Result<()> {
         use indicatif::MultiProgress;
-        use lib::progress;
         use std::sync::Arc;
 
         match self {
@@ -108,31 +106,29 @@ impl Action {
                 // TODO :: Clean this the fuck up
                 let mut handles = vec![];
                 for exporter in runtime.config.exporters.clone() {
-                    let passed_progress = multi_bar.add(spinner());
+                    let passed_progress = multi_bar.add(progress::spinner());
                     passed_progress.set_message(format!("Running exporter: {exporter}"));
 
                     let total_progress = total_progress.clone();
                     let multi_bar = multi_bar.clone();
                     let runtime = runtime.clone();
 
-                    let handle = spawn(async move {
-                        trace!("Running exporter: {}", exporter);
-                        let result = exporter.run(&runtime, &passed_progress, &multi_bar).await;
-                        total_progress.inc(1);
-                        passed_progress.finish_and_clear();
-                        result
-                    })
-                    .instrument(span!(tracing::Level::TRACE, "exporter"));
+                    trace!("Running exporter: {}", exporter);
+                    let result = exporter.run(&runtime, &passed_progress, &multi_bar).await;
+                    total_progress.inc(1);
+                    passed_progress.finish_and_clear();
 
-                    handles.push(handle);
+                    handles.push(result);
                 }
 
                 total_progress.finish_and_clear();
-                let results = futures::future::join_all(handles).await;
-                for result in results {
-                    if let Err(e) = result? {
+                // let results = futures::future::join_all(handles).await;
+                for result in handles {
+                    if let Err(e) = result {
                         error!("Error while running exporter: {:?}", &e);
                     }
+
+                    trace!("Finished running exporter successfully");
                 }
 
                 Ok(())
@@ -155,7 +151,7 @@ fn find_backup_root(destination: Option<&Path>) -> Result<PathBuf> {
     }
 }
 
-#[instrument]
+#[instrument(level = "TRACE")]
 fn select_location(destination: Option<&Path>) -> Result<PathBuf> {
     if let Some(path) = destination {
         ensure_directory_exists(path)?;

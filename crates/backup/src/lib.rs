@@ -32,6 +32,7 @@
 #![feature(async_fn_in_trait)]
 #![feature(fn_traits)]
 #![feature(stmt_expr_attributes)]
+#![feature(exact_size_is_empty)]
 
 pub mod app;
 pub mod config;

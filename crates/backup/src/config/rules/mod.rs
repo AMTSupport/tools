@@ -15,8 +15,8 @@
  */
 
 pub mod autoprune;
-mod metadata;
-mod rule;
+pub mod metadata;
+pub mod rule;
 
 use crate::config::rules::autoprune::AutoPrune;
 use crate::config::rules::metadata::Metadata;

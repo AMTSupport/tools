@@ -14,7 +14,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use ratatui::{
+use ratatouille::{
     backend::Backend,
     layout::Alignment,
     style::{Color, Style},

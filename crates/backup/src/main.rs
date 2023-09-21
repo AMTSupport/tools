@@ -17,7 +17,6 @@
 use anyhow::Result;
 use backup::app::AppCli;
 use clap::Parser;
-use std::path::PathBuf;
 
 #[cfg(feature = "ui-tui")]
 #[cfg(not(feature = "ui-cli"))]

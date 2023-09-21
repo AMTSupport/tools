@@ -29,7 +29,7 @@ pub struct CliUI {
 }
 
 impl CliUI {
-    #[instrument]
+    #[instrument(level = "TRACE")]
     pub fn new(initial_action: Action, destination: Option<&Path>) -> Result<Self> {
         let runtime = initial_action.prepare(destination)?;
         let app = App::new(runtime);
@@ -37,7 +37,7 @@ impl CliUI {
         Ok(Self { app })
     }
 
-    #[instrument]
+    #[instrument(level = "TRACE")]
     pub async fn run(&mut self, event: Action) -> Result<()> {
         self.app.running = true;
 
@@ -54,7 +54,7 @@ impl CliUI {
 impl Ui for CliUI {}
 
 impl UiBuidableFiller for CliUI {
-    #[instrument]
+    #[instrument(level = "TRACE")]
     async fn fill<B: UiBuildable<V>, V: From<B> + Debug>() -> Result<V> {
         let mut builder = B::default();
         let mut required_values = B::REQUIRED_FIELDS.to_vec();
@@ -87,7 +87,7 @@ impl UiBuidableFiller for CliUI {
         builder.build()
     }
 
-    #[instrument]
+    #[instrument(level = "TRACE")]
     async fn modify<B: UiBuildable<V>, V: From<B> + Debug>(mut builder: B) -> Result<V> {
         for field in B::REQUIRED_FIELDS {
             let current = builder.display(field);
