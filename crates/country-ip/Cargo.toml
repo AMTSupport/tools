@@ -48,11 +48,14 @@ thiserror = { workspace = true }
 anyhow = { workspace = true }
 
 rand = { version = "0.8.5", features = ["small_rng"] }
-async-compression = { version = "0.4.3", default-features = false, features = ["tokio", "gzip"] }
-tokio-util = { version = "0.7.9", features = ["compat"] }
-futures = "0.3.28"
+
 cidr = "0.2.2"
-async-trait = "0.1.73"
+
+# Futures & Async
+futures = { workspace = true, default-features = false, features = ["std"] }
+async-trait = { workspace = true }
+async-compression = { workspace = true, default-features = false }
+tokio-util = { workspace = true, features = ["compat"] }
 rayon = { workspace = true }
 
 # Countries

@@ -90,7 +90,7 @@ impl Endpoint for NSightEndpoint {
     type Response = Response;
 
     // TODO :: validate api key
-    #[instrument]
+    #[instrument(level = "TRACE")]
     fn new(args: Self::Args) -> Self {
         use http_cache_reqwest::{Cache, CacheMode, HttpCache, MokaManager};
         use reqwest::Client;
@@ -108,7 +108,7 @@ impl Endpoint for NSightEndpoint {
         Self { host: args, client }
     }
 
-    #[instrument]
+    #[instrument(level = "TRACE")]
     async fn handle(&self, event: Self::Request) -> anyhow::Result<Self::Response> {
         use Request::*;
 

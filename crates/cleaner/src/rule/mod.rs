@@ -41,7 +41,7 @@ pub enum Rule {
 
 impl Rule {
     /// Returns true if the paths passes the rule
-    #[instrument]
+    #[instrument(level = "TRACE")]
     pub fn test(&self, path: &Path) -> bool {
         let passed = match self {
             Rule::Age(..) => age::test(*self, path),
@@ -53,7 +53,7 @@ impl Rule {
     }
 }
 
-#[instrument]
+#[instrument(level = "TRACE")]
 pub(super) fn meta(path: &Path) -> Result<Metadata> {
     path.metadata()
         .inspect(|m| trace!("Metadata acquired for {}: {:?}", path.display(), m))

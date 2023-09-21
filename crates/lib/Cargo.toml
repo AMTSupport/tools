@@ -33,6 +33,7 @@ tracing-indicatif = { workspace = true, optional = true }
 thiserror = { workspace = true }
 anyhow = { workspace = true }
 
+sysexits = "0.7.2"
 cfg-if = "1.0"
 
 [target.'cfg(unix)'.dependencies]

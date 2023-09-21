@@ -35,7 +35,7 @@ pub enum CleanerError {
     PathError(String, String),
 }
 
-#[instrument]
+#[instrument(level = "TRACE")]
 fn env_path(env: String) -> Result<PathBuf> {
     env::var(&env)
         .inspect(|env_var| trace!("Using environment variable: {}", env_var))
@@ -43,7 +43,7 @@ fn env_path(env: String) -> Result<PathBuf> {
         .map(PathBuf::from)
 }
 
-#[instrument]
+#[instrument(level = "TRACE")]
 fn env_dir<'l>(env: String) -> Result<PathBuf> {
     let path = env_path(env.clone())?;
 

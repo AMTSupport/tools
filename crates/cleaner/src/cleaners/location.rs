@@ -81,7 +81,7 @@ fn recurse(top: Vec<PathBuf>) -> HashSet<PathBuf> {
     paths
 }
 
-#[instrument]
+#[instrument(level = "TRACE")]
 fn environment(var: &str) -> Vec<PathBuf> {
     if let Ok(path) = std::env::var(var) {
         if Path::new(&path).exists() {
@@ -97,7 +97,7 @@ fn environment(var: &str) -> Vec<PathBuf> {
     }
 }
 
-#[instrument]
+#[instrument(level = "TRACE")]
 fn globbing(pattern: &str) -> Paths {
     debug!("Globbing pattern {}", pattern);
 
@@ -112,7 +112,7 @@ fn globbing(pattern: &str) -> Paths {
     .unwrap_or_else(|_| panic!("Pattern error in globbing {pattern}"))
 }
 
-#[instrument]
+#[instrument(level = "TRACE")]
 fn sub(location: &Location, sub_location: &String) -> Vec<PathBuf> {
     debug!("Subbing {} with {}", location.get_path().len(), sub_location);
 

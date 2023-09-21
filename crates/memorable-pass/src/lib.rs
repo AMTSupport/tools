@@ -36,7 +36,7 @@ const CONF_PATH: &str = "~/.config/pgen/rules.toml";
 pub type TransformationFn = impl Fn(&str) -> String;
 
 // TODO :: Turn into stream
-#[instrument]
+#[instrument(level = "TRACE")]
 pub async fn random_words<'a>(word_count: u8, word_length_min: u8, word_length_max: u8) -> Vec<&'a str> {
     let range = word_length_min..=word_length_max;
     let mut words = Vec::with_capacity(word_count as usize);
