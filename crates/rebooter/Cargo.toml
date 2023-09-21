@@ -13,6 +13,7 @@ path = "src/main.rs"
 
 [dependencies]
 lib = { path = "../lib" }
+macros = { path = "../macros" }
 
 # Runtimes
 tokio = { workspace = true }
@@ -31,9 +32,10 @@ anyhow = { workspace = true }
 
 uptime_lib = "0.2.2"
 sysexits = "0.7.1"
+planif = "0.2"
 
 [target.'cfg(windows)'.dependencies]
-windows = { version = "0.51.1", features = ["Data_Xml_Dom", "Win32_Foundation", "Win32_Security", "Win32_System_Threading", "Win32_UI_WindowsAndMessaging"] }
+planif = "0.2"
 registry = "1.2.3"
 
 [dev-dependencies]

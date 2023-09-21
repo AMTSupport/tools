@@ -14,25 +14,19 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::application::{Cli, Error};
-use anyhow::Result;
-use clap::Parser;
-use tracing::info;
+use std::sync::LazyLock;
+use chrono::Duration;
+use tracing::{error, instrument};
 
-#[derive(Debug, Clone, Copy)]
-pub struct Runtime {
-    pub cli: Cli,
-}
+static MAXIMUM_UPTIME: LazyLock<Duration> = LazyLock::new(|| Duration::days(7));
 
-impl Runtime {
-    pub async fn new() -> Result<Self> {
-        let cli = Cli::parse();
-        let _guard = lib::log::init(env!("CARGO_CRATE_NAME"), cli.flags.verbose);
+#[instrument(level = "TRACE", ret)]
+pub(crate) fn needs_reboot(maximum: Option<&Duration>) -> bool {
+    let Ok(Ok(uptime)) = uptime_lib::get().inspect_err(|err| {
+        error!("failed to get uptime: {err}");
+    }).map(Duration::from_std) else {
+        return false;
+    };
 
-        if cli.flags.dry_run {
-            info!("Dry run enabled, no actions will be taken");
-        }
-
-        Ok(Self { cli })
-    }
+    uptime > *maximum.unwrap_or(&MAXIMUM_UPTIME)
 }

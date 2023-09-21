@@ -14,29 +14,24 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use anyhow::Result;
-use clap::Parser;
-use lib::cli::Flags;
-use rebooter::reason::Reason;
-use sysexits::ExitCode;
+use tracing::instrument;
 
-#[derive(Debug, Parser)]
-struct Cli {
-    #[command(flatten)]
-    flags: Flags,
+#[cfg(windows)]
+#[instrument(level = "TRACE", ret)]
+pub(crate) fn needs_reboot() -> bool {
+    use registry::Hive;
+    use registry::Security;
+
+    let regkey = Hive::LocalMachine.open(
+        r"SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update",
+        Security::Read,
+    )?;
+
+    regkey.value("RebootRequired").is_ok()
 }
 
-#[tokio::main]
-async fn main() -> Result<ExitCode> {
-    let flags = Cli::parse().flags;
-    let _guard = lib::log::init(env!("CARGO_PKG_NAME"), flags.verbose);
-
-    if let Some(code) = lib::helper::require_elevated_privileges() {
-        return Ok(code);
-    }
-
-    let reasons = Reason::get_variants().into_iter().filter(Reason::valid).collect::<Vec<_>>();
-    
-
-    Ok(ExitCode::Ok)
+#[cfg(not(windows))]
+#[instrument(level = "TRACE", ret)]
+pub(crate) fn needs_reboot() -> bool {
+    false
 }
