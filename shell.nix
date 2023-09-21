@@ -12,6 +12,7 @@ in
 mainPkg.overrideAttrs (oa: {
   nativeBuildInputs = with pkgs; [
     (fenixPkgs.complete.withComponents [
+      "rust-src"
       "rust-analyzer"
       "clippy-preview"
       "rustfmt-preview"

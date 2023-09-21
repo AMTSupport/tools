@@ -13,7 +13,7 @@ path = "src/lib.rs"
 [features]
 default = ["ui-cli"]
 
-ui-cli = ["lib/ui-cli", "indicatif", "inquire"]
+ui-cli = ["lib/ui-cli", "indicatif", "tracing-indicatif"]
 ui-tui = ["lib/ui-tui", "ratatui", "crossterm"]
 ui-gui = ["lib/ui-gui", "iced", "iced_aw"]
 
@@ -23,16 +23,14 @@ macros = { path = "../macros" }
 
 # Runtimes
 tokio = { workspace = true }
-tokio-stream = { workspace = true }
 
 # Cli & UI
 clap = { workspace = true }
 indicatif = { workspace = true, optional = true }
-inquire = { workspace = true, optional = true }
 
 # TUI
 ratatui = { workspace = true, features = ["all-widgets"], optional = true }
-crossterm = { workspace = true, features = [], optional = true }
+crossterm = { workspace = true, optional = true }
 
 # GUI
 iced = { workspace = true, optional = true }
@@ -45,15 +43,16 @@ reqwest = { workspace = true, features = ["stream"] }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 tracing-appender = { workspace = true }
+tracing-indicatif = { workspace = true, optional = true }
 thiserror = { workspace = true }
 anyhow = { workspace = true }
 
 rand = { version = "0.8.5", features = ["small_rng"] }
-async-compression = { version = "0.4.1", default-features = false, features = ["tokio", "gzip"] }
-tokio-util = { version = "0.7.8", features = ["compat"] }
+async-compression = { version = "0.4.3", default-features = false, features = ["tokio", "gzip"] }
+tokio-util = { version = "0.7.9", features = ["compat"] }
 futures = "0.3.28"
 cidr = "0.2.2"
-async-trait = "0.1.72"
+async-trait = "0.1.73"
 rayon = { workspace = true }
 
 # Countries
