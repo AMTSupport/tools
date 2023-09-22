@@ -15,7 +15,7 @@
  */
 
 use crate::processor::word::Word;
-use crate::rules::action::{Action, ActionCondition};
+use crate::rules::action::Action;
 use crate::rules::position::Position;
 use tracing::debug;
 
@@ -45,27 +45,29 @@ impl<'a> Processor<'a> {
                 debug!("Applying rule: {action:?} to range {start_end:?}");
 
                 match action {
-                    Action::Addition(_, position, addition, condition) => match condition.should_use(index, position, &start_end) {
-                        false => debug!("Skipping rule as condition failed"),
-                        // ActionCondition::HasNoInput if start_end.0 != 0 || position.is_end() => {
-                        //     debug!("Skipping rule as it has no input and is not at the start of the word");
-                        //     continue
-                        // },
-                        // ActionCondition::HasInput if start_end.0 == 0 && position.is_start() => {
-                        //     debug!("Skipping rule as it has input and is at the start of the word");
-                        //     continue
-                        // },
-                        _ => match position {
-                            Position::Start => {
-                                mut_word.insert_str(start_end.0, addition);
-                                start_end = (start_end.0 + addition.len(), start_end.1 + addition.len())
-                            }
-                            Position::End => {
-                                mut_word.insert_str(start_end.1, addition);
-                                start_end = (start_end.0, start_end.1 + addition.len())
-                            }
-                        },
-                    },
+                    Action::Addition(_, position, addition, condition) => {
+                        match condition.should_use(index, position, &start_end) {
+                            false => debug!("Skipping rule as condition failed"),
+                            // ActionCondition::HasNoInput if start_end.0 != 0 || position.is_end() => {
+                            //     debug!("Skipping rule as it has no input and is not at the start of the word");
+                            //     continue
+                            // },
+                            // ActionCondition::HasInput if start_end.0 == 0 && position.is_start() => {
+                            //     debug!("Skipping rule as it has input and is at the start of the word");
+                            //     continue
+                            // },
+                            _ => match position {
+                                Position::Start => {
+                                    mut_word.insert_str(start_end.0, addition);
+                                    start_end = (start_end.0 + addition.len(), start_end.1 + addition.len())
+                                }
+                                Position::End => {
+                                    mut_word.insert_str(start_end.1, addition);
+                                    start_end = (start_end.0, start_end.1 + addition.len())
+                                }
+                            },
+                        }
+                    }
                     Action::Transformation(_, condition, transformation) => {
                         let before = mut_word.len();
                         let ranged = &mut_word[start_end.0..start_end.1];
@@ -94,7 +96,6 @@ mod tests {
     use crate::rules::rule::Rule;
     use crate::rules::transformation::case::CaseTransformation;
     use regex::Regex;
-    use tracing::info;
 
     #[test_log::test(test)]
     fn addition_start() {

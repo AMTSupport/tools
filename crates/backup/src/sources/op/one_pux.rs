@@ -88,10 +88,7 @@ pub mod export {
                     parsed.push(item);
                 }
 
-                finished.push(super::vault::Vault {
-                    attrs,
-                    items: parsed,
-                })
+                finished.push(super::vault::Vault { attrs, items: parsed })
             }
 
             let data = vec![super::account::Account {

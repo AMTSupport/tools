@@ -20,16 +20,16 @@ use crate::sources::getter::{CliGetter, CommandFiller};
 use crate::sources::interactive::Interactive;
 use crate::sources::op::cli;
 use crate::sources::op::core::OnePasswordCore;
-use futures_util::TryFutureExt;
 use anyhow::{anyhow, Context, Result};
+use futures_util::TryFutureExt;
 use lib::pathed::Pathed;
+use lib::ui::cli::ui_inquire::inquire_style;
 use macros::CommonFields;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display, Formatter};
 use std::process::Command;
 use thiserror::Error;
 use tracing::{trace, warn};
-use lib::ui::cli::ui_inquire::inquire_style;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Attrs {
@@ -133,10 +133,14 @@ impl Interactive<OnePasswordAccount> for OnePasswordAccount {
                 trace!("Prompting for service account token");
                 // TODO :: Wrong url
                 let token = Text::new("Enter your 1Password service token")
-                    .with_help_message("You can get a service token at https://my.1password.com/integrations/infrastructure-secrets")
+                    .with_help_message(
+                        "You can get a service token at https://my.1password.com/integrations/infrastructure-secrets",
+                    )
                     .with_validator(|t: &str| match t.len() {
                         0 => Ok(Validation::Invalid("Token cannot be empty".into())),
-                        _ if !t.starts_with("ops_") => Ok(Validation::Invalid("Valid Service Token must start with 'ops_'".into())),
+                        _ if !t.starts_with("ops_") => {
+                            Ok(Validation::Invalid("Valid Service Token must start with 'ops_'".into()))
+                        }
                         _ => Ok(Validation::Valid),
                     })
                     .with_placeholder("ops_...")
@@ -180,14 +184,10 @@ impl Interactive<OnePasswordAccount> for OnePasswordAccount {
                         0 => Err(anyhow!("No vaults found for this account.")),
                         _ => MultiSelect::new("Select the vaults you want to use.", v)
                             .with_render_config(inquire_style())
-                            .with_validator(
-                                |selections: &[ListOption<&Reference>]| match selections.len() {
-                                    0 => Ok(Validation::Invalid(
-                                        "You must select at least one vault.".into(),
-                                    )),
-                                    _ => Ok(Validation::Valid),
-                                },
-                            )
+                            .with_validator(|selections: &[ListOption<&Reference>]| match selections.len() {
+                                0 => Ok(Validation::Invalid("You must select at least one vault.".into())),
+                                _ => Ok(Validation::Valid),
+                            })
                             .prompt()
                             .context("Get vaults from user selection"),
                     }

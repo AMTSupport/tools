@@ -22,7 +22,6 @@ use cleaner::cleaners::location::*;
 use std::sync::LazyLock;
 use std::{env, path::PathBuf};
 
-
 #[test_log::test(test)]
 fn test_environment_variable_exists() -> Result<()> {
     // Set up a temporary directory and a temporary environment variable

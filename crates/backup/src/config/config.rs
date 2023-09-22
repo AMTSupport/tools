@@ -116,10 +116,13 @@ impl Config {
             true => {
                 let mut slice = vec![];
                 fs::File::open(&*path).await?.read(&mut slice).await?;
-                serde_json::from_slice(&*slice).map_err(Error::Serde).and_then(|mut config: Config| {
-                    config.path.replace(path.into());
-                    Ok(config)
-                }).map_err(Into::into)
+                serde_json::from_slice(&*slice)
+                    .map_err(Error::Serde)
+                    .and_then(|mut config: Config| {
+                        config.path.replace(path.into());
+                        Ok(config)
+                    })
+                    .map_err(Into::into)
             }
         }
     }

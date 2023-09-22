@@ -39,7 +39,10 @@ pub trait EventHandler {
     const TICK_RATE: u16;
 
     /// Constructs a new instance of [`EventHandler`].
-    fn new() -> Self where Self: Sized {
+    fn new() -> Self
+    where
+        Self: Sized,
+    {
         let tick_duration = Duration::from_millis(Self::TICK_RATE.into());
         let (sender, receiver) = mpsc::channel();
 
@@ -71,11 +74,9 @@ pub trait EventHandler {
         Self::inner(sender, receiver, handler)
     }
 
-    fn inner(
-        sender: mpsc::Sender<Event>,
-        receiver: mpsc::Receiver<Event>,
-        handler: thread::JoinHandle<()>
-    ) -> Self where Self: Sized;
+    fn inner(sender: mpsc::Sender<Event>, receiver: mpsc::Receiver<Event>, handler: thread::JoinHandle<()>) -> Self
+    where
+        Self: Sized;
 
     /// Receive the next event from the handler thread.
     ///

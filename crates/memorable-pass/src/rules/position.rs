@@ -28,7 +28,7 @@ impl Position {
     pub fn is_end(&self) -> bool {
         matches!(self, Self::End)
     }
-    
+
     pub fn positional_value<V>(&self, if_start: V, if_end: V) -> V {
         match self {
             Self::Start => if_start,

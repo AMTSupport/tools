@@ -14,7 +14,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-pub(crate) mod variants;
 pub(crate) mod common_fields;
 pub(crate) mod names;
 pub(crate) mod regex;
+pub(crate) mod variants;

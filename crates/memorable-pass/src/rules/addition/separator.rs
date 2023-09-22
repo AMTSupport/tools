@@ -94,7 +94,7 @@ impl Rule for SeparatorAddition {
                 position.positional_value(Priority::Low, Priority::Custom(100)),
                 position,
                 fn_char().to_string(),
-                ActionCondition::HasInput
+                ActionCondition::HasInput,
             )
         })
         .collect()
@@ -105,8 +105,8 @@ impl Rule for SeparatorAddition {
 mod tests {
     use super::*;
     use crate::processor::processor::Processor;
-    use std::assert_matches::assert_matches;
     use regex::Regex;
+    use std::assert_matches::assert_matches;
 
     fn get_string(action: &Action) -> String {
         match action {
@@ -153,6 +153,9 @@ mod tests {
         let result = processor.finish();
         let group = "[!@$%\\.&*\\-+=?:]";
         println!("{}", result);
-        assert_matches!(Regex::new(&*format!("^hello{group}world{group}$")).unwrap().is_match(&result), true);
+        assert_matches!(
+            Regex::new(&*format!("^hello{group}world{group}$")).unwrap().is_match(&result),
+            true
+        );
     }
 }

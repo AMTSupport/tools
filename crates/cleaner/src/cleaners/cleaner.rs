@@ -334,7 +334,6 @@ pub(super) async fn basic_files<C: CleanerInternal>(
 ) -> CleanupResult {
     let (passed, failed) = collect_locations(cleaner.locations(), cleaner.rules());
     let passed_result = clean_files(relational, passed, runtime).await;
-    
 
     passed_result.extend_missed(failed)
 }

@@ -34,10 +34,7 @@ pub fn continue_loop<I>(vec: &Vec<I>, prompt_type: &str) -> bool {
     match should_continue {
         Ok(should_continue) => should_continue,
         Err(err) => {
-            warn!(
-                "Failed to get confirmation for additional {}: {}",
-                prompt_type, err
-            );
+            warn!("Failed to get confirmation for additional {}: {}", prompt_type, err);
             false
         }
     }

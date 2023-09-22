@@ -31,9 +31,8 @@ pub fn spinner() -> ProgressBar {
 }
 
 pub fn spinner_with_count() -> ProgressBar {
-    let spinner = ProgressBar::new_spinner().with_style(
-        style_spinner().template("{spinner:.green} {msg:.cyan/blue} {pos}/{len}").unwrap(),
-    );
+    let spinner = ProgressBar::new_spinner()
+        .with_style(style_spinner().template("{spinner:.green} {msg:.cyan/blue} {pos}/{len}").unwrap());
     spinner.enable_steady_tick(Duration::from_millis(50));
     spinner
 }
@@ -59,11 +58,7 @@ pub fn style_spinner() -> ProgressStyle {
 }
 
 pub fn style_bar() -> ProgressStyle {
-    ProgressStyle::default_bar()
-        .tick_chars(TICK_CHARS)
-        .progress_chars(PROGRESS_CHARS)
-        .template(BAR_TEMPLATE)
-        .unwrap()
+    ProgressStyle::default_bar().tick_chars(TICK_CHARS).progress_chars(PROGRESS_CHARS).template(BAR_TEMPLATE).unwrap()
 }
 
 pub fn download_style() -> ProgressStyle {

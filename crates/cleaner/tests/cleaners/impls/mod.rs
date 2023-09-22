@@ -14,5 +14,5 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-pub mod setup;
 pub mod browser;
+pub mod setup;

@@ -77,15 +77,15 @@ mod tests {
         assert_ne!(Priority::High, Priority::Low);
         assert_ne!(Priority::Medium, Priority::Low);
     }
-    
+
     #[test]
     fn order() {
         let mut vec = vec![Priority::Medium, Priority::High, Priority::Low];
         vec.sort();
-        
+
         assert_eq!(vec, vec![Priority::Low, Priority::Medium, Priority::High]);
     }
-    
+
     #[test]
     fn custom() {
         assert!(Priority::Custom(100) > Priority::High);

@@ -36,7 +36,6 @@ async fn main() -> Result<ExitCode> {
     }
 
     let reasons = Reason::get_variants().into_iter().filter(Reason::valid).collect::<Vec<_>>();
-    
 
     Ok(ExitCode::Ok)
 }

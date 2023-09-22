@@ -68,13 +68,8 @@ where
         Self::_get(config, envs.as_slice(), args.as_slice()).await
     }
 
-
     #[instrument(ret, err)]
-    async fn _get(
-        config: &Runtime,
-        envs: &[(&str, &str)],
-        args: &[&str],
-    ) -> anyhow::Result<T> {
+    async fn _get(config: &Runtime, envs: &[(&str, &str)], args: &[&str]) -> anyhow::Result<T> {
         let mut command = B::base_command(config)?;
         command.arg("--format=json");
         command.args(Self::ARGS);
@@ -88,10 +83,7 @@ where
             Err(e) => {
                 error_span!("Command Error").in_scope(|| {
                     error!("Error executing command: {command:?}");
-                    error!(
-                        "Expecting json value for type: {:?}",
-                        std::any::type_name::<T>()
-                    );
+                    error!("Expecting json value for type: {:?}", std::any::type_name::<T>());
                 });
 
                 return Err(Error::Execution(e).into());
@@ -106,11 +98,7 @@ where
                 error!("Stderr: {}", String::from_utf8_lossy(&output.stderr));
             });
 
-            return Err(Error::Execution(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "Command failed",
-            ))
-                .into());
+            return Err(Error::Execution(std::io::Error::new(std::io::ErrorKind::Other, "Command failed")).into());
         }
 
         let stdout = output.stdout;

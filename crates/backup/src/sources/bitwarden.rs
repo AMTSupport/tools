@@ -14,14 +14,16 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+use crate::config::backend::Backend;
 use crate::config::runtime::Runtime;
 use crate::sources::auto_prune::Prune;
 use crate::sources::downloader::Downloader;
 use crate::sources::exporter::Exporter;
 use crate::sources::getter::CliGetter;
-use anyhow::{Result, anyhow, Context};
+use anyhow::{anyhow, Context, Result};
 use const_format::formatcp;
 use indicatif::{MultiProgress, ProgressBar};
+use inquire::PasswordDisplayMode;
 use lib::fs::normalise_path;
 use lib::pathed::Pathed;
 use serde::{Deserialize, Serialize};
@@ -29,9 +31,7 @@ use std::env;
 use std::fmt::{Display, Formatter};
 use std::path::PathBuf;
 use std::process::Command;
-use inquire::PasswordDisplayMode;
 use tracing::{error, info, trace};
-use crate::config::backend::Backend;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BitwardenUser {
@@ -220,9 +220,9 @@ pub(crate) async fn interactive(config: &Runtime) -> Result<Vec<Backend>> {
 
     if !output.status.success() {
         return Err(anyhow!(
-                "Failed to log into BitWarden -> {}",
-                String::from_utf8_lossy(&output.stdout)
-            ));
+            "Failed to log into BitWarden -> {}",
+            String::from_utf8_lossy(&output.stdout)
+        ));
     }
 
     let session_id = String::from_utf8(output.stdout)?;

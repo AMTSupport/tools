@@ -14,11 +14,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use async_trait::async_trait;
 use crate::cleaners::cleaner::{basic_files, Cleaner, CleanerInternal, CleanupResult};
 use crate::cleaners::location::Location;
 use crate::config::runtime::Runtime;
 use crate::rule::Rules;
+use async_trait::async_trait;
 
 #[derive(Default, Debug, Clone, Copy)]
 pub struct ShaderCleaner;

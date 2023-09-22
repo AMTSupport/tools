@@ -87,12 +87,7 @@ impl Exporter for OnePasswordCore {
     /// Creates a 1PUX compatible export,
     ///
     /// The name of this file is in format of "1Password-{uuid of the account exporting it}-{%Y%m%d-%H%M%S}.1pux"
-    async fn export(
-        &mut self,
-        runtime: &Runtime,
-        main_bar: &ProgressBar,
-        progress_bar: &MultiProgress,
-    ) -> Result<()> {
+    async fn export(&mut self, runtime: &Runtime, main_bar: &ProgressBar, progress_bar: &MultiProgress) -> Result<()> {
         use chrono::Local;
         use one_pux::{attributes::Attributes, export::Export};
 

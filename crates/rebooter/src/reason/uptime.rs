@@ -14,17 +14,20 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use std::sync::LazyLock;
 use chrono::Duration;
+use std::sync::LazyLock;
 use tracing::{error, instrument};
 
 static MAXIMUM_UPTIME: LazyLock<Duration> = LazyLock::new(|| Duration::days(7));
 
 #[instrument(level = "TRACE", ret)]
 pub(crate) fn needs_reboot(maximum: Option<&Duration>) -> bool {
-    let Ok(Ok(uptime)) = uptime_lib::get().inspect_err(|err| {
-        error!("failed to get uptime: {err}");
-    }).map(Duration::from_std) else {
+    let Ok(Ok(uptime)) = uptime_lib::get()
+        .inspect_err(|err| {
+            error!("failed to get uptime: {err}");
+        })
+        .map(Duration::from_std)
+    else {
         return false;
     };
 

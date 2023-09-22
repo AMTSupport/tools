@@ -14,10 +14,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+pub mod action;
 pub mod addition;
+pub mod position;
+pub mod priority;
 pub mod rule;
 pub mod rules;
 pub mod transformation;
-pub mod priority;
-pub mod action;
-pub mod position;
