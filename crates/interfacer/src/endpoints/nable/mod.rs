@@ -18,9 +18,9 @@
 pub mod endpoints;
 pub mod structs;
 
-use std::str::FromStr;
 use anyhow::Result;
 use clap::Parser;
+use std::str::FromStr;
 
 #[derive(Debug, Clone)]
 pub struct NSightApiKey(pub String);
