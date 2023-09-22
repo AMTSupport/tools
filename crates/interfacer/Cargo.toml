@@ -1,7 +1,8 @@
 [package]
-name = "rest"
+name = "interfacer"
 version = "0.1.0"
 edition = "2021"
+
 
 [features]
 default = ["ui-cli"]
