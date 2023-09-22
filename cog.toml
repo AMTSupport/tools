@@ -1,0 +1,35 @@
+ignore_merge_commits = true
+branch_whitelist = ["master"]
+tag_prefix = "v"
+
+post_bump_hooks = [
+    "git push",
+    "git push origin --tags"
+]
+pre_package_bump_hooks = [
+    "echo 'upgrading {{package}}' to {{version}}",
+    "cargo fmt -p {{package}} -- --check",
+    "cargo clippy -p {{package}} --all-features -- -D warnings",
+    "cargo test -p {{package}} --all-features",
+    "cargo set-version {{version}}"
+]
+
+[changelog]
+#template = "monorepo_remote"
+package_template = "package_remote"
+remote = "github.com"
+repository = "tools"
+owner = "AMTSupport"
+authors = [
+    { signature = "James Draycott", username = "Da_Racci" }
+]
+
+[packages]
+internal-lib = { path = "crates/lib", public_api = false }
+internal-macros = { path = "crates/macros", public_api = false }
+app-backup = { path = "crates/backup" }
+app-cleaner = { path = "crates/cleaner" }
+app-country-ip = { path = "crates/country-ip" }
+app-interfacer = { path = "crates/interfacer" }
+app-memorable-pass = { path = "crates/memorable-pass" }
+background-rebooter = { path = "crates/rebooter" }

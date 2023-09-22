@@ -11,6 +11,7 @@ let
 in
 mainPkg.overrideAttrs (oa: {
   nativeBuildInputs = with pkgs; [
+    cocogitto
     (fenixPkgs.complete.withComponents [
       "rust-src"
       "rust-analyzer"
