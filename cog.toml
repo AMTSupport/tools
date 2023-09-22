@@ -3,8 +3,8 @@ branch_whitelist = ["master"]
 tag_prefix = "v"
 
 post_bump_hooks = [
-    "git push",
-    "git push origin --tags"
+#    "git push",
+#    "git push origin --tags"
 ]
 pre_package_bump_hooks = [
     "echo 'upgrading {{package}}' to {{version}}",
