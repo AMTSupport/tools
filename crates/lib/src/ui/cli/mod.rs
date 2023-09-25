@@ -18,6 +18,7 @@ use anyhow::{anyhow, Context, Result};
 use inquire::validator::StringValidator;
 use tracing::{trace, warn};
 
+#[allow(clippy::module_inception)] // FIXME
 pub mod cli;
 pub mod error;
 pub mod progress;

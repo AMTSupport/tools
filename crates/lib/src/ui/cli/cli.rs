@@ -206,20 +206,20 @@ crate::dyn_impl! {
 
             for field in required_values {
                 let message = format!("Please enter the value for {field}");
-                let prompt = Text::new(&*message)
+                let prompt = Text::new(&message)
                     .with_help_message("This value is required")
                     .with_placeholder("Enter value here...");
 
                 let value = prompt.prompt()?;
-                builder.set_field(field, &*value)?;
+                builder.set_field(field, &value)?;
             }
 
             for field in optional_values {
                 let message = format!("Please enter the value for {field}");
-                let prompt = Text::new(&*message).with_help_message("This value is optional").with_default("");
+                let prompt = Text::new(&message).with_help_message("This value is optional").with_default("");
 
                 let value = prompt.prompt()?;
-                builder.set_field(field, &*value)?;
+                builder.set_field(field, &value)?;
             }
 
             builder.build()
@@ -230,13 +230,13 @@ crate::dyn_impl! {
             for field in B::REQUIRED_FIELDS {
                 let current = builder.display(field);
                 let message = format!("Please enter the value for {field}");
-                let prompt = Text::new(&*message)
+                let prompt = Text::new(&message)
                     .with_help_message("This value is required")
                     .with_placeholder("Enter value here...")
-                    .with_default(&*current);
+                    .with_default(&current);
 
                 match prompt.prompt() {
-                    Ok(value) => builder.set_field(field, &*value)?,
+                    Ok(value) => builder.set_field(field, &value)?,
                     Err(err) => {
                         error!("Failed to prompt for field {field}: {err}");
                         error!("Using current value: {current}");
@@ -247,13 +247,13 @@ crate::dyn_impl! {
             for field in B::OPTIONAL_FIELDS {
                 let current = builder.display(field);
                 let message = format!("Please enter the value for {field}");
-                let prompt = Text::new(&*message)
+                let prompt = Text::new(&message)
                     .with_help_message("This value is optional")
                     .with_placeholder("Enter value here...")
-                    .with_default(&*current);
+                    .with_default(&current);
 
                 match prompt.prompt() {
-                    Ok(value) => builder.set_field(field, &*value)?,
+                    Ok(value) => builder.set_field(field, &value)?,
                     Err(err) => {
                         error!("Failed to prompt for field {field}: {err}");
                         error!("Using current value: {current}");

@@ -18,12 +18,12 @@ use std::env;
 use tracing::{subscriber, Level, Subscriber};
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::fmt::format::FmtSpan;
-use tracing_subscriber::fmt::writer::MakeWriterExt;
 use tracing_subscriber::fmt::Layer;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::registry::LookupSpan;
 use tracing_subscriber::Registry;
 
+#[allow(dead_code)]
 fn level_and_span(verbosity: u8) -> (Level, FmtSpan) {
     match verbosity {
         0 => (Level::INFO, FmtSpan::NONE),
@@ -57,6 +57,7 @@ where
 {
     use indicatif::ProgressStyle;
     use tracing_indicatif::IndicatifLayer;
+    use tracing_subscriber::fmt::writer::MakeWriterExt;
 
     let (level, span) = level_and_span(verbosity);
     let layer = IndicatifLayer::new().with_progress_style(
@@ -82,7 +83,7 @@ where
 }
 
 #[cfg(not(feature = "ui-cli"))]
-fn add_ui_layer<S>(registry: S, verbosity: u8) -> impl Subscriber + for<'span> LookupSpan<'span> + Send + Sync + 'static
+fn add_ui_layer<S>(registry: S, _verbosity: u8) -> impl Subscriber + for<'span> LookupSpan<'span> + Send + Sync + 'static
 where
     S: Subscriber + for<'span> LookupSpan<'span> + Send + Sync + 'static,
 {
