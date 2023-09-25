@@ -108,13 +108,6 @@ mod tests {
     use regex::Regex;
     use std::assert_matches::assert_matches;
 
-    fn get_string(action: &Action) -> String {
-        match action {
-            Action::Addition(_, _, string, ..) => string.clone(),
-            _ => String::new(),
-        }
-    }
-
     #[test_log::test(test)]
     fn separator_none() {
         let mut processor = Processor::new(vec!["hello", "world"]);

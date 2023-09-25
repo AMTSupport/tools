@@ -29,13 +29,13 @@ pub enum ActionCondition {
 }
 
 #[derive(Derivative)]
-#[derivative(Debug, Ord = "feature_allow_slow_enum", Eq, PartialEq)]
+#[derivative(Debug, Eq)]
 pub enum Action {
     Addition(Priority, Position, String, ActionCondition),
     Transformation(
         Priority,
         ActionCondition,
-        #[derivative(Debug = "ignore", Ord = "ignore", PartialEq = "ignore")] TransformationFn,
+        #[derivative(Debug = "ignore")] TransformationFn,
     ),
 }
 
@@ -56,16 +56,28 @@ impl ActionCondition {
     }
 }
 
+impl PartialEq<Self> for Action {
+    fn eq(&self, other: &Self) -> bool {
+        self.cmp(other) == Ordering::Equal
+    }
+}
+
 impl PartialOrd for Action {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Action {
+    fn cmp(&self, other: &Self) -> Ordering {
         match (self, other) {
             (Self::Addition(pri1, pos1, ..), Self::Addition(pri2, pos2, ..)) => match pos1 == pos2 {
-                true => pri1.partial_cmp(pri2),
-                false => pos1.partial_cmp(pos2),
+                true => pri1.cmp(pri2),
+                false => pos1.cmp(pos2),
             },
-            (Self::Transformation(pri1, ..), Self::Transformation(pri2, ..)) => pri1.partial_cmp(pri2),
-            (Self::Addition(..), Self::Transformation(..)) => Some(Ordering::Less),
-            (Self::Transformation(..), Self::Addition(..)) => Some(Ordering::Greater),
+            (Self::Transformation(pri1, ..), Self::Transformation(pri2, ..)) => pri1.cmp(pri2),
+            (Self::Addition(..), Self::Transformation(..)) => Ordering::Less,
+            (Self::Transformation(..), Self::Addition(..)) => Ordering::Greater,
         }
     }
 }

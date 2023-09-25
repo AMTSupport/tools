@@ -48,14 +48,6 @@ impl<'a> Processor<'a> {
                     Action::Addition(_, position, addition, condition) => {
                         match condition.should_use(index, position, &start_end) {
                             false => debug!("Skipping rule as condition failed"),
-                            // ActionCondition::HasNoInput if start_end.0 != 0 || position.is_end() => {
-                            //     debug!("Skipping rule as it has no input and is not at the start of the word");
-                            //     continue
-                            // },
-                            // ActionCondition::HasInput if start_end.0 == 0 && position.is_start() => {
-                            //     debug!("Skipping rule as it has input and is at the start of the word");
-                            //     continue
-                            // },
                             _ => match position {
                                 Position::Start => {
                                     mut_word.insert_str(start_end.0, addition);

@@ -15,7 +15,7 @@
  */
 
 use crate::config;
-use crate::rules::rules::Rules;
+use crate::rules::Rules;
 use crate::ui::cli::action::Action;
 use lib::cli::Flags as CommonFlags;
 use lib::ui::cli::cli::{AsyncCliUI, CliResult, CliUI};
@@ -41,10 +41,10 @@ impl CliUI for MemorablePassCli {
             let _preload = &config::asset::WORDS;
         });
 
-        return Ok(Self {
+        Ok(Self {
             _guard: None,
             rules: None,
-        });
+        })
     }
 }
 
@@ -60,10 +60,7 @@ impl AsyncCliUI for MemorablePassCli {
                 let passwords = crate::generate(&rules).await;
                 self.rules.replace(rules);
 
-                info!(
-                    "Generated passwords:\n{passwords}",
-                    passwords = passwords.join("\n")
-                );
+                info!("Generated passwords:\n{passwords}", passwords = passwords.join("\n"));
             }
         }
 

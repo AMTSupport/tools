@@ -14,7 +14,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::rules::rules::Rules;
+use crate::rules::Rules;
 use clap::Subcommand;
 
 #[derive(Debug, Subcommand)]
@@ -22,5 +22,5 @@ pub enum Action {
     Generate {
         #[command(flatten)]
         rules: Rules,
-    }
+    },
 }

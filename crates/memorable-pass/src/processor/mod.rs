@@ -14,5 +14,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#[allow(clippy::module_inception)]
 pub mod processor;
 pub mod word;

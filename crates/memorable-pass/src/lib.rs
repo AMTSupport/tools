@@ -21,11 +21,11 @@
 #![feature(async_fn_in_trait)]
 
 use crate::config::asset::WORDS;
-use rand::Rng;
-use tracing::{instrument, trace};
 use crate::processor::processor::Processor;
 use crate::rules::rule::Rule;
-use crate::rules::rules::Rules;
+use crate::rules::Rules;
+use rand::Rng;
+use tracing::{instrument, trace};
 
 pub mod config;
 pub mod processor;
