@@ -14,7 +14,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::builder;
 use crate::config::backend::Backend;
 use crate::config::runtime::Runtime;
 use crate::sources::auto_prune::Prune;
@@ -36,6 +35,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
 use tracing::{debug, error, info, trace};
+use lib::builder;
 
 // #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 // pub struct S3Base {
@@ -136,7 +136,7 @@ impl Exporter for S3Core {
 
         // TODO :: Should this be recursive?
         let mut layer =
-            op.list_with("/").await.context(format!("Failed to list objects in {}", &object.to_str().unwrap()))?;
+            op.lister("/").await.context(format!("Failed to list objects in {}", &object.to_str().unwrap()))?;
 
         progress_state.set_message("Processing objects from S3...");
         progress_state.set_length(layer.size_hint().1.unwrap_or(0) as u64);
@@ -185,7 +185,7 @@ impl Exporter for S3Core {
                 progress_state.inc(1)
             }
 
-            debug!("Checking if file would survice rules...");
+            debug!("Checking if file would survive rules...");
             progress_state.set_message(format!("Checking if {:#} would survive rules...", &filename));
 
             let existing = existing_files.iter().map(|p| p.as_path()).collect::<Vec<&Path>>();
