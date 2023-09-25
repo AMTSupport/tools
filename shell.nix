@@ -6,13 +6,15 @@
 }:
 
 let
-  mainPkg = pkgs.callPackage ./default.nix { inherit localSystem flake-utils fenix crane; };
+  inherit (pkgs.callPackage ./default.nix { inherit localSystem flake-utils fenix crane; }) passthru;
   fenixPkgs = fenix.packages.${localSystem};
 in
-mainPkg.overrideAttrs (oa: {
+(pkgs.mkShell passthru).overrideAttrs (oldAttrs: {
   nativeBuildInputs = with pkgs; [
     cocogitto
+    act
     (fenixPkgs.complete.withComponents [
+      "cargo"
       "rust-src"
       "rust-analyzer"
       "clippy-preview"
@@ -24,5 +26,5 @@ mainPkg.overrideAttrs (oa: {
     cargo-nextest
     cargo-expand
     cargo-cranky
-  ] ++ (oa.nativeBuildInputs or [ ]);
+  ] ++ (oldAttrs.nativeBuildInputs or [ ]);
 })

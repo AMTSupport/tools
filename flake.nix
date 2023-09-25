@@ -29,7 +29,7 @@
         cargoToml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
         hasSubCrates = (builtins.length (cargoToml.workspace.members or [ ])) >= 1;
 
-        cargoPackages = onAll localSystem
+        cargoOutputs = onAll localSystem
           (crossSystem:
             let
               disambiguate = name: if crossSystem == localSystem then name else "${name}-${crossSystem}";
@@ -41,17 +41,18 @@
                 memberName = path: let cargo = getCargoToml path; in cargo.package.name;
                 getPkg = workspace: pkgs.callPackage ./default.nix { inherit localSystem crossSystem flake-utils crane fenix workspace; };
               in
-              if builtins.length members >= 1
-              then builtins.listToAttrs (builtins.map (member: { name = disambiguate (memberName member); value = let split = builtins.split "/" member; in getPkg (builtins.elemAt split (builtins.length split - 1)); }) members)
-              else builtins.listToAttrs (builtins.map (member: { name = disambiguate (memberName "crates/${member}"); value = getPkg member; }) (builtins.attrNames (builtins.readDir ./crates)))
+              if builtins.length members >= 1 then
+                builtins.listToAttrs (builtins.map (member: { name = disambiguate (memberName member); value = let split = builtins.split "/" member; in getPkg (builtins.elemAt split (builtins.length split - 1)); }) members)
+              else
+                builtins.listToAttrs (builtins.map (member: { name = disambiguate (memberName "crates/${member}"); value = getPkg member; }) (builtins.attrNames (builtins.readDir ./crates)))
             else { }) // (if ((cargoToml.package.name or null) == null) then { } else (builtins.listToAttrs [{ name = disambiguate "default"; value = pkgs.callPackage ./default.nix { inherit localSystem crossSystem flake-utils crane fenix; }; }]))
           );
       in
       {
-        packages = cargoPackages // {
+        packages = builtins.mapAttrs (name: outputs: outputs.crateBinary) cargoOutputs // {
           all = pkgs.symlinkJoin {
             name = "all";
-            paths = builtins.attrValues cargoPackages;
+            paths = builtins.attrValues (builtins.mapAttrs (name: outputs: outputs.crateBinary) cargoOutputs);
           };
         };
 
@@ -63,14 +64,11 @@
           (attr: packageChecks: (attr // packageChecks))
           { }
           (builtins.attrValues (builtins.mapAttrs
-            (name: package:
-              let inherit (package.passthru) craneLib args; in {
-                "${name}-fmt" = craneLib.cargoFmt args;
-                "${name}-clippy" = craneLib.cargoClippy (args // {
-                  inherit (package) cargoArtifacts;
-                  cargoClippyExtraArgs = "--workspace -- --deny warnings";
-                });
-              })
-            cargoPackages));
+            (name: crateOutput: {
+              "${name}-fmt" = crateOutput.crateFmt;
+              "${name}-clippy" = crateOutput.crateClippy;
+              "${name}-test" = crateOutput.crateTest;
+            })
+            cargoOutputs));
       });
 }

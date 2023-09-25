@@ -7,7 +7,6 @@
 , flake-utils
 , crane
 , fenix
-, depsOnly ? false
 }:
 let
   # TODO: This is a hack to get the right target for the right system.
@@ -49,97 +48,113 @@ let
     then pkgs.pkgsCross.aarch64-multiplatform
     else pkgs.pkgsCross.${crossSystem};
 
+  inherit (crossPackages) targetPlatform;
+  isNative = localSystem == crossSystem;
+  useMold = isNative && targetPlatform.isLinux;
+  useWine = targetPlatform.isWindows && localSystem == flake-utils.lib.system.x86_64-linux;
+
+  commonDeps = {
+    depsBuildBuild = [ ]
+      ++ lib.optionals (!isNative) (with pkgs; [ qemu ])
+      ++ lib.optionals (targetPlatform.isWindows) (with crossPackages; [ stdenv.cc windows.mingw_w64_pthreads windows.pthreads ]);
+
+    buildInputs = with crossPackages; [ openssl ]
+      ++ lib.optionals (useMold) (with pkgs; [ clang mold ]);
+
+    nativeBuildInputs = with pkgs; [ pkg-config ]
+      ++ lib.optionals (useWine) ([ (pkgs.wine.override { wineBuild = "wine64"; }) ]);
+
+    LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath (with pkgs; [
+      openssl
+    ] ++ lib.optionals (isNative && targetPlatform.isLinux) (with pkgs; [
+      wayland
+      libxkbcommon
+      vulkan-loader
+      libglvnd
+      egl-wayland
+      wayland-protocols
+      xwayland
+      libdecor
+    ]));
+  };
+
+  commonEnv = {
+    "CARGO_BUILD_TARGET" = target;
+
+    "CARGO_TARGET_${TARGET}_LINKER" =
+      if useMold
+      then "${crossPackages.clang}/bin/${crossPackages.clang.targetPrefix}clang"
+      else let inherit (crossPackages.stdenv) cc; in "${cc}/bin/${cc.targetPrefix}cc";
+
+    "CARGO_TARGET_${TARGET}_RUSTFLAGS" =
+      if useMold then "-C link-arg=-fuse-ld=${crossPackages.mold}/bin/mold"
+      else null;
+
+    "CARGO_TARGET_${TARGET}_RUNNER" =
+      if isNative
+      then null
+      else if useWine
+      then
+        pkgs.writeScript "wine-wrapper" ''
+          #!${pkgs.bash}/bin/bash
+          export WINEPREFIX="$(mktemp -d)"
+          exec ${(pkgs.wine.override { wineBuild = "wine64"; })}/bin/wine64 $@
+        ''
+      else "${pkgs.qemu}/bin/qemu-${targetPlatform.qemuArch}";
+  };
+
   commonArgs =
     let
-      tomlPath = craneLib.path (if workspace == null then ./Cargo.toml else ./crates/${workspace}/Cargo.toml);
-      cargoToml = builtins.fromTOML (builtins.readFile tomlPath);
-      inherit (cargoToml.package or { inherit (self) name; version = "0.0.0.0"; }) name version;
-    in
-    {
-      pname = name;
-      inherit version;
-
+      cargoToml = craneLib.path (if workspace == null then ./Cargo.toml else ./crates/${workspace}/Cargo.toml);
       src = craneLib.path ./.;
+    in
+    commonDeps // commonEnv // {
+      inherit src;
+      inherit (craneLib.crateNameFromCargoToml { inherit src cargoToml; }) pname version;
+
       cargoLock = craneLib.path ./Cargo.lock;
       cargoExtraArgs = if workspace != null then "--package ${workspace}" else "";
+
+      strictDeps = true;
     };
 
-  releaseArgs = commonArgs // {
-    doCheck = false;
+  cargoArtifact = craneLib.buildDepsOnly commonArgs;
 
-    RUST_LOG = "info";
-    RUST_LOG_SPAN_EVENTS = null;
-  };
+  cargoBuild = artifact: extra: craneLib.buildPackage (commonArgs // {
+    cargoArtifact = artifact;
+  } // extra commonArgs);
 
-  developmentArgs = commonArgs // {
-    doCheck = false;
+  cargoClippy = artifact: extra: craneLib.cargoClippy (commonArgs // {
+    cargoArtifact = artifact;
+    cargoClippyExtraArgs = "--package ${workspace} -- --deny warnings";
+  } // extra commonArgs);
 
-    CARGO_PROFILE = "dev";
+  cargoFmt = artifact: extra: craneLib.cargoFmt (commonArgs // {
+    cargoArtifact = artifact;
+  } // extra commonArgs);
 
-    RUST_LOG = "trace";
-    RUST_LOG_SPAN_EVENTS = "full";
-  };
-
-  mkDerivation = args:
-    let
-      inherit (crossPackages) targetPlatform;
-
-      isNative = localSystem == crossSystem;
-      useMold = isNative && targetPlatform.isLinux;
-      useWine = targetPlatform.isWindows && localSystem == flake-utils.lib.system.x86_64-linux;
-    in
-    craneLib.buildPackage (args // {
-      strictDeps = true;
-
-      passthru = { inherit craneLib args; };
-
-      depsBuildBuild = [ ]
-        ++ lib.optionals (!isNative) (with pkgs; [ qemu ])
-        ++ lib.optionals (targetPlatform.isWindows) (with crossPackages; [ stdenv.cc windows.mingw_w64_pthreads windows.pthreads ]);
-
-      buildInputs = with crossPackages; [ openssl ]
-        ++ lib.optionals (useMold) (with pkgs; [ clang mold ]);
-
-      nativeBuildInputs = with pkgs; [ pkg-config ]
-        ++ lib.optionals (useWine) ([ (pkgs.wine.override { wineBuild = "wine64"; }) ]);
-
-      LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath (with pkgs; [
-        openssl
-      ] ++ lib.optionals (isNative && targetPlatform.isLinux) (with pkgs; [
-        wayland
-        libxkbcommon
-        vulkan-loader
-        libglvnd
-        egl-wayland
-        wayland-protocols
-        xwayland
-        libdecor
-      ]));
-
-      "CARGO_BUILD_TARGET" = target;
-
-      "CARGO_TARGET_${TARGET}_LINKER" =
-        if useMold
-        then "${crossPackages.clang}/bin/${crossPackages.clang.targetPrefix}clang"
-        else let inherit (crossPackages.stdenv) cc; in "${cc}/bin/${cc.targetPrefix}cc";
-
-      "CARGO_TARGET_${TARGET}_RUSTFLAGS" =
-        if useMold then "-C link-arg=-fuse-ld=${crossPackages.mold}/bin/mold"
-        else null;
-
-      "CARGO_TARGET_${TARGET}_RUNNER" =
-        if isNative
-        then null
-        else if useWine
-        then
-          pkgs.writeScript "wine-wrapper" ''
-            #!${pkgs.bash}/bin/bash
-            export WINEPREFIX="$(mktemp -d)"
-            exec ${(pkgs.wine.override { wineBuild = "wine64"; })}/bin/wine64 $@
-          ''
-        else "${pkgs.qemu}/bin/qemu-${targetPlatform.qemuArch}";
-    });
+  cargoTest = artifact: extra: craneLib.cargoNextest (commonArgs // {
+    cargoArtifact = artifact;
+  } // extra commonArgs);
 in
-(if depsOnly then
-  mkDerivation commonArgs
-else mkDerivation releaseArgs)
+{
+  passthru = commonDeps // commonEnv // {
+    inherit isNative;
+  };
+
+  crateArtifact = cargoArtifact;
+
+  crateBinary = cargoBuild cargoArtifact (args: {
+    cargoExtraArgs = "--bin ${args.pname}";
+  });
+
+  crateLibrary = cargoBuild cargoArtifact (args: {
+    cargoExtraArgs = "--lib";
+  });
+
+  crateTest = cargoTest cargoArtifact;
+
+  crateClippy = cargoClippy cargoArtifact;
+
+  crateFmt = cargoFmt cargoArtifact;
+}

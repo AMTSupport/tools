@@ -1,8 +1,6 @@
 [workspace]
 members = ["crates/*"]
 default-members = [
-    "crates/lib",
-    "crates/macros",
     "crates/backup",
     "crates/cleaner",
     "crates/country-ip",
