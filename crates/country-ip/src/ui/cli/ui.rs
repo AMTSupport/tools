@@ -15,6 +15,7 @@
  */
 
 use super::oneshot::OneshotAction;
+#[cfg(feature = "ui-repl")]
 use super::repl::ReplAction;
 use lib::cli::Flags as CommonFlags;
 use lib::ui::cli::cli::{AsyncCliUI, CliResult, CliUI};
@@ -30,13 +31,14 @@ pub struct CountryIPCli {
 
 impl CliUI for CountryIPCli {
     type OneShotCommand = OneshotAction;
+    #[cfg(feature = "ui-repl")]
     type ReplCommand = ReplAction;
 
     fn new(_args: Self::Args) -> CliResult<Self>
     where
         Self: Sized,
     {
-        return Ok(Self { _guard: None });
+        Ok(Self { _guard: None })
     }
 }
 
@@ -57,7 +59,7 @@ impl AsyncCliUI for CountryIPCli {
                 let country = crate::get_country(&country).map_err(|err| CliError::Source(err.into()))?;
 
                 span.pb_set_message("Getting IP Records...");
-                let random = crate::get(&country, &ipv6).await.map_err(|err| CliError::Source(err.into()))?;
+                let random = crate::get(&country, &ipv6).await.map_err(CliError::Source)?;
 
                 info!("{} => {random}", country.iso_short_name());
             }
@@ -78,6 +80,7 @@ impl AsyncCliUI for CountryIPCli {
         Ok(())
     }
 
+    #[cfg(feature = "ui-repl")]
     async fn handle_repl_command(&mut self, command: Self::ReplCommand, flags: &CommonFlags) -> CliResult<bool> {
         match command {
             ReplAction::Quit => Ok(true),

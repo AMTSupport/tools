@@ -24,17 +24,11 @@ async fn main() -> lib::ui::cli::cli::CliResult<()> {
     ui.run().await
 }
 
-#[tokio::main]
-#[cfg(feature = "ui-tui")]
-async fn main() {
-    todo!("tui not implemented yet")
-}
-
-#[tokio::main]
-#[cfg(feature = "ui-gui")]
-async fn main() {
-    use country_ip::ui::gui::application::CountryIPApp;
-    use iced::{Application, Sandbox, Settings};
-
-    <CountryIPApp as Application>::run(Settings::default())
-}
+// #[tokio::main]
+// #[cfg(feature = "ui-gui")]
+// async fn main() {
+//     use country_ip::ui::gui::application::CountryIPApp;
+//     use iced::{Application, Sandbox, Settings};
+//
+//     <CountryIPApp as Application>::run(Settings::default())
+// }

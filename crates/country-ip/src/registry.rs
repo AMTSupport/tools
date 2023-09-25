@@ -34,14 +34,14 @@ use tracing::instrument;
 
 #[derive(Debug, Error)]
 pub enum RegistryErrors {
-    #[error("Failed to get data for {0:?}")]
+    #[error("Failed to get data for {}", .0.name())]
     DownloadFailed(Registry, #[source] anyhow::Error),
 
-    #[error("Failed to parse data for {0:?}")]
+    #[error("Failed to parse data for {}", .0.name())]
     ParseFailed(Registry, #[source] anyhow::Error),
 
-    #[error("Failed to get internet registry for country {0:?}")]
-    RegistryFailed(Country, #[source] Option<anyhow::Error>),
+    #[error("Failed to get internet registry for country {}", .0.iso_short_name())]
+    RegistryFailed(Box<Country>, #[source] Option<anyhow::Error>),
 }
 
 #[derive(Debug, EnumVariants, Clone, Copy, Hash, Eq, PartialEq)]
@@ -82,11 +82,7 @@ pub struct RegistryRecords {
 impl RecordDB for RegistryRecords {
     #[instrument(level = "TRACE", ret)]
     async fn lookup(&self, ip: &IpAddr) -> Option<Alpha2> {
-        self.inner
-            .iter()
-            .par_bridge()
-            .find_first(|record| record.range().contains(&*ip))
-            .map(|record| record.alpha().clone())
+        self.inner.iter().par_bridge().find_first(|record| record.range().contains(ip)).map(|record| *record.alpha())
     }
 
     #[instrument(level = "TRACE", ret)]
@@ -111,7 +107,7 @@ impl Registry {
         use Registry::*;
 
         if DELEGATES.contains(&country.alpha2()) {
-            return Err(RegistryFailed(country.clone(), None).into());
+            return Err(RegistryFailed(Box::new(country.clone()), None).into());
         }
 
         let region = country.region();
@@ -140,7 +136,7 @@ impl Registry {
                         }
                         _ => Arin,
                     },
-                    _ => return Err(RegistryFailed(country.clone(), None).into()),
+                    _ => return Err(RegistryFailed(Box::new(country.clone()), None).into()),
                 }
             }
             Some(Region::Asia) => {
@@ -151,10 +147,10 @@ impl Registry {
                         Alpha2::IR => Ripencc,
                         _ => Apnic,
                     },
-                    _ => return Err(RegistryFailed(country.clone(), None).into()),
+                    _ => return Err(RegistryFailed(Box::new(country.clone()), None).into()),
                 }
             }
-            None => return Err(RegistryFailed(country.clone(), None).into()),
+            None => return Err(RegistryFailed(Box::new(country.clone()), None).into()),
         };
 
         Ok(registry)
@@ -178,9 +174,7 @@ impl Registry {
     }
 
     pub const fn suffix(&self) -> &'static str {
-        match self {
-            _ => "extended-latest",
-        }
+        "extended-latest"
     }
 
     pub fn url(&self) -> String {
@@ -206,14 +200,14 @@ impl Registry {
 
     #[instrument(level = "TRACE", ret)]
     async fn downloaded(&self) -> Result<RegistryRecords> {
-        let ref map = DOWNLOADED.lock().await;
+        let map = &(DOWNLOADED.lock().await);
         map.get(self).ok_or(anyhow::anyhow!("Data not downloaded")).cloned()
     }
 
     #[instrument(level = "TRACE", ret, err)]
     async fn download(&self) -> Result<()> {
         let url = &self.url();
-        let data = reqwest::get(&*url)
+        let data = reqwest::get(url)
             .await
             .map_err(|e| RegistryErrors::DownloadFailed(*self, e.into()))?
             .bytes()
@@ -236,12 +230,12 @@ impl Registry {
                     },
                 };
 
-                let value = match IpAddr::from_str(&*split[3]) {
+                let value = match IpAddr::from_str(&split[3]) {
                     Ok(value) => value,
                     Err(_) => return None,
                 };
 
-                let range = match u32::from_str(&*split[4]) {
+                let range = match u32::from_str(&split[4]) {
                     Ok(range) => range,
                     Err(_) => return None,
                 };
@@ -294,7 +288,7 @@ mod test {
             debug_assert!(records.is_ok(), "Failed to download {reg:?}; {records:?}");
 
             let records = records?;
-            debug_assert!(records.inner.len() > 0, "No records for {reg:?}");
+            debug_assert!(!records.inner.is_empty(), "No records for {reg:?}");
         }
 
         Ok(())
@@ -324,7 +318,7 @@ mod test {
 
             let records = registry.get().await?;
             let records = records.filtered(&country.alpha2()).await;
-            debug_assert!(records.len() > 0, "No records for {country:?}");
+            debug_assert!(!records.is_empty(), "No records for {country:?}");
         }
 
         Ok(())

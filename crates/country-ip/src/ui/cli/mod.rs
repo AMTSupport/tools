@@ -14,6 +14,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-pub mod ui;
 mod oneshot;
+#[cfg(feature = "ui-repl")]
 mod repl;
+pub mod ui;

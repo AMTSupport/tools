@@ -14,8 +14,7 @@ path = "src/lib.rs"
 default = ["ui-cli"]
 
 ui-cli = ["lib/ui-cli", "indicatif", "tracing-indicatif"]
-ui-tui = ["lib/ui-tui", "ratatui", "crossterm"]
-ui-gui = ["lib/ui-gui", "iced", "iced_aw"]
+#ui-gui = ["lib/ui-gui", "iced", "iced_aw"]
 
 [dependencies]
 lib = { path = "../lib" }
@@ -27,10 +26,6 @@ tokio = { workspace = true }
 # Cli & UI
 clap = { workspace = true }
 indicatif = { workspace = true, optional = true }
-
-# TUI
-ratatui = { workspace = true, features = ["all-widgets"], optional = true }
-crossterm = { workspace = true, optional = true }
 
 # GUI
 iced = { workspace = true, optional = true }

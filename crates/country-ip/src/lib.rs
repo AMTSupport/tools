@@ -47,16 +47,14 @@ pub enum Error {
 
 #[instrument(level = "TRACE", ret, err, fields(country = %country.iso_short_name()))]
 pub async fn get_record_db(country: &Country) -> Result<Box<dyn RecordDB>> {
-    match Registry::get_for(&country) {
+    match Registry::get_for(country) {
         Ok(registry) => {
             debug!("Using registry {} for {}", registry.name(), country.iso_short_name());
             registry.get().await
         }
-        Err(_) => {
-            debug!(
-                "No registry found for {}, falling back to DB-IP",
-                country.iso_short_name()
-            );
+        Err(err) => {
+            error!("{err}");
+            debug!("Falling back to DB-IP for {}", country.iso_short_name());
             Ok(db_ip::DB::instance())
         }
     }
@@ -107,7 +105,7 @@ fn get_country(alpha: &Option<String>) -> std::result::Result<Country, Error> {
 #[instrument(level = "TRACE", ret, err, fields(country = %country.iso_short_name()))]
 async fn get(country: &Country, use_ipv6: &bool) -> Result<IpAddr> {
     let alpha = country.alpha2();
-    let record_db = get_record_db(&country).await?;
+    let record_db = get_record_db(country).await?;
     match use_ipv6 {
         true => record_db.random_ipv6(&alpha),
         false => record_db.random_ipv4(&alpha),
