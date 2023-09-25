@@ -24,7 +24,6 @@ macros = { path = "../macros" }
 
 # Runtimes
 tokio = { workspace = true }
-#tokio-stream = { workspace = true }
 
 # Cli & UI
 clap = { workspace = true }
@@ -37,12 +36,13 @@ serde_json = { workspace = true }
 rust-embed = { workspace = true }
 
 # Logging & Errors
-tracing = { workspace = true }
-tracing-subscriber = { workspace = true }
-#thiserror = { workspace = true }
-anyhow = { workspace = true }
+tracing.workspace = true
+tracing-subscriber.workspace = true
+tracing-appender.workspace = true
+#thiserror.workspace = true
+anyhow.workspace = true
 
-derivative = { version = "2.2.0", features = [] }
+derivative = { version = "2.2.0" }
 
 [dev-dependencies]
 # Logging & Errors

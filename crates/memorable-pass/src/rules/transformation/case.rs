@@ -40,7 +40,7 @@ impl Rule for CaseTransformation {
         _last: bool,
         _passable: &mut Self::Passable,
     ) -> Vec<Action> {
-        let copy = self.clone();
+        let copy = *self;
         vec![Action::Transformation(Priority::High, ActionCondition::Always, move |str| match &copy {
             CaseTransformation::None => str.to_string(),
             CaseTransformation::Uppercase => str.to_ascii_uppercase(),

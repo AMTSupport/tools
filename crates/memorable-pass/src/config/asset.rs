@@ -18,7 +18,7 @@ use anyhow::Context;
 use rust_embed::RustEmbed;
 use std::collections::HashMap;
 use std::sync::LazyLock;
-use tracing::{debug, error, info};
+use tracing::instrument;
 
 pub static WORDS: LazyLock<HashMap<usize, Vec<String>>> = LazyLock::new(get_words);
 
@@ -26,16 +26,11 @@ pub static WORDS: LazyLock<HashMap<usize, Vec<String>>> = LazyLock::new(get_word
 #[folder = "assets"]
 pub struct Asset;
 
+#[instrument(level = "TRACE", ret)]
 fn get_words() -> HashMap<usize, Vec<String>> {
-    let start = std::time::Instant::now();
-
     let asset_file =
         Asset::get("words.json").context("Find words.json asset file.").expect("Failed to find words.json asset file.");
-    let words_map = serde_json::from_slice::<HashMap<usize, Vec<String>>>(&asset_file.data)
+    serde_json::from_slice::<HashMap<usize, Vec<String>>>(&asset_file.data)
         .context("Parse words.json asset into Map")
-        .expect("Failed to parse words.json asset into Map");
-
-    debug!("Loaded words in {}ms", start.elapsed().as_millis());
-
-    words_map
+        .expect("Failed to parse words.json asset into Map")
 }

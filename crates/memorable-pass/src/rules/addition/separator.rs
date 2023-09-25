@@ -138,7 +138,7 @@ mod tests {
         .process_with_passable(&mut processor, &mut Some('?'));
 
         let result = processor.finish();
-        assert_eq!("^hello?world?$", result);
+        assert_eq!("hello?world?", result);
     }
 
     #[test]
@@ -154,7 +154,7 @@ mod tests {
         let group = "[!@$%\\.&*\\-+=?:]";
         println!("{}", result);
         assert_matches!(
-            Regex::new(&*format!("^hello{group}world{group}$")).unwrap().is_match(&result),
+            Regex::new(&format!("^hello{group}world{group}$")).unwrap().is_match(&result),
             true
         );
     }

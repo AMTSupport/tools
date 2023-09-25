@@ -68,10 +68,10 @@ impl<'a> Processor<'a> {
                             },
                         }
                     }
-                    Action::Transformation(_, condition, transformation) => {
+                    Action::Transformation(_, _condition, transformation) => {
                         let before = mut_word.len();
                         let ranged = &mut_word[start_end.0..start_end.1];
-                        mut_word.replace_range(start_end.0..start_end.1, &*transformation(ranged));
+                        mut_word.replace_range(start_end.0..start_end.1, &transformation(ranged));
                         start_end = (
                             start_end.0 + (mut_word.len() - before),
                             start_end.1 + (mut_word.len() - before),

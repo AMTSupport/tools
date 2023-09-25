@@ -23,17 +23,33 @@
 use crate::config::asset::WORDS;
 use rand::Rng;
 use tracing::{instrument, trace};
+use crate::processor::processor::Processor;
+use crate::rules::rule::Rule;
+use crate::rules::rules::Rules;
 
 pub mod config;
 pub mod processor;
 pub mod rules;
-
-#[cfg(windows)]
-const CONF_PATH: &str = "%APPDATA%\\.config\\pgen\\rules.toml";
-#[cfg(unix)]
-const CONF_PATH: &str = "~/.config/pgen/rules.toml";
+pub mod ui;
 
 pub type TransformationFn = impl Fn(&str) -> String;
+
+pub async fn generate(rules: &Rules) -> Vec<String> {
+    let mut passwords = Vec::with_capacity(rules.amount);
+
+    // TODO :: Spawn a thread for each password.
+    while passwords.len() < rules.amount {
+        let words = random_words(rules.word_count, rules.word_length_min, rules.word_length_max).await;
+        let mut processor = Processor::new(words);
+        rules.addition_digits.process(&mut processor);
+        rules.addition_separator.process(&mut processor);
+        rules.transformation_case.process(&mut processor);
+
+        passwords.push(processor.finish());
+    }
+
+    passwords
+}
 
 // TODO :: Turn into stream
 #[instrument(level = "TRACE")]
@@ -45,7 +61,7 @@ pub async fn random_words<'a>(word_count: u8, word_length_min: u8, word_length_m
     trace!("Finding {} words within range {:?}", word_count, range);
     while words.len() < word_count as usize {
         let length = seed.gen_range(range.clone());
-        let possible_words = (&WORDS).get(&(length as usize)).unwrap();
+        let possible_words = WORDS.get(&(length as usize)).unwrap();
         let word = possible_words.get(seed.gen_range(0..possible_words.len())).unwrap().as_str();
 
         words.push(word);
@@ -53,47 +69,3 @@ pub async fn random_words<'a>(word_count: u8, word_length_min: u8, word_length_m
 
     words
 }
-
-// #[derive(Debug, Subcommand)]
-// pub enum Commands {
-//     Generate {
-//         #[command(flatten)]
-//         rules: Rules,
-//
-//         /// The file to use as the rules config.
-//         #[arg(short, long, default_value_t = CONF_PATH.into())]
-//         file: String,
-//
-//         #[command(flatten)]
-//         flags: lib::cli::Flags,
-//     },
-//     Config {
-//         #[command(subcommand)]
-//         action: ConfigAction,
-//     },
-// }
-//
-// #[derive(Debug, Subcommand)]
-// pub enum ConfigAction {
-//     Generate {
-//         #[arg(short, long, default_value_t = CONF_PATH.into())]
-//         file: String,
-//
-//         #[command(flatten)]
-//         rules: Rules,
-//
-//         /// Whether to overwrite the file if it already exists.
-//         #[arg(short, long)]
-//         force: bool,
-//
-//         #[command(flatten)]
-//         flags: lib::cli::Flags,
-//     },
-//     Show {
-//         #[arg(short, long, default_value_t = CONF_PATH.into())]
-//         file: String,
-//
-//         #[command(flatten)]
-//         flags: lib::cli::Flags,
-//     },
-// }
