@@ -7,8 +7,9 @@ edition = "2021"
 default = []
 
 ui-tui = ["ratatui", "crossterm"]
-ui-cli = ["indicatif", "inquire", "shlex", "tracing-indicatif"]
+ui-cli = ["indicatif", "inquire", "tracing-indicatif"]
 ui-gui = ["iced", "iced_aw"]
+ui-repl = ["ui-cli", "shlex"]
 
 [dependencies]
 # Cli & UI

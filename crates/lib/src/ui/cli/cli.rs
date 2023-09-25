@@ -21,14 +21,14 @@ use anyhow::Result;
 use clap::{CommandFactory, FromArgMatches, Parser, Subcommand};
 use inquire::Text;
 use std::fmt::Debug;
-use std::io::{stdin, stdout, Write};
-use tracing::{debug, error, instrument, trace};
+use tracing::{error, instrument, trace};
 
 #[derive(Debug, Parser)]
 struct MaybeRepl<O: Subcommand> {
     #[command(subcommand)]
     pub oneshot: Option<O>,
 
+    #[cfg(feature = "repl")]
     #[arg(long, short = 'r', action = clap::ArgAction::SetTrue)]
     pub repl: bool,
 
@@ -41,6 +41,7 @@ pub type CliResult<T> = Result<T, CliError>;
 pub trait AsyncCliUI: CliUI + Send + Sync {
     async fn handle_command(&mut self, command: Self::OneShotCommand, flags: &CommonFlags) -> CliResult<()>;
 
+    #[cfg(feature = "ui-repl")]
     async fn handle_repl_command(&mut self, command: Self::ReplCommand, flags: &CommonFlags) -> CliResult<bool>;
 
     /// Run the CLI Application.
@@ -63,6 +64,7 @@ pub trait AsyncCliUI: CliUI + Send + Sync {
             has_run = true;
         }
 
+        #[cfg(feature = "ui-repl")]
         if command.repl {
             self.repl(None).await?;
             has_run = true;
@@ -79,6 +81,7 @@ pub trait AsyncCliUI: CliUI + Send + Sync {
     ///
     /// This is a mode where the user can enter commands and have them executed
     /// in a loop until they exit.
+    #[cfg(feature = "ui-repl")]
     async fn repl(&mut self, init: Option<(Self::ReplCommand, CommonFlags)>) -> CliResult<()>
     where
         Self: Sized,
@@ -118,6 +121,7 @@ pub trait AsyncCliUI: CliUI + Send + Sync {
         Ok(())
     }
 
+    #[cfg(feature = "ui-repl")]
     async fn respond(&mut self, line: &str) -> CliResult<bool> {
         let args = shlex::split(line).ok_or_else(|| CliError::ParseError(line.into()))?;
         let mut matches = Self::ReplCommand::command().try_get_matches_from(&args).map_err(CliError::InvalidCommand)?;
@@ -133,6 +137,7 @@ pub trait CliUI {
     type OneShotCommand: Subcommand;
 
     /// The command that will be used to parse REPL commands
+    #[cfg(feature = "ui-repl")]
     type ReplCommand: Parser + Subcommand;
 
     /// The arguments that will be used to create the CLI UI
@@ -153,6 +158,7 @@ pub trait CliUI {
         Self: Sized;
 }
 
+#[cfg(feature = "ui-repl")]
 #[instrument(level = "TRACE", err, ret)]
 fn readline() -> CliResult<String> {
     stdout().write(b"$ ").map_err(CliError::WriteError)?;
@@ -166,81 +172,111 @@ fn readline() -> CliResult<String> {
     Ok(buffer)
 }
 
-impl<OSCmd, ReplCmd, A> UiBuidableFiller for dyn CliUI<OneShotCommand = OSCmd, ReplCommand = ReplCmd, Args = A>
-where
-    OSCmd: Subcommand + Parser + CommandFactory + Debug,
-    ReplCmd: Subcommand + Parser + CommandFactory + Debug,
-    A: Debug,
-{
-    #[instrument(level = "TRACE", ret, err)]
-    async fn fill<B: UiBuildable<V>, V: From<B> + Debug>() -> Result<V> {
-        let mut builder = B::default();
-        let mut required_values = B::REQUIRED_FIELDS.to_vec();
-        let mut optional_values = B::OPTIONAL_FIELDS.to_vec();
+crate::dyn_impl! {
+    impl UiBuidableFiller where {
+        #[cfg(feature = "ui-cli-repl")]
+        for CliUI<OneShotCommand=OSCmd,ReplCommand=ReplCmd,Args=A> where {
+            OSCmd: Subcommand + CommandFactory + Debug,
+            ReplCmd: Subcommand + Parser + CommandFactory + Debug,
+            A: Debug
+        },
+        #[cfg(not(feature = "ui-cli-repl"))]
+        for CliUI<OneShotCommand=OSCmd,Args=A> where {
+            OSCmd: Subcommand + CommandFactory + Debug,
+            A: Debug
+        }
+    } for {
+        #[instrument(level = "TRACE", ret, err)]
+        async fn fill<B: UiBuildable<V>, V: From<B> + Debug>() -> Result<V> {
+            let mut builder = B::default();
+            let mut required_values = B::REQUIRED_FIELDS.to_vec();
+            let mut optional_values = B::OPTIONAL_FIELDS.to_vec();
 
-        for env_filled in builder.filled_fields() {
-            trace!("Field {env_filled} was filled from env");
-            required_values.retain(|field| field != env_filled);
-            optional_values.retain(|field| field != env_filled);
+            for env_filled in builder.filled_fields() {
+                trace!("Field {env_filled} was filled from env");
+                required_values.retain(|field| field != env_filled);
+                optional_values.retain(|field| field != env_filled);
+            }
+
+            for field in required_values {
+                let message = format!("Please enter the value for {field}");
+                let prompt = Text::new(&*message)
+                    .with_help_message("This value is required")
+                    .with_placeholder("Enter value here...");
+
+                let value = prompt.prompt()?;
+                builder.set_field(field, &*value)?;
+            }
+
+            for field in optional_values {
+                let message = format!("Please enter the value for {field}");
+                let prompt = Text::new(&*message).with_help_message("This value is optional").with_default("");
+
+                let value = prompt.prompt()?;
+                builder.set_field(field, &*value)?;
+            }
+
+            builder.build()
         }
 
-        for field in required_values {
-            let message = format!("Please enter the value for {field}");
-            let prompt = Text::new(&*message)
-                .with_help_message("This value is required")
-                .with_placeholder("Enter value here...");
+        #[instrument(level = "TRACE", ret, err)]
+        async fn modify<B: UiBuildable<V>, V: From<B> + Debug>(mut builder: B) -> Result<V> {
+            for field in B::REQUIRED_FIELDS {
+                let current = builder.display(field);
+                let message = format!("Please enter the value for {field}");
+                let prompt = Text::new(&*message)
+                    .with_help_message("This value is required")
+                    .with_placeholder("Enter value here...")
+                    .with_default(&*current);
 
-            let value = prompt.prompt()?;
-            builder.set_field(field, &*value)?;
+                match prompt.prompt() {
+                    Ok(value) => builder.set_field(field, &*value)?,
+                    Err(err) => {
+                        error!("Failed to prompt for field {field}: {err}");
+                        error!("Using current value: {current}");
+                    }
+                }
+            }
+
+            for field in B::OPTIONAL_FIELDS {
+                let current = builder.display(field);
+                let message = format!("Please enter the value for {field}");
+                let prompt = Text::new(&*message)
+                    .with_help_message("This value is optional")
+                    .with_placeholder("Enter value here...")
+                    .with_default(&*current);
+
+                match prompt.prompt() {
+                    Ok(value) => builder.set_field(field, &*value)?,
+                    Err(err) => {
+                        error!("Failed to prompt for field {field}: {err}");
+                        error!("Using current value: {current}");
+                    }
+                }
+            }
+
+            builder.build()
         }
-
-        for field in optional_values {
-            let message = format!("Please enter the value for {field}");
-            let prompt = Text::new(&*message).with_help_message("This value is optional").with_default("");
-
-            let value = prompt.prompt()?;
-            builder.set_field(field, &*value)?;
-        }
-
-        builder.build()
     }
+}
 
-    #[instrument(level = "TRACE", ret, err)]
-    async fn modify<B: UiBuildable<V>, V: From<B> + Debug>(mut builder: B) -> Result<V> {
-        for field in B::REQUIRED_FIELDS {
-            let current = builder.display(field);
-            let message = format!("Please enter the value for {field}");
-            let prompt = Text::new(&*message)
-                .with_help_message("This value is required")
-                .with_placeholder("Enter value here...")
-                .with_default(&*current);
-
-            match prompt.prompt() {
-                Ok(value) => builder.set_field(field, &*value)?,
-                Err(err) => {
-                    error!("Failed to prompt for field {field}: {err}");
-                    error!("Using current value: {current}");
-                }
+#[macro_export]
+macro_rules! dyn_impl {
+    (impl $trait:ty where {
+        $(
+            $(#[$cfg:meta])*
+            for $receiver:path where {
+                $(
+                    $where_ident:ident: $where_ty:tt $(+ $where_ty_add:tt)*
+                ),*
             }
-        }
-
-        for field in B::OPTIONAL_FIELDS {
-            let current = builder.display(field);
-            let message = format!("Please enter the value for {field}");
-            let prompt = Text::new(&*message)
-                .with_help_message("This value is optional")
-                .with_placeholder("Enter value here...")
-                .with_default(&*current);
-
-            match prompt.prompt() {
-                Ok(value) => builder.set_field(field, &*value)?,
-                Err(err) => {
-                    error!("Failed to prompt for field {field}: {err}");
-                    error!("Using current value: {current}");
-                }
-            }
-        }
-
-        builder.build()
+        ),*
+    } for $impl_body:tt) => {
+        $(
+            $(#[$cfg])*
+            impl<$($where_ident),*> $trait for dyn $receiver where
+                $($where_ident: $where_ty $(+ $where_ty_add)*),*
+            $impl_body
+        )*
     }
 }
