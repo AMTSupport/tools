@@ -18,17 +18,23 @@ use crate::cli::Flags as CommonFlags;
 use crate::ui::cli::error::CliError;
 use crate::ui::{UiBuidableFiller, UiBuildable};
 use anyhow::Result;
-use clap::{CommandFactory, FromArgMatches, Parser, Subcommand};
+use clap::{CommandFactory, Parser, Subcommand};
 use inquire::Text;
 use std::fmt::Debug;
 use tracing::{error, instrument, trace};
+#[cfg(feature = "ui-repl")]
+use {
+    clap::FromArgMatches,
+    std::io::{stdin, stdout, Write},
+    tracing::debug,
+};
 
 #[derive(Debug, Parser)]
 struct MaybeRepl<O: Subcommand> {
     #[command(subcommand)]
     pub oneshot: Option<O>,
 
-    #[cfg(feature = "repl")]
+    #[cfg(feature = "ui-repl")]
     #[arg(long, short = 'r', action = clap::ArgAction::SetTrue)]
     pub repl: bool,
 
@@ -174,13 +180,13 @@ fn readline() -> CliResult<String> {
 
 crate::dyn_impl! {
     impl UiBuidableFiller where {
-        #[cfg(feature = "ui-cli-repl")]
+        #[cfg(feature = "ui-repl")]
         for CliUI<OneShotCommand=OSCmd,ReplCommand=ReplCmd,Args=A> where {
             OSCmd: Subcommand + CommandFactory + Debug,
             ReplCmd: Subcommand + Parser + CommandFactory + Debug,
             A: Debug
         },
-        #[cfg(not(feature = "ui-cli-repl"))]
+        #[cfg(not(feature = "ui-repl"))]
         for CliUI<OneShotCommand=OSCmd,Args=A> where {
             OSCmd: Subcommand + CommandFactory + Debug,
             A: Debug

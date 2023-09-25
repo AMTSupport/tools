@@ -9,7 +9,7 @@ default = []
 ui-tui = ["ratatui", "crossterm"]
 ui-cli = ["indicatif", "inquire", "tracing-indicatif"]
 ui-gui = ["iced", "iced_aw"]
-ui-repl = ["ui-cli", "shlex"]
+ui-repl = ["ui-cli", "shlex", "ui-cli"]
 
 [dependencies]
 # Cli & UI
