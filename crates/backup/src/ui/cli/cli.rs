@@ -16,12 +16,10 @@
 
 use crate::app::App;
 use crate::ui::cli::action::Action;
-use crate::ui::{Ui, UiBuidableFiller, UiBuildable};
 use anyhow::Result;
-use inquire::Text;
 use std::fmt::Debug;
 use std::path::Path;
-use tracing::{error, instrument, trace};
+use tracing::instrument;
 
 #[derive(Debug)]
 pub struct CliUI {
@@ -48,81 +46,5 @@ impl CliUI {
         self.app.running = false;
 
         Ok(())
-    }
-}
-
-impl Ui for CliUI {}
-
-impl UiBuidableFiller for CliUI {
-    #[instrument(level = "TRACE")]
-    async fn fill<B: UiBuildable<V>, V: From<B> + Debug>() -> Result<V> {
-        let mut builder = B::default();
-        let mut required_values = B::REQUIRED_FIELDS.to_vec();
-        let mut optional_values = B::OPTIONAL_FIELDS.to_vec();
-
-        for env_filled in builder.filled_fields() {
-            trace!("Field {env_filled} was filled from env");
-            required_values.retain(|field| field != env_filled);
-            optional_values.retain(|field| field != env_filled);
-        }
-
-        for field in required_values {
-            let message = format!("Please enter the value for {field}");
-            let prompt = Text::new(&*message)
-                .with_help_message("This value is required")
-                .with_placeholder("Enter value here...");
-
-            let value = prompt.prompt()?;
-            builder.set_field(field, &*value)?;
-        }
-
-        for field in optional_values {
-            let message = format!("Please enter the value for {field}");
-            let prompt = Text::new(&*message).with_help_message("This value is optional").with_default("");
-
-            let value = prompt.prompt()?;
-            builder.set_field(field, &*value)?;
-        }
-
-        builder.build()
-    }
-
-    #[instrument(level = "TRACE")]
-    async fn modify<B: UiBuildable<V>, V: From<B> + Debug>(mut builder: B) -> Result<V> {
-        for field in B::REQUIRED_FIELDS {
-            let current = builder.display(field);
-            let message = format!("Please enter the value for {field}");
-            let prompt = Text::new(&*message)
-                .with_help_message("This value is required")
-                .with_placeholder("Enter value here...")
-                .with_default(&*current);
-
-            match prompt.prompt() {
-                Ok(value) => builder.set_field(field, &*value)?,
-                Err(err) => {
-                    error!("Failed to prompt for field {field}: {err}");
-                    error!("Using current value: {current}");
-                }
-            }
-        }
-
-        for field in B::OPTIONAL_FIELDS {
-            let current = builder.display(field);
-            let message = format!("Please enter the value for {field}");
-            let prompt = Text::new(&*message)
-                .with_help_message("This value is optional")
-                .with_placeholder("Enter value here...")
-                .with_default(&*current);
-
-            match prompt.prompt() {
-                Ok(value) => builder.set_field(field, &*value)?,
-                Err(err) => {
-                    error!("Failed to prompt for field {field}: {err}");
-                    error!("Using current value: {current}");
-                }
-            }
-        }
-
-        builder.build()
     }
 }
