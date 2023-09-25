@@ -17,12 +17,12 @@
 use clap::Parser;
 
 #[derive(Default, Debug, Clone, Copy, Parser)]
-pub struct Flags {
+pub struct Flags<const HIDE: bool = false> {
     /// The verbosity of the terminal logger
-    #[arg(short, long, global = true, action = clap::ArgAction::Count)]
+    #[arg(short, long, hide = HIDE, global = true, action = clap::ArgAction::Count)]
     pub verbose: u8,
 
     /// If there shouldn't be any changes made and only a dry run should be performed
-    #[arg(short, long, global = true, action = clap::ArgAction::SetTrue)]
+    #[arg(short, long, hide = HIDE, global = true, action = clap::ArgAction::SetTrue)]
     pub dry_run: bool,
 }
