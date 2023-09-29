@@ -20,6 +20,10 @@
 #![feature(async_fn_in_trait)]
 #![feature(result_option_inspect)]
 #![feature(associated_type_defaults)]
+#![feature(trait_alias)]
+#![feature(trivial_bounds)]
+#![feature(stmt_expr_attributes)]
+#![feature(cfg_match)]
 
 pub mod cli;
 pub mod fs;
@@ -29,3 +33,4 @@ pub mod pathed;
 
 #[cfg(any(feature = "ui-gui", feature = "ui-tui", feature = "ui-cli"))]
 pub mod ui;
+pub mod macros;

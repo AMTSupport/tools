@@ -20,11 +20,14 @@
 #![feature(associated_type_defaults)]
 #![feature(async_fn_in_trait)]
 
+use std::sync::Arc;
+// use futures_util::StreamExt;
 use crate::config::asset::WORDS;
 use crate::processor::processor::Processor;
 use crate::rules::rule::Rule;
 use crate::rules::Rules;
 use rand::Rng;
+use tokio_stream::{iter, StreamExt};
 use tracing::{instrument, trace};
 
 pub mod config;
@@ -35,20 +38,19 @@ pub mod ui;
 pub type TransformationFn = impl Fn(&str) -> String;
 
 pub async fn generate(rules: &Rules) -> Vec<String> {
-    let mut passwords = Vec::with_capacity(rules.amount);
+    let rules = Arc::new(rules);
+    iter(0..=rules.amount)
+        .then(|_| random_words(rules.word_count, rules.word_length_min, rules.word_length_max))
+        .map(|words| {
+            let mut processor = Processor::new(words);
+            rules.addition_digits.process(&mut processor);
+            rules.addition_separator.process(&mut processor);
+            rules.transformation_case.process(&mut processor);
 
-    // TODO :: Spawn a thread for each password.
-    while passwords.len() < rules.amount {
-        let words = random_words(rules.word_count, rules.word_length_min, rules.word_length_max).await;
-        let mut processor = Processor::new(words);
-        rules.addition_digits.process(&mut processor);
-        rules.addition_separator.process(&mut processor);
-        rules.transformation_case.process(&mut processor);
-
-        passwords.push(processor.finish());
-    }
-
-    passwords
+            processor.finish()
+        })
+        .collect()
+        .await
 }
 
 // TODO :: Turn into stream

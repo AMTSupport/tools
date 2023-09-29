@@ -14,6 +14,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+use anyhow::Result;
 use std::any::Any;
 use std::fmt::Debug;
 
@@ -22,15 +23,36 @@ pub mod cli;
 #[cfg(feature = "ui-tui")]
 pub mod tui;
 
-pub(super) trait Ui: UiBuidableFiller + Sized + Send + Sync {}
+pub trait Ui<R = Result<Self>>
+where
+    Self: UiBuidableFiller,
+{
+    /// The arguments that will be used to create the [`Ui`]
+    ///
+    /// This can be used to pass in configuration options, or other data.
+    /// This is not required to be used, but is available if needed.
+    type Args = ();
 
-pub(super) trait UiBuidableFiller {
-    async fn fill<B: UiBuildable<V>, V: From<B> + Debug>() -> anyhow::Result<V>;
-
-    async fn modify<B: UiBuildable<V>, V: From<B> + Debug>(builder: B) -> anyhow::Result<V>;
+    /// Create a new instance of the [`Ui`]
+    ///
+    /// This is used to create a new instance of the [`Ui`], and can be used to
+    /// parse arguments, or other data.
+    ///
+    /// Your logging guard should be set up here, as well as any other
+    /// configuration that is needed.
+    #[allow(clippy::new_ret_no_self)]
+    fn new(args: Self::Args) -> R
+    where
+        Self: Sized;
 }
 
-pub(super) trait UiBuildable<V>
+pub trait UiBuidableFiller {
+    async fn fill<B: UiBuildable<V>, V: From<B> + Debug>() -> Result<V>;
+
+    async fn modify<B: UiBuildable<V>, V: From<B> + Debug>(builder: B) -> Result<V>;
+}
+
+pub trait UiBuildable<V>
 where
     V: Sized + From<Self> + Debug,
     Self: Sized + Default + Debug,
@@ -38,14 +60,14 @@ where
     const REQUIRED_FIELDS: &'static [&'static str];
     const OPTIONAL_FIELDS: &'static [&'static str];
 
-    fn env_fill(&mut self) -> anyhow::Result<Vec<&'static str>>;
+    fn env_fill(&mut self) -> Result<Vec<&'static str>>;
 
     /// Returns a list of fields which have been filled
     /// This is used to determine if the user has filled in all the required fields
     /// and to display a summary of the fields which will be used.
     fn filled_fields(&self) -> Vec<&&str>;
 
-    fn set_field(&mut self, field: &str, value: &str) -> anyhow::Result<()>;
+    fn set_field(&mut self, field: &str, value: &str) -> Result<()>;
 
     fn get_field<T: Any + Sized>(&self, field: &str) -> Option<&T>;
 
@@ -56,7 +78,7 @@ where
         }
     }
 
-    fn build(self) -> anyhow::Result<V>;
+    fn build(self) -> Result<V>;
 }
 
 /// This macro is used to generate the builder pattern for the UI

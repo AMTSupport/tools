@@ -1197,31 +1197,10 @@ version = "1.1.5"
 source = "git+https://github.com/gootorov/rust-csv.git?branch=serde-flatten#31d1105f9ee50bf02dff178f20be4a1ec9fdff2d"
 dependencies = [
  "bstr 0.2.17",
- "csv-core 0.1.10 (git+https://github.com/gootorov/rust-csv.git?branch=serde-flatten)",
+ "csv-core",
  "itoa 0.4.8",
  "ryu",
  "serde",
-]
-
-[[package]]
-name = "csv"
-version = "1.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "626ae34994d3d8d668f4269922248239db4ae42d538b14c398b74a52208e8086"
-dependencies = [
- "csv-core 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
- "itoa 1.0.9",
- "ryu",
- "serde",
-]
-
-[[package]]
-name = "csv-core"
-version = "0.1.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2b2466559f260f48ad25fe6317b3c8dac77b5bdb5763ac7d9d6103530663bc90"
-dependencies = [
- "memchr",
 ]
 
 [[package]]
@@ -2551,7 +2530,7 @@ dependencies = [
  "anyhow",
  "chrono",
  "clap",
- "csv 1.1.5",
+ "csv",
  "env_logger",
  "http-cache-reqwest",
  "indicatif",
@@ -2744,6 +2723,7 @@ dependencies = [
  "indicatif",
  "inquire",
  "is_elevated",
+ "paste",
  "ratatui",
  "rustix 0.38.14",
  "shlex",
@@ -2753,7 +2733,6 @@ dependencies = [
  "tracing-appender",
  "tracing-indicatif",
  "tracing-subscriber",
- "winres",
 ]
 
 [[package]]
@@ -3001,26 +2980,23 @@ name = "memorable-pass"
 version = "0.1.1"
 dependencies = [
  "anyhow",
- "bytes",
  "clap",
- "csv 1.2.2",
  "derivative",
  "env_logger",
+ "futures-util",
  "lib",
  "macros",
  "rand 0.8.5",
  "regex",
- "reqwest",
  "rust-embed",
  "serde",
  "serde_json",
  "test-log",
- "thiserror",
  "tokio",
+ "tokio-stream",
  "tracing",
  "tracing-appender",
  "tracing-subscriber",
- "zip",
 ]
 
 [[package]]
@@ -5598,15 +5574,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "toml"
-version = "0.5.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f4f7f0dd8d50a853a531c426359045b1998f04219d88799810762cd4ad314234"
-dependencies = [
- "serde",
-]
-
-[[package]]
 name = "toml_datetime"
 version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6705,15 +6672,6 @@ checksum = "524e57b2c537c0f9b1e69f1965311ec12182b4122e45035b1508cd24d2adadb1"
 dependencies = [
  "cfg-if",
  "windows-sys 0.48.0",
-]
-
-[[package]]
-name = "winres"
-version = "0.1.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b68db261ef59e9e52806f688020631e987592bd83619edccda9c47d42cde4f6c"
-dependencies = [
- "toml",
 ]
 
 [[package]]

@@ -18,7 +18,9 @@ use crate::config;
 use crate::rules::Rules;
 use crate::ui::cli::action::Action;
 use lib::cli::Flags as CommonFlags;
-use lib::ui::cli::cli::{AsyncCliUI, CliResult, CliUI};
+use lib::ui::cli::oneshot::OneshotHandler;
+use lib::ui::cli::{CliResult, CliUi};
+use lib::ui::Ui;
 use tokio::runtime::Handle;
 use tracing::{info, instrument};
 use tracing_appender::non_blocking::WorkerGuard;
@@ -29,28 +31,13 @@ pub struct MemorablePassCli {
     rules: Option<Rules>,
 }
 
-impl CliUI for MemorablePassCli {
-    type OneShotCommand = Action;
+impl CliUi for MemorablePassCli {}
 
-    fn new(_args: Self::Args) -> CliResult<Self>
-    where
-        Self: Sized,
-    {
-        // Preload the words
-        Handle::current().spawn(async {
-            let _preload = &config::asset::WORDS;
-        });
+impl OneshotHandler for MemorablePassCli {
+    type Action = Action;
 
-        Ok(Self {
-            _guard: None,
-            rules: None,
-        })
-    }
-}
-
-impl AsyncCliUI for MemorablePassCli {
     #[instrument(level = "TRACE", skip(self))]
-    async fn handle_command(&mut self, command: Self::OneShotCommand, flags: &CommonFlags) -> CliResult<()> {
+    async fn handle(&mut self, command: Self::Action, flags: &CommonFlags) -> CliResult<()> {
         if self._guard.is_none() {
             self._guard = Some(lib::log::init(env!("CARGO_PKG_NAME"), flags.verbose));
         }
@@ -66,40 +53,21 @@ impl AsyncCliUI for MemorablePassCli {
 
         Ok(())
     }
+}
 
-    #[cfg(feature = "ui-repl")]
-    #[instrument(level = "TRACE", skip(self))]
-    async fn handle_repl_command(&mut self, command: Self::ReplCommand, flags: &CommonFlags) -> CliResult<bool> {
-        match command.action {
-            ReplCommand::Generate => {
-                let rules = self.rules.get_or_insert_with(|| {
-                    debug!("No rules set, using defaults");
-                    Rules::default()
-                });
+impl Ui<CliResult<Self>> for MemorablePassCli {
+    fn new(_args: Self::Args) -> CliResult<Self>
+    where
+        Self: Sized,
+    {
+        // Preload the words
+        Handle::current().spawn(async {
+            let _preload = &config::asset::WORDS;
+        });
 
-                let passwords = generate(&rules).await;
-                info!(
-                    "Generated passwords:\n\n{passwords}\n",
-                    passwords = passwords.join("\n")
-                );
-            }
-            ReplCommand::Rules(rules) => {
-                let previous_rules = self.rules.replace(rules);
-
-                if let Some(previous_rules) = previous_rules {
-                    debug!("Replacing previous rules.");
-                    debug!("Previous rules:\n\n{previous_rules:?}\n");
-                }
-            }
-            ReplCommand::Ping => {
-                info!("Pong!");
-            }
-            ReplCommand::Quit => {
-                info!("Quitting...");
-                return Ok(true);
-            }
-        }
-
-        Ok(false)
+        Ok(Self {
+            _guard: None,
+            rules: None,
+        })
     }
 }

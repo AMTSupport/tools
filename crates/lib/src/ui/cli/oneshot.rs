@@ -14,13 +14,4 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::rules::Rules;
-use clap::Parser;
-
-#[derive(Debug, Parser)]
-pub enum Action {
-    Generate {
-        #[command(flatten)]
-        rules: Rules,
-    },
-}
+crate::handler!(pub Oneshot);

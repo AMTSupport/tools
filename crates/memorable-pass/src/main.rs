@@ -18,10 +18,11 @@
 #![feature(async_fn_in_trait)]
 
 use anyhow::Result;
-use lib::ui::cli::cli::{AsyncCliUI, CliUI};
+use lib::ui::cli::CliUi;
+use lib::ui::Ui;
 use memorable_pass::ui::cli::ui::MemorablePassCli;
 
-#[tokio::main]
+#[tokio::main(flavor = "multi_thread", worker_threads = 8)]
 async fn main() -> Result<()> {
     let mut cli = MemorablePassCli::new(())?;
     cli.run().await?;

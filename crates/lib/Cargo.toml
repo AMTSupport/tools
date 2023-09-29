@@ -9,7 +9,7 @@ default = []
 ui-tui = ["ratatui", "crossterm"]
 ui-cli = ["indicatif", "inquire", "tracing-indicatif"]
 ui-gui = ["iced", "iced_aw"]
-ui-repl = ["ui-cli", "shlex", "ui-cli"]
+ui-repl = ["ui-cli", "shlex"]
 
 [dependencies]
 # Cli & UI
@@ -36,10 +36,11 @@ anyhow = { workspace = true }
 
 sysexits = "0.7.2"
 cfg-if = "1.0"
+paste = "1.0.14"
 
 [target.'cfg(unix)'.dependencies]
 rustix = { version = "0.38.14", features = ["process"] }
 
 [target.'cfg(windows)'.dependencies]
 is_elevated = "0.1.2"
-winres = "0.1.12"
+#winres = "0.1.12"

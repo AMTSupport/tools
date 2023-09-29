@@ -29,7 +29,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
 /// The rules which are used to generate passwords.
-#[derive(Debug, Parser, Serialize, Deserialize)]
+#[derive(Debug, Clone, Parser, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Rules {
     /// How many words are used.

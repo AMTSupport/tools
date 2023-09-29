@@ -83,7 +83,10 @@ where
 }
 
 #[cfg(not(feature = "ui-cli"))]
-fn add_ui_layer<S>(registry: S, _verbosity: u8) -> impl Subscriber + for<'span> LookupSpan<'span> + Send + Sync + 'static
+fn add_ui_layer<S>(
+    registry: S,
+    _verbosity: u8,
+) -> impl Subscriber + for<'span> LookupSpan<'span> + Send + Sync + 'static
 where
     S: Subscriber + for<'span> LookupSpan<'span> + Send + Sync + 'static,
 {
