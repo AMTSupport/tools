@@ -15,8 +15,10 @@
  */
 
 use glob::Paths;
-use std::collections::HashSet;
+use std::collections::HashMap;
+use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::exit;
 use tracing::{debug, error, instrument, trace, warn};
 
 #[derive(Debug, Clone)]
@@ -46,39 +48,75 @@ impl Location {
         .collect()
     }
 
-    pub fn get_recursed(&self) -> HashSet<PathBuf> {
-        recurse(self.get_path())
+    pub fn get_recursed(&self) -> Vec<PathBuf> {
+        let init_top = self.get_path();
+        recurse(init_top)
     }
 }
 
-#[instrument(skip(top))]
-fn recurse(top: Vec<PathBuf>) -> HashSet<PathBuf> {
-    let mut paths = HashSet::new();
+#[instrument(level = "TRACE", skip(top_init))]
+fn recurse(mut top_init: Vec<PathBuf>) -> Vec<PathBuf> {
+    let mut collection = HashMap::new();
+    fn recurser(top: Vec<PathBuf>, map: &mut HashMap<PathBuf, Vec<PathBuf>>) {
+        if top.is_empty() {
+            return;
+        }
 
-    for path in top {
-        trace!("Parsing path {}", path.display());
-
-        if path.is_dir() {
-            trace!("Path {} is a directory; recursing into.", path.display());
-            let sub_files = match path.read_dir() {
-                Ok(files) => files,
-                Err(_) => {
-                    error!("Failed to read directory {}", path.display());
-                    continue;
-                }
+        let mut iter = top.into_iter();
+        while let Some(path) = iter.next() {
+            if !path.exists() {
+                warn!("Path {} does not exist", path.display());
+                continue;
             }
-            .flatten()
-            .map(|entry| entry.path())
-            .collect::<Vec<_>>();
 
-            paths.extend(&mut recurse(sub_files).into_iter());
-        } else {
-            trace!("Path {} is a file; appending", path.display());
-            paths.extend_one(path);
+            if !path.is_dir() {
+                error!("Path {} is not a directory; this shouldn't happen!", path.display());
+                continue;
+            }
+
+            if map.contains_key(&path) {
+                trace!("Path {} has already been recursed into; skipping", path.display());
+                continue;
+            }
+
+            if let Ok(files) = fs::read_dir(&path) {
+                let (sub_dirs, sub_files) = files.filter_map(|e| e.ok().map(|e| e.path())).partition(|p| p.is_dir());
+                map.insert(path, sub_files);
+                recurser(sub_dirs, map);
+            } else {
+                error!("Failed to read directory {}", path.display());
+            }
         }
     }
 
-    paths
+    let mut recursing_paths = Vec::new();
+    let mut top_iter = top_init.into_iter();
+    while let Some(path) = top_iter.next() {
+        if !path.exists() {
+            warn!("Path {} does not exist", path.display());
+            continue;
+        }
+
+        if path.is_file() {
+            let parent = path.parent().unwrap_or_else(|| {
+                error!("Path {} has no parent; this shouldn't happen!", path.display());
+                exit(1)
+            });
+
+            if !collection.contains_key(parent) {
+                collection.insert(parent.to_path_buf(), Vec::new());
+            }
+            collection.get_mut(parent).unwrap().push(path.to_path_buf());
+            continue;
+        }
+
+        if path.is_dir() {
+            recursing_paths.push(path);
+        }
+    }
+
+    recurser(recursing_paths, &mut collection);
+    collection.into_iter().flat_map(|(_, v)| v).collect()
 }
 
 #[instrument(level = "TRACE")]

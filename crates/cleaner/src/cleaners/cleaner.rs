@@ -26,7 +26,7 @@ use std::io;
 use std::path::PathBuf;
 use thiserror::Error;
 use tokio_stream::StreamExt;
-use tracing::{trace, warn};
+use tracing::{instrument, trace, warn};
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Delegation, EnumVariants, ValueEnum, EnumNames)]
 #[delegate(trait = CleanerInternal)]
@@ -253,6 +253,7 @@ pub enum MissedFile {
     Other(PathBuf, u64, #[source] io::Error),
 }
 
+#[instrument(level = "TRACE", skip(iter))]
 pub(super) fn collect_locations(iter: Vec<Location>, rules: Rules) -> (Vec<PathBuf>, Vec<MissedFile>) {
     let tuple = iter
         .par_iter()
@@ -268,6 +269,7 @@ pub(super) fn collect_locations(iter: Vec<Location>, rules: Rules) -> (Vec<PathB
     )
 }
 
+#[instrument(level = "TRACE", skip(files, runtime))]
 pub(super) async fn clean_files(cleaner: Cleaner, files: Vec<PathBuf>, runtime: &'static Runtime) -> CleanupResult {
     if files.is_empty() {
         return CleanupResult::Skipped {
