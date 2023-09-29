@@ -10,7 +10,7 @@ keywords = ["generator", "password", "memorable"]
 description = "A memorable password generator written in Rust"
 
 [[bin]]
-name = "memorable"
+name = "memorable-pass"
 path = "src/main.rs"
 
 [features]
@@ -53,14 +53,14 @@ tracing-subscriber = { workspace = true, default-features = false, features = ["
 regex = "1.9.5"
 
 [build-dependencies]
-reqwest = { workspace = true, features = ["blocking","stream"] }
-zip = { workspace = true }
-
-csv = "1.2.2"
-bytes = "1.5.0"
-serde = { workspace = true, features = ["derive"] }
-serde_json = { workspace = true }
-
-anyhow = { workspace = true }
-tracing = { workspace = true }
-thiserror = { workspace = true }
+#reqwest = { workspace = true, features = ["blocking","stream"] }
+#zip = { workspace = true }
+#
+#csv = "1.2.2"
+#bytes = "1.5.0"
+#serde = { workspace = true, features = ["derive"] }
+#serde_json = { workspace = true }
+#
+#anyhow = { workspace = true }
+#tracing = { workspace = true }
+#thiserror = { workspace = true }

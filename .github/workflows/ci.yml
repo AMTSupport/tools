@@ -6,67 +6,27 @@ on:
     paths: [ "**/src/**", '.github/workflows/ci.yml' ]
 
 jobs:
-  fmt-clippy:
+  flake-check:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v3
+      - uses: cachix/install-nix-action@v22
+      - uses: DeterminateSystems/magic-nix-cache-action@v2
 
-      - name: Setup Rust Toolchain and Cache
-        uses: actions-rust-lang/setup-rust-toolchain@v1.4.4
-        with:
-          toolchain: nightly
-          components: rustfmt, clippy
+      - run: nix flake check
 
-      - name: Cargo fmt
-        run: |
-          cargo fmt --all -- --check
-
-      - name: Cargo clippy
-        run: |
-          cargo clippy --workspace -- -D warnings
-
-  tests:
+  build-artifacts:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v3
+      - uses: cachix/install-nix-action@v22
+      - uses: DeterminateSystems/magic-nix-cache-action@v2
 
-      - name: Setup Rust Toolchain and Cache
-        uses: actions-rust-lang/setup-rust-toolchain@v1.4.4
-        with:
-          toolchain: nightly
-
-      - name: Run tests
-        run: |
-          cargo test --workspace --profile ci
-
-
-  artifact:
-    strategy:
-      matrix:
-        build: [ linux, windows ]
-        include:
-          - target: windows
-            os: windows-latest
-            extra: '.exe'
-          - target: linux
-            os: ubuntu-latest
-
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Setup Rust Toolchain and Cache
-        uses: actions-rust-lang/setup-rust-toolchain@v1.4.4
-        with:
-          toolchain: nightly
-
-      - name: Run
-        run: |
-          cargo build --workspace --release
+      - run: nix build
 
       - uses: actions/upload-artifact@v3.0.0
+        if: ${{ !github.event.act }}
         with:
-          name: tools-${{ matrix.os }}
-          path: target/release/backup${{ matrix.extra }}
+          name: tools
+          path: result/bin/
+          if-no-files-found: error

@@ -14,7 +14,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use anyhow::Result;
+// use anyhow::Result;
 
 // #[derive(Debug, Serialize, Deserialize)]
 // struct WordData {
@@ -68,7 +68,7 @@ use anyhow::Result;
 //     Ok(words)
 // }
 
-fn main() -> Result<()> {
+fn main() {}
     // let bad_words = get_bad_words()?;
     // let words = extract_words(download_extract_zip(
     //     "https://www.cs.cmu.edu/~enron/enron_mail_20150507.tar.gz",
@@ -92,6 +92,3 @@ fn main() -> Result<()> {
     // let json_data = serde_json::to_vec(&length_map)?;
     // let mut json_file = File::create("word_data.json")?;
     // json_file.write_all(&*json_data)?;
-
-    Ok(())
-}

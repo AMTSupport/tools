@@ -16,7 +16,7 @@
     fenix = { url = "github:nix-community/fenix"; inputs.nixpkgs.follows = "nixpkgs"; };
   };
 
-  outputs = { nixpkgs, flake-utils, crane, fenix, ... }:
+  outputs = { nixpkgs, flake-utils, crane, fenix, ... }@inputs:
     let
       # TODO - Darwin support (error: don't yet have a `targetPackages.darwin.LibsystemCross for x86_64-apple-darwin`)
       targets = [ "x86_64-linux" ] ++ [ "x86_64-windows" ];
@@ -50,7 +50,7 @@
       in
       {
         packages = builtins.mapAttrs (name: outputs: outputs.crateBinary) cargoOutputs // {
-          all = pkgs.symlinkJoin {
+          default = pkgs.symlinkJoin {
             name = "all";
             paths = builtins.attrValues (builtins.mapAttrs (name: outputs: outputs.crateBinary) cargoOutputs);
           };
@@ -60,15 +60,26 @@
           default = pkgs.callPackage ./shell.nix { inherit localSystem flake-utils crane fenix; };
         };
 
-        checks = builtins.foldl'
-          (attr: packageChecks: (attr // packageChecks))
-          { }
-          (builtins.attrValues (builtins.mapAttrs
-            (name: crateOutput: {
-              "${name}-fmt" = crateOutput.crateFmt;
-              "${name}-clippy" = crateOutput.crateClippy;
-              "${name}-test" = crateOutput.crateTest;
-            })
-            cargoOutputs));
+        checks =
+          let
+            nativeOutputs = builtins.filter (o: o.isNative) (builtins.attrValues (builtins.mapAttrs
+              (name: output: {
+                inherit name;
+                inherit (output.passthru) isNative;
+
+                inherit (output) crateFmt crateClippy crateTest;
+              })
+              cargoOutputs));
+          in
+          builtins.foldl'
+            (attr: packageChecks: (attr // packageChecks))
+            { }
+            (builtins.map
+              (crate: {
+                "${crate.name}-formatting" = crate.crateFmt;
+                "${crate.name}-clippy" = crate.crateClippy;
+                "${crate.name}-test" = crate.crateTest;
+              })
+              nativeOutputs);
       });
 }

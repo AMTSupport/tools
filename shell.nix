@@ -13,6 +13,7 @@ in
   nativeBuildInputs = with pkgs; [
     cocogitto
     act
+    hyperfine
     (fenixPkgs.complete.withComponents [
       "cargo"
       "rust-src"

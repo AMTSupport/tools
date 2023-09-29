@@ -3,6 +3,9 @@ name = "interfacer"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "interfacer"
+path = "src/main.rs"
 
 [features]
 default = ["ui-cli"]

@@ -6,6 +6,10 @@ categories = ["command-line-utilities", "system", "utilities", "cli"]
 keywords = ["cleaner", "clean", "cleaning", "cleaning-tool", "cleaning-utility"]
 description = "A cleaning tool written in Rust"
 
+[[bin]]
+name = "cleaner"
+path = "src/main.rs"
+
 [dependencies]
 lib = { path = "../lib" }
 macros = { path = "../macros" }

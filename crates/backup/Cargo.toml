@@ -5,6 +5,10 @@ edition = "2021"
 categories = ["command-line-utilities", "system", "utilities", "cli"]
 keywords = ["backup"]
 
+[[bin]]
+name = "backup"
+path = "src/main.rs"
+
 [features]
 default = ["ui-cli", "sources-s3", "sources-bitwarden", "sources-1password"]
 binary-downloader = ["bytes", "rand", "const_format"]

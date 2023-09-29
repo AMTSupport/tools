@@ -116,26 +116,27 @@ let
       cargoExtraArgs = if workspace != null then "--package ${workspace}" else "";
 
       strictDeps = true;
+      doCheck = false; # Checks are done with flake
     };
 
   cargoArtifact = craneLib.buildDepsOnly commonArgs;
 
   cargoBuild = artifact: extra: craneLib.buildPackage (commonArgs // {
-    cargoArtifact = artifact;
-  } // extra commonArgs);
+    cargoArtifacts = artifact;
+  } // (if extra != null then extra commonArgs else { }));
 
   cargoClippy = artifact: extra: craneLib.cargoClippy (commonArgs // {
-    cargoArtifact = artifact;
+    cargoArtifacts = artifact;
     cargoClippyExtraArgs = "--package ${workspace} -- --deny warnings";
-  } // extra commonArgs);
+  } // (if extra != null then extra commonArgs else { }));
 
   cargoFmt = artifact: extra: craneLib.cargoFmt (commonArgs // {
-    cargoArtifact = artifact;
-  } // extra commonArgs);
+    cargoArtifacts = artifact;
+  } // (if extra != null then extra commonArgs else { }));
 
   cargoTest = artifact: extra: craneLib.cargoNextest (commonArgs // {
-    cargoArtifact = artifact;
-  } // extra commonArgs);
+    cargoArtifacts = artifact;
+  } // (if extra != null then extra commonArgs else { }));
 in
 {
   passthru = commonDeps // commonEnv // {
@@ -152,9 +153,9 @@ in
     cargoExtraArgs = "--lib";
   });
 
-  crateTest = cargoTest cargoArtifact;
+  crateTest = cargoTest cargoArtifact null;
 
-  crateClippy = cargoClippy cargoArtifact;
+  crateClippy = cargoClippy cargoArtifact null;
 
-  crateFmt = cargoFmt cargoArtifact;
+  crateFmt = cargoFmt cargoArtifact null;
 }
