@@ -88,7 +88,7 @@ impl Config {
     /// - $BACKUP_CONFIG
     /// - $PWD/settings.json
     #[instrument(level = "TRACE")]
-    pub fn find(directory: Option<&Path>) -> Result<PathBuf> {
+    pub fn find(directory: &Option<PathBuf>) -> Result<PathBuf> {
         use std::env;
 
         env::var(Self::ENV_VAR)
@@ -99,7 +99,7 @@ impl Config {
                 path.exists().then(|| path).ok_or(Error::Find)
             })
             .or_else(|_| {
-                let path = directory.map(|p| p.join(Self::FILENAME));
+                let path = directory.as_ref().map(|p| p.join(Self::FILENAME));
                 path.as_deref().is_some_and(Path::exists).then(|| path.unwrap()).ok_or(Error::Find)
             })
             .or_else(|_| {

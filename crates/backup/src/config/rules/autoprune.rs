@@ -184,12 +184,12 @@ impl Tag {
 
         debug!("Compiled regex for getting existing tags [{compiled}]");
         let capture = compiled.captures_iter(str);
-        if capture.count() == 0 {
+        let tags = capture.map(|m| m.get(0).unwrap().as_str().parse().unwrap()).collect::<Vec<Tag>>();
+        if tags.is_empty() {
             debug!("No tags found in file name [{str}]");
             return (vec![Tag::None], str);
         }
 
-        let tags = capture.map(|m| m.get(0).unwrap().as_str().parse().unwrap()).collect::<Vec<Tag>>();
         let tag_prefix = tags.iter().fold(String::new(), |combinding, next| {
             let mut str = combinding.clone();
             if !combinding.is_empty() {

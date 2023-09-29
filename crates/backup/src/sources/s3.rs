@@ -24,6 +24,7 @@ use futures::{Stream, TryStreamExt};
 use futures_util::StreamExt;
 use indicatif::{MultiProgress, ProgressBar};
 use inquire::validator::Validation;
+use lib::builder;
 use lib::fs::normalise_path;
 use lib::pathed::Pathed;
 use lib::ui::cli::progress::{download, spinner};
@@ -35,17 +36,6 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
 use tracing::{debug, error, info, trace};
-use lib::builder;
-
-// #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-// pub struct S3Base {
-//     pub object: PathBuf,
-//
-//     /// Keeps a serializable map of the operators data,
-//     /// since we can't serialize the operator itself.
-//     #[serde(flatten)]
-//     pub backend: HashMap<String, String>,
-// }
 
 builder!(S3Backend = [
     root => PathBuf,
@@ -144,7 +134,7 @@ impl Exporter for S3Core {
         let download_bar = progress_bar.insert_after(&progress_state, download());
 
         while let Some(item) = layer.try_next().await? {
-            let meta = op.metadata(&item, None).await?;
+            let meta = item.metadata();
             if meta.is_dir() {
                 progress_state.inc(1);
                 continue;
@@ -225,7 +215,7 @@ impl Exporter for S3Core {
 
 #[cfg(feature = "ui-cli")]
 pub(crate) async fn interactive(_runtime: &Runtime) -> Result<Vec<Backend>> {
-    use crate::ui::cli::{continue_loop, env_or_prompt};
+    use lib::ui::cli::{continue_loop, env_or_prompt};
 
     let not_empty_or_ascii =
         |str: &str, msg: &str| match str.chars().any(|c| !c.is_ascii_alphanumeric() && c != '-' && c != '_')

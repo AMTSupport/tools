@@ -34,7 +34,6 @@
 #![feature(stmt_expr_attributes)]
 #![feature(exact_size_is_empty)]
 
-pub mod app;
 pub mod config;
 pub mod sources;
 pub mod ui;

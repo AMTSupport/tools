@@ -15,8 +15,8 @@
  */
 
 use anyhow::Result;
-use backup::app::AppCli;
-use clap::Parser;
+use lib::ui::cli::CliUi;
+use lib::ui::Ui;
 
 #[cfg(feature = "ui-tui")]
 #[cfg(not(feature = "ui-cli"))]
@@ -35,35 +35,12 @@ pub async fn main() -> Result<()> {
 #[cfg(not(feature = "ui-tui"))]
 #[tokio::main(flavor = "multi_thread")]
 pub async fn main() -> Result<()> {
-    use backup::ui::cli::cli::CliUI;
-    use lib::log;
+    use backup::ui::cli::ui::BackupCli;
 
-    let cli = AppCli::parse();
-    let _guard = log::init("backup-interactive", cli.flags.verbose);
-    rayon::ThreadPoolBuilder::new().num_threads(22).build_global().unwrap();
-
-    let mut ui = CliUI::new(cli.action, cli.destination.as_ref().map(|pb| pb.as_path()))?;
-    ui.run(cli.action).await?;
-
+    let mut app = BackupCli::new(())?;
+    app.run().await?;
     Ok(())
-
     // TODO :: Verify writable
     // TODO :: Verify enough space
     // TODO :: Verify dir is either empty, or has existing backup data
-}
-
-#[cfg(all(feature = "ui-tui", feature = "ui-cli"))]
-#[tokio::main(flavor = "multi_thread")]
-pub async fn main() -> Result<()> {
-    use clap::Parser;
-
-    let cli = AppCli::parse()?;
-
-    Ok(())
-}
-
-#[cfg(not(any(feature = "ui-tui", feature = "ui-cli")))]
-pub fn main() {
-    error!("No UI backend enabled, please enable one of the following features: ui-tui, ui-cli");
-    std::process::exit(1);
 }

@@ -20,35 +20,49 @@ use crate::config::rules::autoprune::AutoPrune;
 use crate::config::rules::Rules;
 use crate::config::runtime::Runtime;
 use crate::sources::exporter::ExporterSource;
-use crate::ui::cli::continue_loop;
 use anyhow::{anyhow, Context, Result};
+use clap::Parser;
 use inquire::validator::Validation;
 use inquire::{PathFilter, PathSelect, PathSelectionMode};
 use lib::pathed::ensure_directory_exists;
+use lib::ui::cli::continue_loop;
 use lib::ui::cli::progress;
+use macros::CommonFields;
 use std::env;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::str::FromStr;
 use tracing::{error, instrument, trace};
 
-#[derive(Debug, Clone, Copy, clap::Subcommand)]
+#[derive(Debug, Parser, CommonFields)]
 pub enum Action {
     /// Create a new backup configuration interactively
-    Init,
+    Init {
+        /// The path to the backup location root directory.
+        #[clap(short = 'D', long, help = "The path to the backup location root directory.")]
+        destination: Option<PathBuf>,
+    },
 
     /// Run the backup process with the existing configuration
-    Run,
+    Run {
+        /// The path to the backup location root directory.
+        #[clap(short = 'D', long, help = "The path to the backup location root directory.")]
+        destination: Option<PathBuf>,
+    },
 
     /// Modify the configuration interactively
-    Modify,
+    Modify {
+        /// The path to the backup location root directory.
+        #[clap(short = 'D', long, help = "The path to the backup location root directory.")]
+        destination: Option<PathBuf>,
+    },
 }
 
 impl Action {
     #[instrument(level = "TRACE")]
-    pub fn prepare(&self, destination: Option<&Path>) -> Result<Runtime> {
+    pub fn prepare(&self) -> Result<Runtime> {
         match self {
-            Action::Init => {
-                let backup_root = find_backup_root(None)?;
+            Action::Init { destination } => {
+                let backup_root = find_backup_root(destination)?;
                 let config_path = backup_root.join(Config::FILENAME);
                 if config_path.exists() {
                     return Err(anyhow!(
@@ -59,7 +73,7 @@ impl Action {
 
                 Ok(Runtime::wrapping(backup_root))
             }
-            Action::Modify | Action::Run => {
+            Action::Modify { destination } | Action::Run { destination } => {
                 let backup_root = find_backup_root(destination)?;
                 Ok(Runtime::wrapping(backup_root))
             }
@@ -72,14 +86,14 @@ impl Action {
         use std::sync::Arc;
 
         match self {
-            Action::Init => {
+            Action::Init { .. } => {
                 runtime.config.rules = new_rules()?;
                 runtime.config.exporters = new_exporters(&runtime).await?;
                 runtime.config.mutated = true;
 
                 Ok(())
             }
-            Action::Modify => {
+            Action::Modify { .. } => {
                 use inquire::Confirm;
                 // TODO :: Use builder stuff for this
 
@@ -99,7 +113,7 @@ impl Action {
 
                 Ok(())
             }
-            Action::Run => {
+            Action::Run { .. } => {
                 let multi_bar = Arc::new(MultiProgress::new());
                 let total_progress = Arc::new(multi_bar.add(progress::bar(runtime.config.exporters.len() as u64)));
 
@@ -137,7 +151,7 @@ impl Action {
     }
 }
 
-fn find_backup_root(destination: Option<&Path>) -> Result<PathBuf> {
+fn find_backup_root(destination: &Option<PathBuf>) -> Result<PathBuf> {
     match select_location(destination) {
         Ok(path) => Ok(path),
         Err(err) => {
@@ -152,7 +166,7 @@ fn find_backup_root(destination: Option<&Path>) -> Result<PathBuf> {
 }
 
 #[instrument(level = "TRACE")]
-fn select_location(destination: Option<&Path>) -> Result<PathBuf> {
+fn select_location(destination: &Option<PathBuf>) -> Result<PathBuf> {
     if let Some(path) = destination {
         ensure_directory_exists(path)?;
         return Ok(path.to_path_buf());
