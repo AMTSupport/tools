@@ -38,11 +38,12 @@ impl CleanerInternal for ShaderCleaner {
     #[cfg(windows)]
     fn locations(&self) -> Vec<Location> {
         use super::USERS;
-        let prefix = "AppData/Local/";
 
         vec![
-            Location::Sub(&USERS, format!("{prefix}NVIDIA/DXCache/*")),
-            Location::Sub(&USERS, format!("{prefix}D3DSCache/*")),
+            Location::Sub(&USERS, "AppData/Local/NVIDIA/DXCache/*".into()),
+            Location::Sub(&USERS, "AppData/Local/D3DSCache/*".into()),
+            // Chromium GPU Cache
+            Location::Sub(&USERS, "AppData/Roaming/Microsoft/Teams/GPUCache/*".into()),
         ]
     }
 
