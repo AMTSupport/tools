@@ -79,6 +79,12 @@ let
   };
 
   commonEnv = {
+    # Fixes the CC crate in build scripts.
+    "CC_${target}" =
+    if useMold
+    then "${crossPackages.clang}/bin/${crossPackages.clang.targetPrefix}clang"
+    else let inherit (crossPackages.stdenv) cc; in "${cc}/bin/${cc.targetPrefix}cc";
+
     "CARGO_BUILD_TARGET" = target;
 
     "CARGO_TARGET_${TARGET}_LINKER" =
