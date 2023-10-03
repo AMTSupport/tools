@@ -2,8 +2,14 @@
   description = "Foo Bar Rust Project";
 
   nixConfig = {
-    extra-substituters = [ "https://racci.cachix.org" ];
-    extra-trusted-public-keys = [ "racci.cachix.org-1:Kl4opLxvTV9c77DpoKjUOMLDbCv6wy3GVHWxB384gxg=" ];
+    extra-substituters = [
+      "https://amt.cachix.org"
+      "https://racci.cachix.org"
+    ];
+    extra-trusted-public-keys = [
+      "amt.cachix.org-1:KiJsXTfC7rGJc4DmNlLA56caUUWuc8YsOfzpPgredJI="
+      "racci.cachix.org-1:Kl4opLxvTV9c77DpoKjUOMLDbCv6wy3GVHWxB384gxg="
+     ];
   };
 
   inputs = {
