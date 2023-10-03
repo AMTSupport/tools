@@ -26,6 +26,7 @@ use indicatif::{MultiProgress, ProgressBar};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Backend {
     S3(S3Core),

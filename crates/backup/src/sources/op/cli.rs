@@ -752,7 +752,7 @@ pub mod item {
                         if password_details.is_some() {
                             let into = password_details
                                 .clone() // TODO -> Better error handling
-                                .expect(&format!("Get password details of {value}"))
+                                .unwrap_or_else(|| panic!("Get password details of {value}"))
                                 .into();
                             let _ = password_history.insert(into);
                         }

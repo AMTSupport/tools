@@ -15,6 +15,7 @@
  */
 
 pub mod backend;
+#[allow(clippy::module_inception)] // FIXME
 pub mod config;
 pub mod rules;
 pub mod runtime;

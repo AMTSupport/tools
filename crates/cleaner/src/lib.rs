@@ -25,6 +25,7 @@
 #![feature(associated_type_defaults)]
 #![feature(extend_one)]
 #![feature(io_error_more)]
+#![allow(incomplete_features)]
 #![feature(inherent_associated_types)]
 
 pub mod application;

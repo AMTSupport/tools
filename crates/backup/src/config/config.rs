@@ -115,7 +115,7 @@ impl Config {
             false => Err(Error::NotFound(path.to_path_buf()).into()),
             true => {
                 let mut slice = vec![];
-                fs::File::open(path).await?.read(&mut slice).await?;
+                fs::File::open(path).await?.read_to_end(&mut slice).await?;
                 serde_json::from_slice(&slice)
                     .map_err(Error::Serde)
                     .map(|mut config: Config| {
