@@ -7,7 +7,7 @@ monorepo_version_separator = "-"
 
 pre_bump_hooks = [ "nix flake check" ]
 pre_package_bump_hooks = [
-    "echo 'upgrading {{package}}' to {{version}}",
+    "echo 'upgrading {{package}} from {{latest}} to {{version}}",
     "sed -i -e 's/^version = .*/version = \"{{version}}\"/' crates/{{package}}/Cargo.toml",
 #    "git cliff --include-path 'crates/{{package}}/**' -t {{version}} -o 'crates/{{package}}/CHANGELOG.md"
 ]
@@ -24,6 +24,18 @@ owner = "AMTSupport"
 authors = [
     { username = "DaRacci", signature = "James Draycott" }
 ]
+
+[commit_types]
+feat = { changelog_title = "<!-- 0 -->⛰️  Features" }
+fix = { changelog_title = "<!-- 1 -->🐛 Bug Fixes" }
+refactor = { changelog_title = "<!-- 2 -->🚜 Refactor" }
+doc = { changelog_title = "<!-- 3 -->📚 Documentation" }
+perf = { changelog_title = "<!-- 4 -->⚡ Performance" }
+style = { changelog_title = "<!-- 5 -->🎨 Styling" }
+test = { changelog_title = "<!-- 6 -->🧪 Testing" }
+ci = { changelog_title = "<!-- 7 -->🤖 CI Tasks" }
+build = { changelog_title = "<!-- 8 -->🏗️ Build Tasks" }
+chore = { changelog_title = "<!-- 9 -->⚙️ Miscellaneous Tasks" }
 
 [packages]
 lib = { path = "crates/lib", public_api = false }
