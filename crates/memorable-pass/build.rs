@@ -69,26 +69,26 @@
 // }
 
 fn main() {}
-    // let bad_words = get_bad_words()?;
-    // let words = extract_words(download_extract_zip(
-    //     "https://www.cs.cmu.edu/~enron/enron_mail_20150507.tar.gz",
-    //     "enron-v1.csv",
-    // )?)?;
-    //
-    // let mut length_map: HashMap<usize, Vec<String>> = HashMap::new();
-    // for word in words.into_iter() {
-    //     if bad_words.contains(&word) {
-    //         continue;
-    //     }
-    //
-    //     match length_map.get_mut(&word.len()) {
-    //         Some(vec) => vec.push(word),
-    //         None => {
-    //             length_map.insert(word.len(), vec![word]);
-    //         }
-    //     };
-    // }
-    //
-    // let json_data = serde_json::to_vec(&length_map)?;
-    // let mut json_file = File::create("word_data.json")?;
-    // json_file.write_all(&*json_data)?;
+// let bad_words = get_bad_words()?;
+// let words = extract_words(download_extract_zip(
+//     "https://www.cs.cmu.edu/~enron/enron_mail_20150507.tar.gz",
+//     "enron-v1.csv",
+// )?)?;
+//
+// let mut length_map: HashMap<usize, Vec<String>> = HashMap::new();
+// for word in words.into_iter() {
+//     if bad_words.contains(&word) {
+//         continue;
+//     }
+//
+//     match length_map.get_mut(&word.len()) {
+//         Some(vec) => vec.push(word),
+//         None => {
+//             length_map.insert(word.len(), vec![word]);
+//         }
+//     };
+// }
+//
+// let json_data = serde_json::to_vec(&length_map)?;
+// let mut json_file = File::create("word_data.json")?;
+// json_file.write_all(&*json_data)?;

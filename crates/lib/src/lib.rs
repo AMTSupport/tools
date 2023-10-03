@@ -31,6 +31,6 @@ pub mod helper;
 pub mod log;
 pub mod pathed;
 
+pub mod macros;
 #[cfg(any(feature = "ui-gui", feature = "ui-tui", feature = "ui-cli"))]
 pub mod ui;
-pub mod macros;
