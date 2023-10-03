@@ -55,15 +55,15 @@ impl Location {
 }
 
 #[instrument(level = "TRACE", skip(top_init))]
-fn recurse(mut top_init: Vec<PathBuf>) -> Vec<PathBuf> {
+fn recurse(top_init: Vec<PathBuf>) -> Vec<PathBuf> {
     let mut collection = HashMap::new();
     fn recurser(top: Vec<PathBuf>, map: &mut HashMap<PathBuf, Vec<PathBuf>>) {
         if top.is_empty() {
             return;
         }
 
-        let mut iter = top.into_iter();
-        while let Some(path) = iter.next() {
+        let iter = top.into_iter();
+        for path in iter {
             if !path.exists() {
                 warn!("Path {} does not exist", path.display());
                 continue;
@@ -90,8 +90,8 @@ fn recurse(mut top_init: Vec<PathBuf>) -> Vec<PathBuf> {
     }
 
     let mut recursing_paths = Vec::new();
-    let mut top_iter = top_init.into_iter();
-    while let Some(path) = top_iter.next() {
+    let top_iter = top_init.into_iter();
+    for path in top_iter {
         if !path.exists() {
             warn!("Path {} does not exist", path.display());
             continue;
