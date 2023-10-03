@@ -11,6 +11,7 @@ let
 in
 (pkgs.mkShell passthru).overrideAttrs (oldAttrs: {
   nativeBuildInputs = with pkgs; [
+    git-cliff
     cocogitto
     act
     hyperfine

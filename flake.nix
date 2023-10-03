@@ -60,6 +60,31 @@
             name = "all";
             paths = builtins.attrValues (builtins.mapAttrs (name: outputs: outputs.crateBinary) cargoOutputs);
           };
+
+          bump-crates = let git = "${pkgs.git}/bin/git"; in pkgs.writeScriptBin "bump-crates" ''
+            #!${pkgs.nushell}/bin/nu
+
+            $env.PATH = "${pkgs.lib.makeBinPath [ pkgs.git-cliff ]}:$env.PATH"
+
+            if (${git} status --porcelain | lines | length) > 0 {
+              echo "You have uncommitted changes, please commit or stash them before bumping crates"
+              exit 1
+            }
+
+            # Get all crates which have had file changes since the last tag
+            let lastRelease = ((
+              let rev = (${git} describe --tags --abbrev=0);
+              if ($rev | is-empty) {
+                ${git} rev-list --max-parents=0 HEAD
+              } else { $rev }
+            ) | str trim)
+            let changedCrates = (${git} diff-tree --no-commit-id --name-only $"($lastRelease)..HEAD" -r | lines | each { $in | path split } | filter { $in.0 == 'crates' } | each { $in.1 } | uniq)
+
+            # Run cocogitto to bump the version of each crate
+            $changedCrates | each {|crate|
+              ${pkgs.cocogitto}/bin/cog bump -a --package $crate
+            }
+          '';
         };
 
         devShells = {
