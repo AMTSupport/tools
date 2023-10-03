@@ -11,9 +11,8 @@ let
 in
 (pkgs.mkShell passthru).overrideAttrs (oldAttrs: {
   nativeBuildInputs = with pkgs; [
-    git-cliff
-    cocogitto
     act
+    cocogitto
     hyperfine
     (fenixPkgs.complete.withComponents [
       "cargo"
