@@ -28,5 +28,6 @@ in
     cargo-nextest
     cargo-expand
     cargo-cranky
+    cargo-edit
   ] ++ (oldAttrs.nativeBuildInputs or [ ]);
 })

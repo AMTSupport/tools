@@ -8,7 +8,7 @@ monorepo_version_separator = "-"
 pre_bump_hooks = [ "nix flake check" ]
 pre_package_bump_hooks = [
     "echo 'upgrading {{package}} from {{latest}} to {{version}}",
-    "sed -i -e 's/^version = .*/version = \"{{version}}\"/' crates/{{package}}/Cargo.toml",
+    "cargo set-version --package {{package}} {{version}}",
 #    "git cliff --include-path 'crates/{{package}}/**' -t {{version}} -o 'crates/{{package}}/CHANGELOG.md"
 ]
 post_bump_hooks = [
