@@ -46,6 +46,15 @@ where
         Self: Sized;
 }
 
+impl<U: UiBuidableFiller + Default> Ui for U {
+    fn new(_args: Self::Args) -> Result<Self>
+    where
+        Self: Sized,
+    {
+        Ok(Self::default())
+    }
+}
+
 pub trait UiBuidableFiller {
     async fn fill<B: UiBuildable<V>, V: From<B> + Debug>() -> Result<V>;
 

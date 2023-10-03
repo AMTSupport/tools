@@ -16,9 +16,10 @@
 
 #[tokio::main]
 #[cfg(feature = "ui-cli")]
-async fn main() -> lib::ui::cli::cli::CliResult<()> {
+async fn main() -> lib::ui::cli::CliResult<()> {
     use country_ip::ui::cli::ui::CountryIPCli;
-    use lib::ui::cli::cli::{AsyncCliUI, CliUI};
+    use lib::ui::cli::CliUi;
+    use lib::ui::Ui;
 
     let mut ui = CountryIPCli::new(())?;
     ui.run().await

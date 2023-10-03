@@ -14,10 +14,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use clap::Subcommand;
+use clap::Parser;
 use std::net::IpAddr;
 
-#[derive(Debug, Subcommand)]
+#[derive(Debug, Parser)]
 pub enum OneshotAction {
     /// Get a random IP address for a country.
     ///

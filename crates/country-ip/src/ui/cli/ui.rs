@@ -15,36 +15,25 @@
  */
 
 use super::oneshot::OneshotAction;
-#[cfg(feature = "ui-repl")]
-use super::repl::ReplAction;
 use lib::cli::Flags as CommonFlags;
-use lib::ui::cli::cli::{AsyncCliUI, CliResult, CliUI};
 use lib::ui::cli::error::CliError;
-use tracing::{error, info, info_span, instrument};
+use lib::ui::cli::oneshot::OneshotHandler;
+use lib::ui::cli::{CliResult, CliUi};
+use tracing::{error, info, info_span};
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_indicatif::span_ext::IndicatifSpanExt;
 
-#[derive(Debug)]
+#[derive(Default, Debug)]
 pub struct CountryIPCli {
     _guard: Option<WorkerGuard>,
 }
 
-impl CliUI for CountryIPCli {
-    type OneShotCommand = OneshotAction;
-    #[cfg(feature = "ui-repl")]
-    type ReplCommand = ReplAction;
+impl CliUi for CountryIPCli {}
 
-    fn new(_args: Self::Args) -> CliResult<Self>
-    where
-        Self: Sized,
-    {
-        Ok(Self { _guard: None })
-    }
-}
+impl OneshotHandler for CountryIPCli {
+    type Action = OneshotAction;
 
-impl AsyncCliUI for CountryIPCli {
-    #[instrument(skip(self))]
-    async fn handle_command(&mut self, command: Self::OneShotCommand, flags: &CommonFlags) -> CliResult<()> {
+    async fn handle(&mut self, command: Self::Action, flags: &CommonFlags) -> CliResult<()> {
         if self._guard.is_none() {
             self._guard = Some(lib::log::init(env!("CARGO_PKG_NAME"), flags.verbose));
         }
@@ -78,20 +67,5 @@ impl AsyncCliUI for CountryIPCli {
         }
 
         Ok(())
-    }
-
-    #[cfg(feature = "ui-repl")]
-    async fn handle_repl_command(&mut self, command: Self::ReplCommand, flags: &CommonFlags) -> CliResult<bool> {
-        match command {
-            ReplAction::Quit => Ok(true),
-            ReplAction::Get { country, ipv6 } => {
-                self.handle_command(OneshotAction::Get { country, ipv6 }, flags).await?;
-                Ok(false)
-            }
-            ReplAction::Lookup { addr } => {
-                self.handle_command(OneshotAction::Lookup { addr }, flags).await?;
-                Ok(false)
-            }
-        }
     }
 }
