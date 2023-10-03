@@ -5,6 +5,7 @@ tag_prefix = "v"
 generate_mono_repository_global_tag = false
 monorepo_version_separator = "-"
 
+pre_bump_hooks = [ "nix flake check" ]
 pre_package_bump_hooks = [
     "echo 'upgrading {{package}}' to {{version}}",
     "sed -i -e 's/^version = .*/version = \"{{version}}\"/' ./crates/{{package}}/Cargo.toml",
