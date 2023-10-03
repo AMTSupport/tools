@@ -460,6 +460,7 @@ pub mod file {
     }
 
     impl Reference {
+        #[allow(dead_code)]
         pub(crate) fn new(id: &str, name: &str, size: usize, content_path: &str) -> Self {
             Self {
                 identifier: identifier::Identifier {
@@ -473,6 +474,7 @@ pub mod file {
     }
 
     impl Attrs {
+        #[allow(dead_code)]
         pub(crate) fn new(
             id: &str,
             title: &str,
@@ -745,13 +747,15 @@ pub mod item {
                 .into_iter()
                 .enumerate()
                 .filter(|(_, f)| f.is_login_field())
-                .inspect(|(_, f)| if let super::field::Field::Concealed { password_details, .. } = f {
-                    if password_details.is_some() {
-                        let into = password_details
-                            .clone() // TODO -> Better error handling
-                            .expect(&format!("Get password details of {value}"))
-                            .into();
-                        let _ = password_history.insert(into);
+                .inspect(|(_, f)| {
+                    if let super::field::Field::Concealed { password_details, .. } = f {
+                        if password_details.is_some() {
+                            let into = password_details
+                                .clone() // TODO -> Better error handling
+                                .expect(&format!("Get password details of {value}"))
+                                .into();
+                            let _ = password_history.insert(into);
+                        }
                     }
                 })
                 .map(|(i, _)| {
@@ -792,9 +796,7 @@ pub mod item {
                 let attrs = field.attrs();
 
                 if attrs.section.as_ref().is_none() {
-                    if sections.is_empty()
-                        || !sections.iter().any(|s| s.title.is_empty() && s.name.is_empty())
-                    {
+                    if sections.is_empty() || !sections.iter().any(|s| s.title.is_empty() && s.name.is_empty()) {
                         sections.insert(0, one_pux::item::AdditionalSection::default())
                     }
 
@@ -807,7 +809,9 @@ pub mod item {
                     .as_ref()
                     .with_context(|| format!("Get section for field {} of item {value}.", attrs.identifier,))?;
 
-                if let Some(s) = sections.iter_mut().find(|s| s.name == section_ref.id()) { s.fields.push(field.into()) }
+                if let Some(s) = sections.iter_mut().find(|s| s.name == section_ref.id()) {
+                    s.fields.push(field.into())
+                }
             }
 
             let document_attributes = match value {
@@ -1416,6 +1420,7 @@ pub mod field {
     }
 
     impl Attrs {
+        #[allow(unused)]
         pub(crate) fn new(
             parent_attrs: &super::item::Attrs,
             identifier: super::identifier::Identifier,

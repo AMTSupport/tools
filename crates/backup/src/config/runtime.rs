@@ -40,7 +40,7 @@ impl Runtime {
 }
 
 impl From<Runtime> for PathBuf {
-    fn from(ref value: Runtime) -> Self {
+    fn from(value: Runtime) -> Self {
         value.directory.clone()
     }
 }

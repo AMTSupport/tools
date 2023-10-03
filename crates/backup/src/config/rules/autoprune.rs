@@ -20,14 +20,11 @@ use anyhow::{Context, Result};
 use chrono::{DateTime, Duration, Utc};
 use fs_err as fs;
 use macros::{EnumNames, EnumRegex, EnumVariants};
-use readable_regex::{ends_with, everything, optional, starts_with, ReadableRe};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use std::cell::LazyCell;
 use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fmt::Debug;
-use std::ops::Add;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 use tokio_stream::StreamExt;
@@ -236,9 +233,6 @@ pub struct AutoPrune {
 }
 
 impl AutoPrune {
-    const REGEX: LazyCell<ReadableRe<'static>> =
-        LazyCell::new(|| starts_with(optional(ReadableRe::Raw(Tag::MULTI_REGEX))).add(ends_with(everything())));
-
     /// This will iterate over the files, removing the tags from the oldest
     /// files until the maximum number of backups for its tag is reached.
     #[instrument(level = "TRACE")]
