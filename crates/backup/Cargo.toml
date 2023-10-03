@@ -14,7 +14,7 @@ default = ["ui-cli", "sources-s3", "sources-bitwarden", "sources-1password"]
 binary-downloader = ["bytes", "rand", "const_format"]
 
 ui-cli = ["indicatif", "inquire", "lib/ui-cli"]
-ui-tui = ["ratatui", "crossterm", "lib/ui-tui"]
+#ui-tui = ["ratatui", "crossterm", "lib/ui-tui"]
 
 sources-s3 = ["opendal", "futures"]
 sources-bitwarden = ["binary-downloader"]

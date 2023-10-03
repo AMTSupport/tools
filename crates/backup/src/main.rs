@@ -14,27 +14,12 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use anyhow::Result;
-use lib::ui::Ui;
-
-#[cfg(feature = "ui-tui")]
-#[cfg(not(feature = "ui-cli"))]
-#[tokio::main(flavor = "multi_thread")]
-pub async fn main() -> Result<()> {
-    use backup::ui::tui::{event::EventHandler, tui::Tui};
-
-    let event_handler = EventHandler::new(50);
-    let mut tui = Tui::new(event_handler)?;
-    tui.init()?;
-
-    Ok(())
-}
-
 #[cfg(feature = "ui-cli")]
-#[cfg(not(feature = "ui-tui"))]
 #[tokio::main(flavor = "multi_thread")]
-pub async fn main() -> Result<()> {
+pub async fn main() -> anyhow::Result<()> {
     use backup::ui::cli::ui::BackupCli;
+    use lib::ui::cli::CliUi;
+    use lib::ui::Ui;
 
     let mut app = BackupCli::new(())?;
     app.run().await?;
@@ -42,9 +27,4 @@ pub async fn main() -> Result<()> {
     // TODO :: Verify writable
     // TODO :: Verify enough space
     // TODO :: Verify dir is either empty, or has existing backup data
-}
-
-#[cfg(not(any(feature = "ui-cli", feature = "ui-tui")))]
-pub fn main() -> ! {
-    unimplemented!("At least one UI is required.")
 }

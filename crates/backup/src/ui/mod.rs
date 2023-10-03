@@ -16,6 +16,3 @@
 
 #[cfg(feature = "ui-cli")]
 pub mod cli;
-
-// #[cfg(feature = "ui-tui")]
-// pub mod tui;

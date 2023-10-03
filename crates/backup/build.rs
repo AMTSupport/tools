@@ -14,7 +14,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-pub mod tui;
-pub mod event;
-pub mod handler;
-pub mod ui;
+fn main() {
+    #[cfg(not(any(feature = "ui-cli", feature = "ui-tui")))]
+    compile_error!("No UI selected")
+}
