@@ -166,8 +166,7 @@ impl Interactive<OnePasswordAccount> for OnePasswordAccount {
                         .await
                         .inspect_err(|e| warn!("Failed to get short account: {}", e))
                         .ok()
-                        .map(|s| s.into_iter().find(|s| s.account_uuid == attrs.identifier.id()))
-                        .flatten()
+                        .and_then(|s| s.into_iter().find(|s| s.account_uuid == attrs.identifier.id()))
                     {
                         None => return Ok(a),
                         s => s,

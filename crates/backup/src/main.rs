@@ -15,7 +15,6 @@
  */
 
 use anyhow::Result;
-use lib::ui::cli::CliUi;
 use lib::ui::Ui;
 
 #[cfg(feature = "ui-tui")]
@@ -43,4 +42,9 @@ pub async fn main() -> Result<()> {
     // TODO :: Verify writable
     // TODO :: Verify enough space
     // TODO :: Verify dir is either empty, or has existing backup data
+}
+
+#[cfg(not(any(feature = "ui-cli", feature = "ui-tui")))]
+pub fn main() -> ! {
+    unimplemented!("At least one UI is required.")
 }

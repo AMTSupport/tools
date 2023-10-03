@@ -356,10 +356,7 @@ pub mod section {
     impl Value {
         // TODO :: Use to hide sshkey fields
         fn should_skip_serializing(&self) -> bool {
-            match self {
-                // Value::Date(None) | Value::MonthYear(None) => true,
-                _ => false,
-            }
+            false
         }
     }
 }

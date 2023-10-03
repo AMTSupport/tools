@@ -88,7 +88,7 @@ impl Action {
         match self {
             Action::Init { .. } => {
                 runtime.config.rules = new_rules()?;
-                runtime.config.exporters = new_exporters(&runtime).await?;
+                runtime.config.exporters = new_exporters(runtime).await?;
                 runtime.config.mutated = true;
 
                 Ok(())
@@ -104,7 +104,7 @@ impl Action {
 
                 // TODO :: Allow removal of existing exporters
                 if Confirm::new("Do you want to modify the exporters?").with_default(true).prompt()? {
-                    let exporters = new_exporters(&runtime).await?;
+                    let exporters = new_exporters(runtime).await?;
                     if !exporters.is_empty() {
                         runtime.config.exporters.extend(exporters);
                         runtime.config.mutated = true;

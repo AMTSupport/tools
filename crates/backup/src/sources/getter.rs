@@ -90,7 +90,7 @@ where
             }
         };
 
-        if !output.status.success() || output.stderr.len() > 0 {
+        if !output.status.success() || !output.stderr.is_empty() {
             error_span!("Command Error").in_scope(|| {
                 error!("Error executing command: {command:?}");
                 error!("Exit Code: {}", output.status.code().unwrap_or(0));

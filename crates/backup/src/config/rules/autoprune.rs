@@ -111,7 +111,7 @@ impl Tag {
             tags.retain(|tag| tag != &Tag::None);
         }
 
-        if tags.contains(&self) {
+        if tags.contains(self) {
             warn!(
                 "Tag {} already present in file name {}, this shouldn't happen.",
                 self.name(),
@@ -120,7 +120,7 @@ impl Tag {
             return path.to_path_buf();
         }
 
-        tags.push(self.clone());
+        tags.push(*self);
         tags.sort();
 
         let tag = tags.iter().map(|tag| tag.name()).collect::<Vec<&str>>().join("-");
@@ -138,7 +138,7 @@ impl Tag {
         };
         let (mut tags, file_name) = Self::get_tags(file_name);
 
-        if !tags.contains(&self) {
+        if !tags.contains(self) {
             return path.to_path_buf();
         }
 
@@ -180,7 +180,7 @@ impl Tag {
     /// ```
     #[instrument(level = "TRACE")]
     pub fn get_tags(str: &str) -> (Vec<Tag>, &str) {
-        let compiled = Regex::new(Self::REGEX.into()).expect("Regex Compilation Error for getting existing tags"); // Infallible
+        let compiled = Regex::new(Self::REGEX).expect("Regex Compilation Error for getting existing tags"); // Infallible
 
         debug!("Compiled regex for getting existing tags [{compiled}]");
         let capture = compiled.captures_iter(str);
@@ -207,10 +207,10 @@ impl Tag {
     }
 
     fn get_file_name_or_ret(path: &Path) -> Result<&str, PathBuf> {
-        match path.file_name().map(OsStr::to_str).flatten() {
+        match path.file_name().and_then(OsStr::to_str) {
             None => {
                 error!("Unable to get file name from path {}", path.display());
-                return Err(path.to_path_buf());
+                Err(path.to_path_buf())
             }
             Some(str) => Ok(str),
         }
@@ -299,7 +299,7 @@ impl AutoPrune {
 
         let mut removed = Vec::new();
         while let Some(file) = stream.next().await {
-            match fs::remove_file(&file) {
+            match fs::remove_file(file) {
                 Ok(_) => {
                     trace!("Removed untagged file {}", file.display());
                     removed.push(file)
@@ -374,7 +374,7 @@ impl Rule for AutoPrune {
             return true;
         }
 
-        if Tag::applicable_tags(&new_metadata) == vec![Tag::None] {
+        if Tag::applicable_tags(new_metadata) == vec![Tag::None] {
             return false;
         }
 

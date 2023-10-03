@@ -19,7 +19,7 @@ pub mod identifier {
     use std::fmt::{Display, Formatter};
 
     #[cfg(test)]
-    use fake::{faker::lorem::en::Word, Dummy, Fake};
+    use fake::{faker::lorem::en::Word, Dummy};
 
     /// The internal identifier for this entity.
     #[cfg_attr(test, derive(Dummy))]
@@ -745,18 +745,14 @@ pub mod item {
                 .into_iter()
                 .enumerate()
                 .filter(|(_, f)| f.is_login_field())
-                .inspect(|(_, f)| match f {
-                    // This is a bit of a hack, but it works for now
-                    super::field::Field::Concealed { password_details, .. } => {
-                        if password_details.is_some() {
-                            let into = password_details
-                                .clone() // TODO -> Better error handling
-                                .expect(&*format!("Get password details of {value}"))
-                                .into();
-                            let _ = password_history.insert(into);
-                        }
+                .inspect(|(_, f)| if let super::field::Field::Concealed { password_details, .. } = f {
+                    if password_details.is_some() {
+                        let into = password_details
+                            .clone() // TODO -> Better error handling
+                            .expect(&format!("Get password details of {value}"))
+                            .into();
+                        let _ = password_history.insert(into);
                     }
-                    _ => (),
                 })
                 .map(|(i, _)| {
                     let field = fields.remove(i - removed);
@@ -793,11 +789,11 @@ pub mod item {
                 .map(|s| s.into())
                 .collect::<Vec<one_pux::item::AdditionalSection>>();
             for field in fields {
-                let attrs = (&field).attrs();
+                let attrs = field.attrs();
 
                 if attrs.section.as_ref().is_none() {
                     if sections.is_empty()
-                        || sections.iter().find(|s| s.title.is_empty() && s.name.is_empty()).is_none()
+                        || !sections.iter().any(|s| s.title.is_empty() && s.name.is_empty())
                     {
                         sections.insert(0, one_pux::item::AdditionalSection::default())
                     }
@@ -811,7 +807,7 @@ pub mod item {
                     .as_ref()
                     .with_context(|| format!("Get section for field {} of item {value}.", attrs.identifier,))?;
 
-                sections.iter_mut().find(|s| s.name == section_ref.id()).map(|s| s.fields.push(field.into()));
+                if let Some(s) = sections.iter_mut().find(|s| s.name == section_ref.id()) { s.fields.push(field.into()) }
             }
 
             let document_attributes = match value {
@@ -918,7 +914,7 @@ pub mod item {
 
             bar.set_message(format!("Requesting items from `{vault}` vault...",));
 
-            let items = Self::raw(&vault.attrs().reference.id(), account.command(config)?)
+            let items = Self::raw(vault.attrs().reference.id(), account.command(config)?)
                 .and_then(|raw| from_slice::<Vec<Item>>(&raw).context("Deserialize items list"))?;
 
             bar.set_length(items.len() as u64);
@@ -1099,7 +1095,7 @@ pub mod item {
                 "Item should deserialize without error; {:#?}",
                 item.err().unwrap()
             );
-            let item = item.unwrap();
+            let _item = item.unwrap();
         }
     }
 }
@@ -1530,7 +1526,7 @@ pub mod field {
                 _ => return false,
             };
 
-            attrs.section.is_none() && attrs.purpose.as_ref().is_some_and(|p| Self::LOGIN_PURPOSES.contains(&p))
+            attrs.section.is_none() && attrs.purpose.as_ref().is_some_and(|p| Self::LOGIN_PURPOSES.contains(p))
         }
 
         pub fn is_notes_field(&self) -> bool {
@@ -1881,7 +1877,7 @@ fn reference_of(item: &item::Attrs, section: Option<&section::Section>, identifi
         vault = item.vault.named(),
         item = item.identifier.id(),
         inner_reference = match &section {
-            None => format!("{}", identifier.id()),
+            None => identifier.id().to_string(),
             Some(s) => format!("{}/{}", s.id(), identifier.id()),
         }
     )

@@ -23,8 +23,8 @@ use std::assert_matches::assert_matches;
 
 // Helper function to create a temporary directory and return its path
 fn create_temp_dir() -> TempDir {
-    let temp_dir = TempDir::new().expect("Failed to create temporary directory");
-    temp_dir
+    
+    TempDir::new().expect("Failed to create temporary directory")
 }
 
 /// Test for Tag Durations

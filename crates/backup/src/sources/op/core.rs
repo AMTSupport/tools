@@ -126,11 +126,11 @@ impl Exporter for OnePasswordCore {
 
         zip.finish().context("Finish export file")?;
 
-        if errors.len() > 0 {
+        if !errors.is_empty() {
             return Err(anyhow!("Errors occurred during export: {:?}", errors));
         }
 
-        return Ok(());
+        Ok(())
     }
 }
 

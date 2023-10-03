@@ -96,7 +96,7 @@ impl Config {
             .map_err(|_| Error::Find)
             .and_then(|dir| {
                 let path = dir.join(Self::FILENAME);
-                path.exists().then(|| path).ok_or(Error::Find)
+                path.exists().then_some(path).ok_or(Error::Find)
             })
             .or_else(|_| {
                 let path = directory.as_ref().map(|p| p.join(Self::FILENAME));
@@ -115,12 +115,12 @@ impl Config {
             false => Err(Error::NotFound(path.to_path_buf()).into()),
             true => {
                 let mut slice = vec![];
-                fs::File::open(&*path).await?.read(&mut slice).await?;
-                serde_json::from_slice(&*slice)
+                fs::File::open(path).await?.read(&mut slice).await?;
+                serde_json::from_slice(&slice)
                     .map_err(Error::Serde)
-                    .and_then(|mut config: Config| {
+                    .map(|mut config: Config| {
                         config.path.replace(path.into());
-                        Ok(config)
+                        config
                     })
                     .map_err(Into::into)
             }

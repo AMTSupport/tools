@@ -247,8 +247,7 @@ pub(crate) async fn interactive(_runtime: &Runtime) -> Result<Vec<Backend>> {
     ]);
 
     let base = S3BackendBuilder::default();
-    let base =
-        base_accessor.into_iter().try_fold(base, |mut base, (k, v)| base.set_field(&*k, &*v).and_then(|_| Ok(base)))?;
+    let base = base_accessor.into_iter().try_fold(base, |mut base, (k, v)| base.set_field(&k, &v).map(|_| base))?;
 
     let prompt =
         inquire::Text::new("What's the path of the object you want to export?").with_validator(|path: &str| {
