@@ -1,6 +1,6 @@
 [package]
 name = "memorable-pass"
-version = "0.1.1"
+version = "0.0.1"
 authors = ["Racci <racci@racci.dev>"]
 edition = "2021"
 readme = "README.md"

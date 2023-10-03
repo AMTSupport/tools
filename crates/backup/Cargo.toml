@@ -1,6 +1,6 @@
 [package]
 name = "backup"
-version = "0.1.0"
+version = "0.0.1"
 edition = "2021"
 categories = ["command-line-utilities", "system", "utilities", "cli"]
 keywords = ["backup"]

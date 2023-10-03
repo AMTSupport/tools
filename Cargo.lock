@@ -2526,7 +2526,7 @@ dependencies = [
 
 [[package]]
 name = "interfacer"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "anyhow",
  "chrono",
@@ -2713,7 +2713,7 @@ dependencies = [
 
 [[package]]
 name = "lib"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "anyhow",
  "cfg-if",
@@ -2879,7 +2879,7 @@ dependencies = [
 
 [[package]]
 name = "macros"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "anyhow",
  "downcast-rs",
@@ -2978,7 +2978,7 @@ dependencies = [
 
 [[package]]
 name = "memorable-pass"
-version = "0.1.1"
+version = "0.0.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -3877,7 +3877,7 @@ dependencies = [
 
 [[package]]
 name = "popup"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "anyhow",
  "chrono",
@@ -4229,7 +4229,7 @@ dependencies = [
 
 [[package]]
 name = "rebooter"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "anyhow",
  "chrono",
