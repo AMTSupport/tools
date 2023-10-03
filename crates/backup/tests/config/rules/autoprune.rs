@@ -23,7 +23,6 @@ use std::assert_matches::assert_matches;
 
 // Helper function to create a temporary directory and return its path
 fn create_temp_dir() -> TempDir {
-    
     TempDir::new().expect("Failed to create temporary directory")
 }
 
