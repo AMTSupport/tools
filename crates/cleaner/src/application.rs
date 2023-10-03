@@ -225,7 +225,6 @@ pub async fn run_cleaners(runtime: &'static Runtime) -> Vec<CleanupResult> {
 
     let mut cleaner_stream = tokio_stream::iter(&runtime.cli.cleaners).map(|cleaner_ref| {
         let cleaner_ref = *cleaner_ref;
-        let runtime = runtime;
 
         tokio::runtime::Handle::current().clone().spawn(async move {
             let cleaner_time = Instant::now();

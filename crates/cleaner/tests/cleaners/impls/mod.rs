@@ -15,4 +15,3 @@
  */
 
 pub mod browser;
-pub mod setup;

@@ -47,50 +47,7 @@ pub enum Cleaner {
     Trash,
     // Environment,
     // Cache,
-    // Trash,
-    // RecycleBin,
-    // CrashDumps,
-    // OldWindows,
 }
-
-// #[automatically_derived]
-// impl Cleaner {
-//     #[automatically_derived]
-//     pub type Delegate = Box<( dyn CleanerInternal )>;
-// }
-// const _: () = {
-//     use std::sync::LazyLock   as _LazyLock;
-//     use std::ops::Deref   as _Deref;
-//     #[allow(non_upper_case_globals)]
-//     static Logs_INSTANCE: _LazyLock<Cleaner::Delegate> = _LazyLock::new(|| Box::new(crate::cleaners::impls::log::LogCleaner::new()));
-//     #[allow(non_upper_case_globals)]
-//     static Browsers_INSTANCE: _LazyLock<Cleaner::Delegate> = _LazyLock::new(|| Box::new(crate::cleaners::impls::browser::BrowserCleaner::new()));
-//     #[allow(non_upper_case_globals)]
-//     static Shaders_INSTANCE: _LazyLock<Cleaner::Delegate> = _LazyLock::new(|| Box::new(crate::cleaners::impls::shader::ShaderCleaner::new()));
-//     #[allow(non_upper_case_globals)]
-//     static Thumbnails_INSTANCE: _LazyLock<Cleaner::Delegate> = _LazyLock::new(|| Box::new(crate::cleaners::impls::thumbnail::ThumbnailCleaner::new()));
-//     #[allow(non_upper_case_globals)]
-//     static Temp_INSTANCE: _LazyLock<Cleaner::Delegate> = _LazyLock::new(|| Box::new(crate::cleaners::impls::temp::TempCleaner::new()));
-//     #[allow(non_upper_case_globals)]
-//     static Downloads_INSTANCE: _LazyLock<Cleaner::Delegate> = _LazyLock::new(|| Box::new(crate::cleaners::impls::downloads::DownloadsCleaner::new()));
-//     #[allow(non_upper_case_globals)]
-//     static Trash_INSTANCE: _LazyLock<Cleaner::Delegate> = _LazyLock::new(|| Box::new(crate::cleaners::impls::trash::TrashCleaner::new()));
-//     impl std::ops::Deref for Cleaner {
-//         type Target = Cleaner::Delegate;
-//         #[automatically_derived]
-//         fn deref(&self) -> &Self::Target {
-//             match self {
-//                 Cleaner::Logs => &*Logs_INSTANCE,
-//                 Cleaner::Browsers => &*Browsers_INSTANCE,
-//                 Cleaner::Shaders => &*Shaders_INSTANCE,
-//                 Cleaner::Thumbnails => &*Thumbnails_INSTANCE,
-//                 Cleaner::Temp => &*Temp_INSTANCE,
-//                 Cleaner::Downloads => &*Downloads_INSTANCE,
-//                 Cleaner::Trash => &*Trash_INSTANCE
-//             }
-//         }
-//     }
-// };
 
 #[async_trait]
 pub trait CleanerInternal: Debug + Send + Sync + 'static {
@@ -199,7 +156,7 @@ impl CleanupResult {
                     missed,
                 }
             }
-            Self::Skipped { cleaner, reason } if reason == SkipReason::NoFiles => Self::Partial {
+            Self::Skipped { cleaner, reason: SkipReason::NoFiles } => Self::Partial {
                 cleaner,
                 cleaned: vec![],
                 missed: new_missed,

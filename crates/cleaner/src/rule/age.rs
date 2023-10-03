@@ -60,7 +60,7 @@ pub(super) fn test(rule: Rule, path: &Path) -> bool {
         }
     };
 
-    let res = &from_date > &duration;
+    let res = from_date > duration;
     match res {
         true => debug!("File {} is older than {duration:?} ({from_date:?})", path.display()),
         false => debug!("File {} is newer than {duration:?} ({from_date:?})", path.display()),
