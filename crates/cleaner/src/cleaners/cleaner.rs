@@ -156,7 +156,10 @@ impl CleanupResult {
                     missed,
                 }
             }
-            Self::Skipped { cleaner, reason: SkipReason::NoFiles } => Self::Partial {
+            Self::Skipped {
+                cleaner,
+                reason: SkipReason::NoFiles,
+            } => Self::Partial {
                 cleaner,
                 cleaned: vec![],
                 missed: new_missed,
