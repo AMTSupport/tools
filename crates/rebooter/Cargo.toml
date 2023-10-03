@@ -11,6 +11,12 @@ path = "src/lib.rs"
 name = "rebooter"
 path = "src/main.rs"
 
+[features]
+default = ["ui-cli"]
+
+ui-cli = ["lib/ui-cli"]
+ui-repl = ["lib/ui-repl"]
+
 [dependencies]
 lib = { path = "../lib" }
 macros = { path = "../macros" }

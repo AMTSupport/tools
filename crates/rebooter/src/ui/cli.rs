@@ -14,9 +14,29 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#![feature(result_option_inspect)]
-#![feature(lazy_cell)]
+use lib::cli::Flags as CommonFlags;
+use lib::ui::cli::oneshot::OneshotHandler;
+use lib::ui::cli::{CliResult, CliUi};
+use lib::ui::Ui;
+use std::fmt::Debug;
 
-pub mod reason;
-mod schedule;
-mod ui;
+pub struct RebooterCli;
+
+impl Ui for RebooterCli {
+    fn new(args: Self::Args) -> anyhow::Result<Self>
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
+}
+
+impl CliUi for RebooterCli {}
+
+impl OneshotHandler for RebooterCli {
+    type Action = ();
+
+    async fn handle(&mut self, command: Self::Action, flags: &CommonFlags) -> CliResult<()> {
+        unimplemented!()
+    }
+}
