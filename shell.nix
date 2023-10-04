@@ -3,6 +3,7 @@
 , flake-utils
 , fenix
 , crane
+, cocogitto
 }:
 
 let
@@ -12,8 +13,8 @@ in
 (pkgs.mkShell passthru).overrideAttrs (oldAttrs: {
   nativeBuildInputs = with pkgs; [
     act
-    cocogitto
     hyperfine
+    cocogitto.packages.${localSystem}.default
     (fenixPkgs.complete.withComponents [
       "cargo"
       "rust-src"

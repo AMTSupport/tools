@@ -20,9 +20,11 @@
 
     crane = { url = "github:ipetkov/crane"; inputs.nixpkgs.follows = "nixpkgs"; };
     fenix = { url = "github:nix-community/fenix"; inputs.nixpkgs.follows = "nixpkgs"; };
+
+    cocogitto = { url = "github:DaRacci/cocogitto/feat/ssh-signing"; inputs.nixpkgs.follows = "nixpkgs"; };
   };
 
-  outputs = { nixpkgs, flake-utils, crane, fenix, ... }@inputs:
+  outputs = { nixpkgs, flake-utils, crane, fenix, cocogitto, ... }@inputs:
     let
       # TODO - Darwin support (error: don't yet have a `targetPackages.darwin.LibsystemCross for x86_64-apple-darwin`)
       targets = [ "x86_64-linux" ] ++ [ "x86_64-windows" ];
@@ -88,7 +90,7 @@
         };
 
         devShells = {
-          default = pkgs.callPackage ./shell.nix { inherit localSystem flake-utils crane fenix; };
+          default = pkgs.callPackage ./shell.nix { inherit localSystem flake-utils crane fenix cocogitto; };
         };
 
         checks =
