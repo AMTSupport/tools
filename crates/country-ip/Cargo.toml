@@ -1,6 +1,6 @@
 [package]
 name = "country-ip"
-version = "0.0.1"
+version = "0.1.0"
 edition = "2021"
 categories = ["command-line-utilities", "utilities", "cli", "library", "lib"]
 keywords = ["random", "ip", "testing", "geo", "country"]
