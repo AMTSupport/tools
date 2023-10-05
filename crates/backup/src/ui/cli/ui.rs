@@ -25,7 +25,7 @@ use tracing_appender::non_blocking::WorkerGuard;
 
 pub struct BackupCli {
     runtime: Option<Runtime>,
-    _gaurd: Option<WorkerGuard>,
+    _guard: Option<WorkerGuard>,
 }
 
 impl CliUi for BackupCli {}
@@ -34,8 +34,8 @@ impl OneshotHandler for BackupCli {
     type Action = Action;
 
     async fn handle(&mut self, command: Self::Action, flags: &CommonFlags) -> CliResult<()> {
-        if self._gaurd.is_none() {
-            self._gaurd = Some(lib::log::init(env!["CARGO_PKG_NAME"], flags.verbose));
+        if self._guard.is_none() {
+            self._guard = Some(lib::log::init(env!["CARGO_PKG_NAME"], flags.verbose));
         }
 
         if self.runtime.is_none() {
@@ -55,7 +55,7 @@ impl Ui for BackupCli {
     {
         Ok(Self {
             runtime: None,
-            _gaurd: None,
+            _guard: None,
         })
     }
 }
