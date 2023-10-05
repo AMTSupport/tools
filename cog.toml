@@ -8,7 +8,6 @@ monorepo_version_separator = "-"
 pre_bump_hooks = [ "nix flake check" ]
 pre_package_bump_hooks = [
     "cargo set-version --package {{package}} {{version}}",
-#    "git add crates/{{package}}/Cargo.toml crates/{{package}}/CHANGELOG.md",
 ]
 post_package_bump_hooks = [
     # Publish to crates.io
@@ -20,6 +19,7 @@ post_bump_hooks = [
 ]
 
 [changelog]
+package_template = "package_remote"
 template = "monorepo_remote"
 remote = "github.com"
 repository = "tools"
