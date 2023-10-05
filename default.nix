@@ -113,10 +113,13 @@ let
     let
       cargoToml = craneLib.path (if workspace == null then ./Cargo.toml else ./crates/${workspace}/Cargo.toml);
       src = craneLib.path ./.;
+
+      inherit (craneLib.crateNameFromCargoToml { inherit src cargoToml; }) pname version;
     in
     commonDeps // commonEnv // {
-      inherit src;
-      inherit (craneLib.crateNameFromCargoToml { inherit src cargoToml; }) pname version;
+      cname = pname;
+      pname = "${pname}-${crossSystem}";
+      inherit src version;
 
       cargoLock = craneLib.path ./Cargo.lock;
       cargoExtraArgs = if workspace != null then "--package ${workspace}" else "";
@@ -152,7 +155,16 @@ in
   crateArtifact = cargoArtifact;
 
   crateBinary = cargoBuild cargoArtifact (args: {
-    cargoExtraArgs = "--bin ${args.pname}";
+    cargoExtraArgs = "--bin ${args.cname}";
+
+    # Add a suffix to the binary name to avoid conflicts.
+    postInstall = ''
+      if [ -f $out/bin/${args.cname} ]; then
+        mv $out/bin/${args.cname} $out/bin/${args.pname}
+      else
+        mv $out/bin/${args.cname}.exe $out/bin/${args.pname}.exe
+      fi
+    '';
   });
 
   crateLibrary = cargoBuild cargoArtifact (args: {
