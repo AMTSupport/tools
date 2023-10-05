@@ -6,16 +6,17 @@ generate_mono_repository_global_tag = false
 monorepo_version_separator = "-"
 
 pre_bump_hooks = [ "nix flake check" ]
+post_bump_hooks = [
+    "git push",
+    "git push origin --tags",
+    "nix flake build"
+]
 pre_package_bump_hooks = [
     "cargo set-version --package {{package}} {{version}}",
 ]
 post_package_bump_hooks = [
-    # Publish to crates.io
-    # Publish a new release on GitHub
-]
-post_bump_hooks = [
-    #    "git push",
-    #    "git push origin --tags"
+    # TODO - Publish to crates.io
+    "gh release create -R AMTSupport/tools --verify-tag -F crates/{{package}}/CHANGELOG.md {{package}}-v{{version}} result/bin/{{package}}*"
 ]
 
 [changelog]
