@@ -19,17 +19,13 @@ use std::env;
 use tracing::{subscriber, Level, Subscriber};
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::fmt::format::FmtSpan;
-use tracing_subscriber::fmt::Layer;
+use tracing_subscriber::fmt::writer::MakeWriterExt;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::registry::LookupSpan;
-use tracing_subscriber::Registry;
+use tracing_subscriber::{Layer, Registry};
 
 #[allow(dead_code)]
 fn level_and_span(flags: &CommonFlags) -> (Level, FmtSpan) {
-    if flags.quiet {
-        return (Level::ERROR, FmtSpan::NONE);
-    }
-
     match flags.verbose {
         0 => (Level::INFO, FmtSpan::NONE),
         1 => (Level::DEBUG, FmtSpan::NONE),
@@ -52,7 +48,10 @@ where
     let file_appender = tracing_appender::rolling::daily(env::temp_dir().join("logs"), env!["CARGO_PKG_NAME"]);
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
 
-    (registry.with(Layer::default().with_writer(non_blocking)), _guard)
+    (
+        registry.with(tracing_subscriber::fmt::layer().with_writer(non_blocking)),
+        _guard,
+    )
 }
 
 #[cfg(feature = "ui-cli")]
@@ -64,8 +63,7 @@ where
     S: Subscriber + for<'span> LookupSpan<'span> + Send + Sync + 'static,
 {
     use indicatif::ProgressStyle;
-    use tracing_indicatif::IndicatifLayer;
-    use tracing_subscriber::fmt::writer::MakeWriterExt;
+    use tracing_indicatif::{filter::IndicatifFilter, IndicatifLayer};
 
     let (level, span) = level_and_span(flags);
     let layer = IndicatifLayer::new().with_progress_style(
@@ -79,23 +77,26 @@ where
     let quiet = flags.quiet;
     registry
         .with(
-            Layer::default()
+            tracing_subscriber::fmt::layer()
+                .with_writer(
+                    layer
+                        .get_stderr_writer()
+                        .with_filter(move |meta| match quiet {
+                            true => meta.level() != &Level::WARN,
+                            false => true,
+                        } && meta.level() <= &level)
+                        .with_max_level(Level::WARN)
+                        .or_else(layer.get_stdout_writer().with_max_level(level)),
+                )
                 .without_time()
-                .with_span_events(span)
                 .with_ansi(!cfg!(windows))
+                .with_span_events(span)
                 .with_target(verbosity > 0)
                 .with_line_number(verbosity > 1)
                 .with_thread_names(verbosity > 2)
-                .with_thread_ids(verbosity > 2)
-                .with_writer(
-                    layer
-                        .get_stdout_writer()
-                        .with_max_level(level)
-                        // If quiet is enabled, we don't want to print warnings, only info and errors.
-                        .with_filter(move |meta| !matches!(*meta.level(), Level::WARN if quiet)),
-                ),
+                .with_thread_ids(verbosity > 2),
         )
-        .with(layer)
+        .with(layer.with_filter(IndicatifFilter::new(!flags.quiet)))
 }
 
 #[cfg(not(feature = "ui-cli"))]
