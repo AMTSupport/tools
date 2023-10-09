@@ -11,16 +11,15 @@
         "systems": "systems_2"
       },
       "locked": {
-        "lastModified": 1696414596,
-        "narHash": "sha256-/H8ICC6mqcpXjrwEM7xtfroU2QsyDE3Y8AMdDMYtMXc=",
+        "lastModified": 1696581017,
+        "narHash": "sha256-T3p4NG3D7wQxK/7ksiIpFbrEwi+ncAme3QgZlTpRgv8=",
         "owner": "DaRacci",
         "repo": "cocogitto",
-        "rev": "471d9d1f101dca70e90d69426ae965766598c990",
+        "rev": "7d0b5e9963b61fa86bdb56745ddbdb215935374f",
         "type": "github"
       },
       "original": {
         "owner": "DaRacci",
-        "ref": "feat/ssh-signing",
         "repo": "cocogitto",
         "type": "github"
       }

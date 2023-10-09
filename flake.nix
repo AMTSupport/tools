@@ -21,7 +21,7 @@
     crane = { url = "github:ipetkov/crane"; inputs.nixpkgs.follows = "nixpkgs"; };
     fenix = { url = "github:nix-community/fenix"; inputs.nixpkgs.follows = "nixpkgs"; };
 
-    cocogitto = { url = "github:DaRacci/cocogitto/feat/ssh-signing"; inputs.nixpkgs.follows = "nixpkgs"; };
+    cocogitto = { url = "github:DaRacci/cocogitto"; inputs.nixpkgs.follows = "nixpkgs"; };
   };
 
   outputs = { nixpkgs, flake-utils, crane, fenix, cocogitto, ... }@inputs:
