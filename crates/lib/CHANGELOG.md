@@ -2,6 +2,16 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [lib-v0.1.1](https://github.com/AMTSupport/tools/compare/backup-v0.1.0..lib-v0.1.1) - 2023-10-09
+#### <!-- 1 -->🐛 Bug Fixes
+- broken logging - ([120f0ff](https://github.com/AMTSupport/tools/commit/120f0ff842d7c4b037d8b65b4598bc2c6590f48d)) - DaRacci
+#### <!-- 2 -->🚜 Refactor
+- log at warn so quite output works with it. - ([2b22073](https://github.com/AMTSupport/tools/commit/2b22073f70f23cdd858de297e003f4680fcf79c4)) - DaRacci
+#### <!-- 9 -->⚙️ Miscellaneous Tasks
+- Add quite flag to flags. - ([a7d0bff](https://github.com/AMTSupport/tools/commit/a7d0bffec7921c619f8c2d269fcadd78fdc94b02)) - DaRacci
+
+- - -
+
 ## [lib-v0.1.0](https://github.com/AMTSupport/tools/compare/5678af914fbd25777e9a28dbaaf557a016530b7d..lib-v0.1.0) - 2023-10-05
 #### <!-- 0 -->⛰️  Features
 - **(cleaner)** rewrite for cleaner, not finished. - ([ae38f90](https://github.com/AMTSupport/tools/commit/ae38f9018595a8ab382a9f9b413d6bf956973eb2)) - DaRacci

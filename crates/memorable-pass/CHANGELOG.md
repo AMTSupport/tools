@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [memorable-pass-v0.1.1](https://github.com/AMTSupport/tools/compare/backup-v0.1.0..memorable-pass-v0.1.1) - 2023-10-09
+#### <!-- 1 -->🐛 Bug Fixes
+- incorrect parameter for init log - ([08fa53a](https://github.com/AMTSupport/tools/commit/08fa53a893995110d7489ee92f370b1f82181a8f)) - DaRacci
+
+- - -
+
 ## [memorable-pass-v0.1.0](https://github.com/AMTSupport/tools/compare/5678af914fbd25777e9a28dbaaf557a016530b7d..memorable-pass-v0.1.0) - 2023-10-05
 #### <!-- 0 -->⛰️  Features
 - **(memorable-pass)** ActionCondition - ([e8535de](https://github.com/AMTSupport/tools/commit/e8535de04d3c4516b273672aac247630fbd5249e)) - DaRacci
