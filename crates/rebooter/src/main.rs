@@ -29,7 +29,7 @@ struct Cli {
 #[tokio::main]
 async fn main() -> Result<ExitCode> {
     let flags = Cli::parse().flags;
-    let _guard = lib::log::init(env!("CARGO_PKG_NAME"), flags.verbose);
+    let _guard = lib::log::init(env!("CARGO_PKG_NAME"), flags);
 
     if let Some(code) = lib::helper::require_elevated_privileges() {
         return Ok(code);

@@ -70,7 +70,7 @@ enum Output {
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
-    let _ = log::init("", cli.flags.verbose);
+    let _ = log::init("", cli.flags);
 
     match cli.endpoint {
         Endpoints::Nable { args, request, output } => {

@@ -178,7 +178,7 @@ impl Application for Informer {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<ExitCode> {
-    let _guard = lib::log::init("informer", 3);
+    let _guard = lib::log::init("informer", &Default::default());
 
     let settings = Settings {
         id: None,

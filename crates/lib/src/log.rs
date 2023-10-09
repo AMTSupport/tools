@@ -14,6 +14,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+use crate::cli::Flags as CommonFlags;
 use std::env;
 use tracing::{subscriber, Level, Subscriber};
 use tracing_appender::non_blocking::WorkerGuard;
@@ -24,8 +25,12 @@ use tracing_subscriber::registry::LookupSpan;
 use tracing_subscriber::Registry;
 
 #[allow(dead_code)]
-fn level_and_span(verbosity: u8) -> (Level, FmtSpan) {
-    match verbosity {
+fn level_and_span(flags: &CommonFlags) -> (Level, FmtSpan) {
+    if flags.quiet {
+        return (Level::ERROR, FmtSpan::NONE);
+    }
+
+    match flags.verbose {
         0 => (Level::INFO, FmtSpan::NONE),
         1 => (Level::DEBUG, FmtSpan::NONE),
         2 => (Level::TRACE, FmtSpan::NONE),
@@ -51,7 +56,10 @@ where
 }
 
 #[cfg(feature = "ui-cli")]
-fn add_ui_layer<S>(registry: S, verbosity: u8) -> impl Subscriber + for<'span> LookupSpan<'span> + Send + Sync + 'static
+fn add_ui_layer<S>(
+    registry: S,
+    flags: &CommonFlags,
+) -> impl Subscriber + for<'span> LookupSpan<'span> + Send + Sync + 'static
 where
     S: Subscriber + for<'span> LookupSpan<'span> + Send + Sync + 'static,
 {
@@ -59,7 +67,7 @@ where
     use tracing_indicatif::IndicatifLayer;
     use tracing_subscriber::fmt::writer::MakeWriterExt;
 
-    let (level, span) = level_and_span(verbosity);
+    let (level, span) = level_and_span(flags);
     let layer = IndicatifLayer::new().with_progress_style(
         ProgressStyle::with_template(
             "{spinner:.green} {span_child_prefix}{span_name:.cyan/blue}{{{span_fields:.purple}}}",
@@ -67,6 +75,8 @@ where
         .unwrap(),
     );
 
+    let verbosity = if flags.quiet { 0 } else { flags.verbose };
+    let quiet = flags.quiet;
     registry
         .with(
             Layer::default()
@@ -77,7 +87,13 @@ where
                 .with_line_number(verbosity > 1)
                 .with_thread_names(verbosity > 2)
                 .with_thread_ids(verbosity > 2)
-                .with_writer(layer.get_stdout_writer().with_max_level(level)),
+                .with_writer(
+                    layer
+                        .get_stdout_writer()
+                        .with_max_level(level)
+                        // If quiet is enabled, we don't want to print warnings, only info and errors.
+                        .with_filter(move |meta| !matches!(*meta.level(), Level::WARN if quiet)),
+                ),
         )
         .with(layer)
 }
@@ -85,7 +101,7 @@ where
 #[cfg(not(feature = "ui-cli"))]
 fn add_ui_layer<S>(
     registry: S,
-    _verbosity: u8,
+    _flags: &CommonFlags,
 ) -> impl Subscriber + for<'span> LookupSpan<'span> + Send + Sync + 'static
 where
     S: Subscriber + for<'span> LookupSpan<'span> + Send + Sync + 'static,
@@ -94,9 +110,9 @@ where
 }
 
 #[inline]
-pub fn init(_named: &str, verbosity: u8) -> WorkerGuard {
+pub fn init(_named: &str, flags: &CommonFlags) -> WorkerGuard {
     let registry = Registry::default();
-    let registry = add_ui_layer(registry, verbosity);
+    let registry = add_ui_layer(registry, flags);
     let (registry, _guard) = add_file_writer(registry);
 
     subscriber::set_global_default(registry).expect("Failed to set global default subscriber");

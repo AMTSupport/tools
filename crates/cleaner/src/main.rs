@@ -27,7 +27,7 @@ static RUNTIME: LazyLock<Runtime> = LazyLock::new(|| Runtime::new().unwrap());
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<()> {
-    let _guard = lib::log::init(env!("CARGO_PKG_NAME"), RUNTIME.cli.flags.verbose);
+    let _guard = lib::log::init(env!("CARGO_PKG_NAME"), &RUNTIME.cli.flags);
     let _ = require_elevated_privileges().is_some_and(|code| code.exit());
     application(&RUNTIME).await?;
 

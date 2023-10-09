@@ -35,7 +35,7 @@ impl OneshotHandler for BackupCli {
 
     async fn handle(&mut self, command: Self::Action, flags: &CommonFlags) -> CliResult<()> {
         if self._guard.is_none() {
-            self._guard = Some(lib::log::init(env!["CARGO_PKG_NAME"], flags.verbose));
+            self._guard = Some(lib::log::init(env!["CARGO_PKG_NAME"], flags));
         }
 
         if self.runtime.is_none() {
