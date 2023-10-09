@@ -11,11 +11,11 @@
         "systems": "systems_2"
       },
       "locked": {
-        "lastModified": 1696581017,
-        "narHash": "sha256-T3p4NG3D7wQxK/7ksiIpFbrEwi+ncAme3QgZlTpRgv8=",
+        "lastModified": 1696836297,
+        "narHash": "sha256-XE8HK5jmBdCURykbaWKhBC2xFmaR0MpLE+9VTQEX8Pk=",
         "owner": "DaRacci",
         "repo": "cocogitto",
-        "rev": "7d0b5e9963b61fa86bdb56745ddbdb215935374f",
+        "rev": "b1ee193641641177408c0c96f1ae6ecf9ac4a02c",
         "type": "github"
       },
       "original": {
