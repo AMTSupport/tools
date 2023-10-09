@@ -19,10 +19,9 @@ use std::env;
 use tracing::{subscriber, Level, Subscriber};
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::fmt::format::FmtSpan;
-use tracing_subscriber::fmt::writer::MakeWriterExt;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::registry::LookupSpan;
-use tracing_subscriber::{Layer, Registry};
+use tracing_subscriber::Registry;
 
 #[allow(dead_code)]
 fn level_and_span(flags: &CommonFlags) -> (Level, FmtSpan) {
@@ -64,6 +63,7 @@ where
 {
     use indicatif::ProgressStyle;
     use tracing_indicatif::{filter::IndicatifFilter, IndicatifLayer};
+    use tracing_subscriber::{fmt::writer::MakeWriterExt, Layer};
 
     let (level, span) = level_and_span(flags);
     let layer = IndicatifLayer::new().with_progress_style(

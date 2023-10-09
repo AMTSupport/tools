@@ -84,7 +84,7 @@ fn recurse(top_init: Vec<PathBuf>) -> Vec<PathBuf> {
                 map.insert(path, sub_files);
                 recurser(sub_dirs, map);
             } else {
-                error!("Failed to read directory {}", path.display());
+                warn!("Failed to read directory {}", path.display());
             }
         }
     }
