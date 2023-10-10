@@ -32,6 +32,8 @@ use std::env;
 use std::path::PathBuf;
 use std::str::FromStr;
 use tracing::{error, instrument, trace};
+use lib::ui::UiBuidableFiller;
+use crate::ui::cli::ui::BackupCli;
 
 #[derive(Debug, Parser, CommonFields)]
 pub enum Action {
@@ -87,7 +89,7 @@ impl Action {
 
         match self {
             Action::Init { .. } => {
-                runtime.config.rules = new_rules()?;
+                runtime.config.rules = BackupCli::fill()?;
                 runtime.config.exporters = new_exporters(runtime).await?;
                 runtime.config.mutated = true;
 
@@ -207,8 +209,9 @@ pub(crate) async fn new_exporters(runtime: &Runtime) -> Result<Vec<Backend>> {
     Ok(exporters)
 }
 
+#[instrument(level = "TRACE", ret, err)]
 fn new_rules() -> Result<Rules> {
-    trace!("Inquiring about rules");
+
 
     let autoprune = if inquire::Confirm::new("Do you want to enable auto-pruning?").with_default(true).prompt()? {
         let mut autoprune = AutoPrune { ..Default::default() };

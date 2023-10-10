@@ -26,9 +26,11 @@ use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fmt::Debug;
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 use std::time::SystemTime;
 use tokio_stream::StreamExt;
 use tracing::{debug, error, info, instrument, trace, warn};
+use lib::builder;
 
 #[derive(
     Debug, Clone, Copy, Hash, PartialOrd, Ord, PartialEq, Eq, Serialize, Deserialize, EnumVariants, EnumNames, EnumRegex,
@@ -214,23 +216,67 @@ impl Tag {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct AutoPrune {
+builder!(AutoPrune = [
     /// How many hours of backups should be kept.
-    pub hours: usize,
-
+    hours => usize = 0,
     /// How many days of backups should be kept.
-    pub days: usize,
-
+    days => usize,
     /// How many per week backups should be kept.
-    pub weeks: usize,
-
+    weeks => usize,
     /// How many per month backups should be kept.
-    pub months: usize,
-
+    months => usize,
     /// The minimum number of backups to keep ignoring the keep_for duration.
-    pub keep_latest: usize,
+    keep_latest => usize
+]);
+
+impl FromStr for AutoPrune {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut autoprune = AutoPrune { ..Default::default() };
+
+        let mut split = s.split_whitespace();
+        if let Some(hours) = split.next() {
+            autoprune.hours = usize::from_str(hours)?;
+        }
+
+        if let Some(days) = split.next() {
+            autoprune.days = usize::from_str(days)?;
+        }
+
+        if let Some(weeks) = split.next() {
+            autoprune.weeks = usize::from_str(weeks)?;
+        }
+
+        if let Some(months) = split.next() {
+            autoprune.months = usize::from_str(months)?;
+        }
+
+        if let Some(keep_latest) = split.next() {
+            autoprune.keep_latest = usize::from_str(keep_latest)?;
+        }
+
+        Ok(autoprune)
+    }
 }
+
+// #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+// pub struct AutoPrune {
+//     /// How many hours of backups should be kept.
+//     pub hours: usize,
+//
+//     /// How many days of backups should be kept.
+//     pub days: usize,
+//
+//     /// How many per week backups should be kept.
+//     pub weeks: usize,
+//
+//     /// How many per month backups should be kept.
+//     pub months: usize,
+//
+//     /// The minimum number of backups to keep ignoring the keep_for duration.
+//     pub keep_latest: usize,
+// }
 
 impl AutoPrune {
     /// This will iterate over the files, removing the tags from the oldest

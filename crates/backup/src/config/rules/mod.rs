@@ -21,15 +21,19 @@ pub mod rule;
 use crate::config::rules::autoprune::AutoPrune;
 use crate::config::rules::metadata::Metadata;
 use crate::config::rules::rule::Rule;
-use serde::{Deserialize, Serialize};
+use lib::builder;
 use std::path::Path;
 use tracing::trace;
 
-#[derive(Default, Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub struct Rules {
-    /// The AutoPrune configuration.
-    pub auto_prune: Option<AutoPrune>,
-}
+// #[derive(Default, Debug, PartialEq, Clone, Serialize, Deserialize)]
+// pub struct Rules {
+//     pub auto_prune: Option<AutoPrune>,
+// }
+
+builder!(Rules = [
+    other_rule => String,
+    [auto_prune] => AutoPrune,
+]);
 
 impl Rules {
     pub async fn would_survive(&self, existing_files: &[&Path], destination: &Path, metadata: Metadata) -> bool {

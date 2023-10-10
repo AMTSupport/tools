@@ -101,78 +101,157 @@ where
 /// ```
 /// use lib::builder;
 ///
-/// builder!(Test = [[opt_field] => String field => String]);
+/// builder!(Test = [[opt_field] => String, field => String]);
 /// builder!(Test2 = [field => String]);
 /// ```
 #[macro_export]
 macro_rules! builder {
     (@count_inputs) => { 0 };
     (@count_inputs $expr:tt) => { 1 };
-    (@count_inputs $($expr:tt),*) => { $(builder(@count_inputs $expr) +)* 0 };
+    (@count_inputs $($expr:tt),*) => { $($crate::builder!(@count_inputs $expr) +)* 0 };
 
-    ($name:ident = [$($field:ident => $type:ty),*, $([$opt_field:ident] => $opt_type:ty),* $(,)?]) => {
-        builder!($name = [$([$opt_field] => $opt_type),*, $($field => $type),*]);
+    (@sort
+        $name:ident
+        {$($($(#[$opt_meta:meta])* $opt_field:ident => $opt_type:ty),+)? }
+        ($($($(#[$meta:meta])* $field:ident => $type:ty $(= $default:expr)?),+)? )
+        [$($(#,[$item_meta:meta]),+ ,)? $item_field:ident , => , $item_type:ty $(, = , $item_default:expr)? ,,, $($remaining:tt),+]) => {
+
+        $crate::builder!(@sort
+            $name
+            {$($($(#[$opt_meta])* $opt_field => $opt_type),+)? }
+            ($($($(#[$meta])* $field => $type $(= $default)?),+ ,)? $($(#[$item_meta])+)? $item_field => $item_type $(= $item_default)?)
+            [$($remaining),+]
+        );
     };
-    ($name:ident = [$([$opt_field:ident] => $opt_type:ty),*, $($field:ident => $type:ty),*] $(,)?) => {
+    (@sort
+        $name:ident
+        {$($($(#[$opt_meta:meta])* $opt_field:ident => $opt_type:ty),+)? }
+        ($($($(#[$meta:meta])* $field:ident => $type:ty $(= $default:expr)?),+)? )
+        [$($(#,[$item_meta:meta]),+,)? $item_field:ident , => , $item_type:ty $(, = , $item_default:expr)?]) => {
+
+        $crate::builder!(@sort
+            $name
+            {$($($(#[$opt_meta])* $opt_field => $opt_type),+)? }
+            ($($($(#[$meta])* $field => $type $(= $default)?),+ ,)? $($(#[$item_meta])+)? $item_field => $item_type $(= $item_default)?)
+            []
+        );
+    };
+
+    (@sort
+        $name:ident
+        {$($($(#[$opt_meta:meta])* $opt_field:ident => $opt_type:ty),+)? }
+        ($($($(#[$meta:meta])* $field:ident => $type:ty $(= $default:expr)?),+)? )
+        [$($(#,[$item_meta:meta]),+,)? [$item_field:ident], => , $item_type:ty,,, $($remaining:tt),+]) => {
+
+        $crate::builder!(@sort
+            $name
+            {$($($(#[$opt_meta])* $opt_field => $opt_type),+ ,)? $($(#[$item_meta])+)? [$item_field] => $item_type }
+            ($($($(#[$meta])* $field => $type $(= $default)?),+)?)
+            [$($remaining),+]
+        );
+    };
+    (@sort
+        $name:ident
+        {$($($(#[$opt_meta:meta])* $opt_field:ident => $opt_type:ty),+)? }
+        ($($($(#[$meta:meta])* $field:ident => $type:ty $(= $default:expr)?),+)? )
+        [$($(#,[$item_meta:meta]),+,)? [$item_field:ident] , => , $item_type:ty,,]) => {
+
+        $crate::builder!(@sort
+            $name
+            {$($($(#[$opt_meta])* $opt_field => $opt_type),+ ,)? $($(#[$item_meta])+)? $item_field => $item_type }
+            ($($($(#[$meta])* $field => $type $(= $default)?),+)?)
+            []
+        );
+    };
+
+    (@sort
+        $name:ident
+        {$($($(#[$opt_meta:meta])* $opt_field:ident => $opt_type:ty),+)? }
+        ($($($(#[$meta:meta])* $field:ident => $type:ty $(= $default:expr)?),+)? )
+        []
+    ) => {
+        $crate::builder!(@impl $name = [ $({$($(#[$meta])* $field => $type $(= $default)?),+ ,})? $([$($(#[$opt_meta])* [$opt_field] => $opt_type),+ ,])?]);
+    };
+
+    ($name:ident = [ $($fields:tt)+ ]) => {
+        $crate::builder!(@sort $name {} () [$($fields),+]);
+    };
+
+    (@impl $name:ident = [
+        $({$(,)? $(
+            $(#[$meta:meta])*
+            $field:ident => $type:ty $(= $default:expr)?
+        ),+,})?
+        $([$(,)? $(
+            $(#[$opt_meta:meta])*
+            [$opt_field:ident] => $opt_type:ty
+        ),+,])?
+    ]) => {
         #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
         pub struct $name {
-            $($opt_field: Option<$opt_type>),*
-            $($field: $type),*
+            $($(
+                $(#[$opt_meta])*
+                $opt_field: Option<$opt_type>
+            ),+,)?
+            $($(
+                $(#[$meta])*
+                $field: $type
+            ),+,)?
         }
 
         paste::paste! {
             #[derive(Debug, Clone)]
             pub struct [<$name Builder>] {
-                $($opt_field: Option<$opt_type>),*
-                $($field: Option<$type>),*
+                $($($opt_field: Option<$opt_type>),+,)?
+                $($($field: Option<$type>),+,)?
             }
 
             impl $name {
-                $(pub fn [<set_ $field>](&self, $field: $type) -> Self {
+                $($(pub fn [<set_ $field>](&self, $field: $type) -> Self {
                     let mut builder = self.clone();
                     builder.$field = $field;
                     builder
-                })*
-                $(pub fn [<set_ $opt_field>](&self, $opt_field: $opt_type) -> Self {
+                })+)?
+                $($(pub fn [<set_ $opt_field>](&self, $opt_field: $opt_type) -> Self {
                     let mut builder = self.clone();
                     builder.$opt_field = Some($opt_field);
                     builder
-                })*
+                })+)?
 
-                $(pub fn [<get_ $field>](&self) -> &$type {
+                $($(pub fn [<get_ $field>](&self) -> &$type {
                     &self.$field
-                })*
+                })+)?
 
-                $(pub fn [<get_ $opt_field>](&self) -> Option<&$opt_type> {
+                $($(pub fn [<get_ $opt_field>](&self) -> Option<&$opt_type> {
                     self.$opt_field.as_ref()
-                })*
+                })+)?
             }
 
             impl [<$name Builder>] {
-                $(pub fn [<set_ $field>](&self, $field: $type) -> Self {
+                $($(pub fn [<set_ $field>](&self, $field: $type) -> Self {
                     let mut builder = self.clone();
                     builder.$field = Some($field);
                     builder
-                })*
-                $(pub fn [<set_ $opt_field>](&self, $opt_field: $opt_type) -> Self {
+                })+)?
+                $($(pub fn [<set_ $opt_field>](&self, $opt_field: $opt_type) -> Self {
                     let mut builder = self.clone();
                     builder.$opt_field = Some($opt_field);
                     builder
-                })*
+                })+)?
 
-                $(pub fn [<get_ $field>](&self) -> Option<&$type> {
+                $($(pub fn [<get_ $field>](&self) -> Option<&$type> {
                     self.$field.as_ref()
-                })*
+                })+)?
 
-                $(pub fn [<get_ $opt_field>](&self) -> Option<&$opt_type> {
+                $($(pub fn [<get_ $opt_field>](&self) -> Option<&$opt_type> {
                     self.$opt_field.as_ref()
-                })*
+                })+)?
             }
 
-            use $crate::ui::UiBuildable;
-            impl UiBuildable<$name> for [<$name Builder>] {
-                const REQUIRED_FIELDS: &'static [&'static str] = &[$(stringify!($field)),*];
-                const OPTIONAL_FIELDS: &'static [&'static str] = &[$(stringify!($opt_field)),*];
+            use $crate::ui::UiBuildable as _UiBuildable;
+            impl _UiBuildable<$name> for [<$name Builder>] {
+                const REQUIRED_FIELDS: &'static [&'static str] = &[$($(stringify!($field)),+)?];
+                const OPTIONAL_FIELDS: &'static [&'static str] = &[$($(stringify!($opt_field)),+)?];
 
                 fn env_fill(&mut self) -> anyhow::Result<Vec<&'static str>> {
                     let mut filled = vec![];
@@ -185,8 +264,8 @@ macro_rules! builder {
                         }
                     };
 
-                    $(env_fill_inner(stringify!($field));)*
-                    $(env_fill_inner(stringify!($opt_field));)*
+                    $($(env_fill_inner(stringify!($field));)+)?
+                    $($(env_fill_inner(stringify!($opt_field));)+)?
 
                     Ok(filled)
                 }
@@ -201,8 +280,8 @@ macro_rules! builder {
 
                 fn set_field(&mut self, field: &str, value: &str) -> anyhow::Result<()> {
                     match field {
-                        $(stringify!($field) => self.[<set_ $field>](value.into()),)*
-                        $(stringify!($opt_field) => self.[<set_ $opt_field>](value.into()),)*
+                        $($(stringify!($field) => self.[<set_ $field>](value.parse()?),)+)?
+                        $($(stringify!($opt_field) => self.[<set_ $opt_field>](value.parse()?),)+)?
                         _ => return Err(anyhow::anyhow!("Unknown field {}", field))
                     };
 
@@ -213,8 +292,8 @@ macro_rules! builder {
                     // Downcast and box the value into an any type so we can return it
                     // without knowing the type, don't use as to cast as not all values are primitives
                     let boxed = match field {
-                        $(stringify!($field) => self.[<get_ $field>]().map(|value| Box::<&dyn std::any::Any>::new(value)),)*
-                        $(stringify!($opt_field) => self.[<get_ $opt_field>]().map(|value| Box::<&dyn std::any::Any>::new(value)),)*
+                        $($(stringify!($field) => self.[<get_ $field>]().map(|value| Box::<&dyn std::any::Any>::new(value)),)*)?
+                        $($(stringify!($opt_field) => self.[<get_ $opt_field>]().map(|value| Box::<&dyn std::any::Any>::new(value)),)*)?
                         _ => None
                     };
 
@@ -223,15 +302,18 @@ macro_rules! builder {
                 }
 
                 fn build(self) -> anyhow::Result<$name> {
-                    $(
+
+                    $($(
+                        $(self.$field.get_or_insert_with(|| $default);)?
+
                         if self.$field.is_none() {
                             return Err(anyhow::anyhow!("Missing required field {}", stringify!($field)));
                         }
-                    )*
+                    )+)?
 
                     Ok($name {
-                        $($opt_field: self.$opt_field),*
-                        $($field: self.$field.unwrap()),*
+                        $($($opt_field: self.$opt_field),+,)?
+                        $($($field: self.$field.unwrap()),+,)?
                     })
                 }
             }
@@ -239,8 +321,8 @@ macro_rules! builder {
             impl Default for [<$name Builder>] {
                 fn default() -> Self {
                     let mut instance = Self {
-                        $($opt_field: None),*
-                        $($field: None),*
+                        $($($opt_field: None),+,)?
+                        $($($field: None),+,)?
                     };
 
                     instance.env_fill().unwrap();
@@ -255,5 +337,5 @@ macro_rules! builder {
                 }
             }
         }
-    }
+    };
 }
