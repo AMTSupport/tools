@@ -19,4 +19,4 @@
 
 pub mod reason;
 mod schedule;
-mod ui;
+pub mod ui;

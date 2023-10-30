@@ -14,13 +14,18 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+use crate::ui::actions::Action;
 use lib::cli::Flags as CommonFlags;
+use lib::populate;
 use lib::ui::cli::oneshot::OneshotHandler;
 use lib::ui::cli::{CliResult, CliUi};
 use lib::ui::Ui;
-use std::fmt::Debug;
+use tracing::info;
+use tracing_appender::non_blocking::WorkerGuard;
 
-pub struct RebooterCli;
+pub struct RebooterCli {
+    _guard: Option<WorkerGuard>,
+}
 
 impl Ui for RebooterCli {
     fn new(args: Self::Args) -> anyhow::Result<Self>
@@ -34,9 +39,18 @@ impl Ui for RebooterCli {
 impl CliUi for RebooterCli {}
 
 impl OneshotHandler for RebooterCli {
-    type Action = ();
+    type Action = Action;
 
     async fn handle(&mut self, command: Self::Action, flags: &CommonFlags) -> CliResult<()> {
-        unimplemented!()
+        populate!(self, flags);
+
+        match command {
+            Action::Test(reason) => match reason.valid() {
+                true => info!("{reason} would require a restart."),
+                false => info!("{reason} would not require a restart."),
+            },
+        }
+
+        Ok(())
     }
 }

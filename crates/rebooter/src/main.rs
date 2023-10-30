@@ -15,27 +15,19 @@
  */
 
 use anyhow::Result;
-use clap::Parser;
-use lib::cli::Flags;
-use rebooter::reason::Reason;
+use lib::ui::cli::CliUi;
+use lib::ui::Ui;
+use rebooter::ui::cli::RebooterCli;
 use sysexits::ExitCode;
-
-#[derive(Debug, Parser)]
-struct Cli {
-    #[command(flatten)]
-    flags: Flags,
-}
 
 #[tokio::main]
 async fn main() -> Result<ExitCode> {
-    let flags = Cli::parse().flags;
-    let _guard = lib::log::init(env!("CARGO_PKG_NAME"), flags);
-
     if let Some(code) = lib::helper::require_elevated_privileges() {
         return Ok(code);
     }
 
-    let reasons = Reason::get_variants().into_iter().filter(Reason::valid).collect::<Vec<_>>();
+    let mut application = RebooterCli::new(())?;
+    application.run().await?;
 
     Ok(ExitCode::Ok)
 }
