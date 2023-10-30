@@ -14,13 +14,14 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#[cfg(windows)]
 mod update;
 mod uptime;
 
+use clap::ValueEnum;
 use macros::EnumVariants;
-use thiserror::Error;
 
-#[derive(Debug, Clone, Error, EnumVariants)]
+#[derive(Debug, Clone, ValueEnum, EnumVariants)]
 pub enum Reason {
     /// The system requires a reboot to apply updates cleanly.
     ///
@@ -28,17 +29,19 @@ pub enum Reason {
     /// complete the process.
     ///
     /// This is only available on Windows.
-    #[error("The system requires a reboot to apply updates")]
+    #[cfg(windows)]
+    // #[error("The system requires a reboot to apply updates")]
     SystemUpdate,
 
     /// The system has been up for longer than 7 days.
-    #[error("The system has been online for longer than 7 days")]
+    // #[error("The system has been online for longer than 7 days")]
     Uptime,
 }
 
 impl Reason {
     pub fn valid(&self) -> bool {
         match self {
+            #[cfg(windows)]
             Self::SystemUpdate => update::needs_reboot(),
             Self::Uptime => uptime::needs_reboot(None),
         }

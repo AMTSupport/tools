@@ -16,7 +16,6 @@
 
 use tracing::instrument;
 
-#[cfg(windows)]
 #[instrument(level = "TRACE", ret)]
 pub(crate) fn needs_reboot() -> bool {
     use registry::Hive;
@@ -28,10 +27,4 @@ pub(crate) fn needs_reboot() -> bool {
     )?;
 
     regkey.value("RebootRequired").is_ok()
-}
-
-#[cfg(not(windows))]
-#[instrument(level = "TRACE", ret)]
-pub(crate) fn needs_reboot() -> bool {
-    false
 }
