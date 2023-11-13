@@ -3,39 +3,35 @@
   <a href="https://github.com/AMTSupport/tools/actions/workflows/ci.yml" target="_blank">
     <img alt="Build Status" src="https://img.shields.io/github/actions/workflow/status/AMTSupport/tools/ci.yml?style=for-the-badge">
   </a>
+  <a href="https://github.com/AMTSupport/tools/">
+  </a>
   <a href="https://www.gnu.org/licenses/" target="_blank">
     <img alt="License: GPLv3" src="https://img.shields.io/badge/License-GPLv3-yellow.svg?style=for-the-badge" />
   </a>
 </p>
 
-> A memorable password generator written for secure and easy to remember passwords.
+> An IP to country / country to IP resolver that supports IPv4 and IPv6.
 >
-> Passwords are generated using a cryptographically secure random number generator.
+> Using APNIC, ARIN, RIPE, LACNIC and AFRINIC databases.
 
 ## Install
 
 ```sh
 # Nix (Recommended) (Release binaries are cached)
-nix run github:AMTSupport/tools#memorable-pass
+nix run github:AMTSupport/tools#country-ip
 
 # Cargo
-cargo install --git https://github.com/AMTSupport/tools memorable-pass
+cargo install --git https://github.com/AMTSupport/tools country-ip
 ```
 
 ## Usage
 
 ```sh
-# Generate a password with the default settings
-memorable-pass generate
+# Get the country of an IP
+country-ip lookup $ip
 
-# Generate a more secure password by increasing the word length
-memorable-pass generate --min-length 7 --max-length 9
-
-# Generate a password with alternating case characters
-memorable-pass generate --transformation-case alternating
-
-# View all possible rules
-memorable-pass help generate
+# Get a random IP of a given country
+country-ip get $country
 ```
 
 ## Author

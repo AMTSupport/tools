@@ -1,4 +1,4 @@
-<h1 align="center">Welcome to country-ip 👋</h1>
+<h1 align="center">Welcome to cleaner 👋</h1>
 <p>
   <a href="https://github.com/AMTSupport/tools/actions/workflows/ci.yml" target="_blank">
     <img alt="Build Status" src="https://img.shields.io/github/actions/workflow/status/AMTSupport/tools/ci.yml?style=for-the-badge">
@@ -8,34 +8,29 @@
   </a>
 </p>
 
-> A memorable password generator written for secure and easy to remember passwords.
->
-> Passwords are generated using a cryptographically secure random number generator.
+> A modular cleaner with dynamic rules, written blazing fast.
 
 ## Install
 
 ```sh
 # Nix (Recommended) (Release binaries are cached)
-nix run github:AMTSupport/tools#memorable-pass
+nix run github:AMTSupport/tools#cleaner
 
 # Cargo
-cargo install --git https://github.com/AMTSupport/tools memorable-pass
+cargo install --git https://github.com/AMTSupport/tools cleaner
 ```
 
 ## Usage
 
 ```sh
-# Generate a password with the default settings
-memorable-pass generate
+# Run all cleaners
+cleaner
 
-# Generate a more secure password by increasing the word length
-memorable-pass generate --min-length 7 --max-length 9
+# Run specific cleaners (See all cleaners in `cleaner --help`)
+cleaner -- trash browsers
 
-# Generate a password with alternating case characters
-memorable-pass generate --transformation-case alternating
-
-# View all possible rules
-memorable-pass help generate
+# Run in quiet mode
+cleaner --quiet
 ```
 
 ## Author
