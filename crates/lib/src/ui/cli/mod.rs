@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 James Draycott <me@racci.dev>
+ * Copyright (c) 2023. James Draycott <me@racci.dev>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -7,16 +7,15 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License along with this program.
+ * If not, see <https://www.gnu.org/licenses/>.
  */
 
 use crate::ui::cli::error::CliError;
 use crate::ui::cli::oneshot::OneshotHandler;
-use crate::ui::{UiBuidableFiller, UiBuildable};
+use crate::ui::{UiBuildable, UiBuildableFiller};
 use anyhow::{anyhow, Context, Result};
 use inquire::validator::StringValidator;
 use inquire::Text;
@@ -32,6 +31,8 @@ pub mod repl;
 pub mod ui_inquire;
 
 pub type CliResult<T> = Result<T, CliError>;
+
+auto trait FeatureTrait {}
 
 crate::feature_trait! {
     pub trait CliUi where {
@@ -80,7 +81,7 @@ crate::feature_trait! {
     }
 }
 
-impl<C> UiBuidableFiller for C
+impl<C> UiBuildableFiller for C
 where
     C: CliUi,
 {
@@ -199,6 +200,17 @@ where
             }
         },
     }
+}
+
+#[macro_export]
+macro_rules! populate {
+    ($self:ident, $flags:ident) => {
+        use lib::log::init as _init;
+
+        if $self._guard.is_none() {
+            $self._guard = Some(_init(env!("CARGO_PKG_NAME"), $flags));
+        }
+    };
 }
 
 #[macro_export]

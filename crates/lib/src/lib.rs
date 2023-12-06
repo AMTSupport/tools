@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 James Draycott <me@racci.dev>
+ * Copyright (c) 2023. James Draycott <me@racci.dev>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -7,30 +7,37 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License along with this program.
+ * If not, see <https://www.gnu.org/licenses/>.
  */
 
 #![feature(lazy_cell)]
 #![feature(const_for)]
 #![feature(const_option)]
-#![feature(async_fn_in_trait)]
+#![feature(auto_traits)]
+#![feature(negative_impls)]
 #![feature(result_option_inspect)]
 #![feature(associated_type_defaults)]
 #![feature(trait_alias)]
 #![feature(trivial_bounds)]
 #![feature(stmt_expr_attributes)]
 #![feature(cfg_match)]
+#![feature(const_format_args)]
+#![feature(impl_trait_in_assoc_type)]
+#![feature(type_alias_impl_trait)]
+#![feature(let_chains)]
+#![feature(try_trait_v2)]
 
 pub mod cli;
 pub mod fs;
 pub mod helper;
 pub mod log;
-pub mod pathed;
-
 pub mod macros;
+pub mod named;
+pub mod pathed;
 #[cfg(any(feature = "ui-gui", feature = "ui-tui", feature = "ui-cli"))]
 pub mod ui;
+#[cfg(feature = "updater")]
+pub mod updater;

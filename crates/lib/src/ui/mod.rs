@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 James Draycott <me@racci.dev>
+ * Copyright (c) 2023. James Draycott <me@racci.dev>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -7,17 +7,17 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License along with this program.
+ * If not, see <https://www.gnu.org/licenses/>.
  */
 
 use anyhow::Result;
 use std::any::Any;
 use std::fmt::Debug;
 
+mod builder;
 #[cfg(feature = "ui-cli")]
 pub mod cli;
 #[cfg(feature = "ui-tui")]
@@ -25,7 +25,7 @@ pub mod tui;
 
 pub trait Ui<R = Result<Self>>
 where
-    Self: UiBuidableFiller,
+    Self: UiBuildableFiller,
 {
     /// The arguments that will be used to create the [`Ui`]
     ///
@@ -46,7 +46,7 @@ where
         Self: Sized;
 }
 
-impl<U: UiBuidableFiller + Default> Ui for U {
+impl<U: UiBuildableFiller + Default> Ui for U {
     fn new(_args: Self::Args) -> Result<Self>
     where
         Self: Sized,
@@ -55,7 +55,7 @@ impl<U: UiBuidableFiller + Default> Ui for U {
     }
 }
 
-pub trait UiBuidableFiller {
+pub trait UiBuildableFiller {
     async fn fill<B: UiBuildable<V>, V: From<B> + Debug>() -> Result<V>;
 
     async fn modify<B: UiBuildable<V>, V: From<B> + Debug>(builder: B) -> Result<V>;
@@ -111,12 +111,14 @@ macro_rules! builder {
     (@count_inputs $($expr:tt),*) => { $($crate::builder!(@count_inputs $expr) +)* 0 };
 
     (@sort
+        $($(#[$struct_meta:meta])+)?
         $name:ident
         {$($($(#[$opt_meta:meta])* $opt_field:ident => $opt_type:ty),+)? }
         ($($($(#[$meta:meta])* $field:ident => $type:ty $(= $default:expr)?),+)? )
         [$($(#,[$item_meta:meta]),+ ,)? $item_field:ident , => , $item_type:ty $(, = , $item_default:expr)? ,,, $($remaining:tt),+]) => {
 
         $crate::builder!(@sort
+            $($(#[$struct_meta])+)?
             $name
             {$($($(#[$opt_meta])* $opt_field => $opt_type),+)? }
             ($($($(#[$meta])* $field => $type $(= $default)?),+ ,)? $($(#[$item_meta])+)? $item_field => $item_type $(= $item_default)?)
@@ -124,12 +126,14 @@ macro_rules! builder {
         );
     };
     (@sort
+        $($(#[$struct_meta:meta])+)?
         $name:ident
         {$($($(#[$opt_meta:meta])* $opt_field:ident => $opt_type:ty),+)? }
         ($($($(#[$meta:meta])* $field:ident => $type:ty $(= $default:expr)?),+)? )
         [$($(#,[$item_meta:meta]),+,)? $item_field:ident , => , $item_type:ty $(, = , $item_default:expr)?]) => {
 
         $crate::builder!(@sort
+            $($(#[$struct_meta])+)?
             $name
             {$($($(#[$opt_meta])* $opt_field => $opt_type),+)? }
             ($($($(#[$meta])* $field => $type $(= $default)?),+ ,)? $($(#[$item_meta])+)? $item_field => $item_type $(= $item_default)?)
@@ -138,12 +142,14 @@ macro_rules! builder {
     };
 
     (@sort
+        $($(#[$struct_meta:meta])+)?
         $name:ident
         {$($($(#[$opt_meta:meta])* $opt_field:ident => $opt_type:ty),+)? }
         ($($($(#[$meta:meta])* $field:ident => $type:ty $(= $default:expr)?),+)? )
         [$($(#,[$item_meta:meta]),+,)? [$item_field:ident], => , $item_type:ty,,, $($remaining:tt),+]) => {
 
         $crate::builder!(@sort
+            $($(#[$struct_meta])+)?
             $name
             {$($($(#[$opt_meta])* $opt_field => $opt_type),+ ,)? $($(#[$item_meta])+)? [$item_field] => $item_type }
             ($($($(#[$meta])* $field => $type $(= $default)?),+)?)
@@ -151,12 +157,14 @@ macro_rules! builder {
         );
     };
     (@sort
+        $($(#[$struct_meta:meta])+)?
         $name:ident
         {$($($(#[$opt_meta:meta])* $opt_field:ident => $opt_type:ty),+)? }
         ($($($(#[$meta:meta])* $field:ident => $type:ty $(= $default:expr)?),+)? )
         [$($(#,[$item_meta:meta]),+,)? [$item_field:ident] , => , $item_type:ty,,]) => {
 
         $crate::builder!(@sort
+            $($(#[$struct_meta])+)?
             $name
             {$($($(#[$opt_meta])* $opt_field => $opt_type),+ ,)? $($(#[$item_meta])+)? $item_field => $item_type }
             ($($($(#[$meta])* $field => $type $(= $default)?),+)?)
@@ -165,19 +173,20 @@ macro_rules! builder {
     };
 
     (@sort
+        $($(#[$struct_meta:meta])+)?
         $name:ident
         {$($($(#[$opt_meta:meta])* $opt_field:ident => $opt_type:ty),+)? }
         ($($($(#[$meta:meta])* $field:ident => $type:ty $(= $default:expr)?),+)? )
         []
     ) => {
-        $crate::builder!(@impl $name = [ $({$($(#[$meta])* $field => $type $(= $default)?),+ ,})? $([$($(#[$opt_meta])* [$opt_field] => $opt_type),+ ,])?]);
+        $crate::builder!(@impl $($(#[$struct_meta])+)? $name = [ $({$($(#[$meta])* $field => $type $(= $default)?),+ ,})? $([$($(#[$opt_meta])* [$opt_field] => $opt_type),+ ,])?]);
     };
 
-    ($name:ident = [ $($fields:tt)+ ]) => {
-        $crate::builder!(@sort $name {} () [$($fields),+]);
+    ($($(#[$struct_meta:meta])+)? $name:ident = [ $($fields:tt)+ ]) => {
+        $crate::builder!(@sort $($(#[$struct_meta])+)? $name {} () [$($fields),+]);
     };
 
-    (@impl $name:ident = [
+    (@impl $($(#[$struct_meta:meta])+)? $name:ident = [
         $({$(,)? $(
             $(#[$meta:meta])*
             $field:ident => $type:ty $(= $default:expr)?
@@ -188,6 +197,7 @@ macro_rules! builder {
         ),+,])?
     ]) => {
         #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+        $($(#[$struct_meta])+)?
         pub struct $name {
             $($(
                 $(#[$opt_meta])*
@@ -332,7 +342,6 @@ macro_rules! builder {
 
             impl From<[<$name Builder>]> for $name {
                 fn from(builder: [<$name Builder>]) -> Self {
-
                     builder.build().unwrap()
                 }
             }
