@@ -14,20 +14,4 @@
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::ui::builder::buildable::Buildable;
-use crate::ui::builder::error::{BuildResult, FillResult};
-use crate::ui::builder::filler::Filler;
-use std::fmt::Debug;
-
-pub mod buildable;
-pub mod dummy;
-pub mod error;
-pub mod filler;
-
-pub trait Builder: Default + Debug {
-    type Buildable: Buildable;
-
-    async fn fill<F: Filler>(self, filler: &mut F) -> FillResult<Self>;
-
-    async fn build(self) -> BuildResult<Self::Buildable>;
-}
+mod pathed;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023. James Draycott <me@racci.dev>
+ * Copyright (c) 2023-2024. James Draycott <me@racci.dev>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -7,31 +7,55 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License along with this program.
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
+use crate::ui::builder::buildable::Buildable;
 use std::marker::PhantomData;
 use thiserror::Error;
 
-#[derive(Error)]
-pub enum BuildableError<T> {
-    #[error("unable to fill {} from input {}: {}", name, input, std::any::type_name::<T>())]
-    UnableToFill {
-        name: String,
+pub type FillResult<T> = Result<T, FillError>;
+pub type BuildResult<T> = Result<T, BuildError>;
+pub type FinalResult<B: Buildable> = Result<B, Error<B>>;
 
-        input: String,
-
-        _ty: PhantomData<T>,
-    },
-
-    #[error("unable to build {name} from builder")]
-    UnableToBuild {
-        name: String,
-
+#[derive(Debug, Error)]
+pub enum Error<B: Buildable> {
+    Fill {
         #[source]
-        source: anyhow::Error,
+        err: FillError,
+
+        _buildable: PhantomData<B>,
     },
+
+    Buildable {
+        #[source]
+        err: BuildError,
+
+        _buildable: PhantomData<B>,
+    },
+}
+
+#[derive(Debug, Error)]
+pub enum FillError {
+    #[error("unable to fill {field} from input, invalid input: {input}")]
+    InvalidInput { field: String, input: String },
+
+    #[error("no fillers available for {field}")]
+    NoFillers { field: String },
+
+    #[error("unknown error: {0}")]
+    Unknown(#[from] Box<dyn std::error::Error>),
+}
+
+#[derive(Debug, Error)]
+pub enum BuildError {
+    #[error("missing required field {field}")]
+    MissingField { field: String },
+
+    #[error("unknown error: {0}")]
+    Unknown(#[from] Box<dyn std::error::Error>),
 }

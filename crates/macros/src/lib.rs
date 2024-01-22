@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023. James Draycott <me@racci.dev>
+ * Copyright (c) 2023-2024. James Draycott <me@racci.dev>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -7,7 +7,8 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License along with this program.
  * If not, see <https://www.gnu.org/licenses/>.
@@ -19,6 +20,7 @@
 #![feature(type_name_of_val)]
 #![feature(cfg_eval)]
 #![feature(cfg_match)]
+#![feature(assert_matches)]
 
 mod builder;
 mod enums;
@@ -176,6 +178,16 @@ pub fn builder_macro(input: TokenStream) -> TokenStream {
     builder::builder(input)
 }
 
+// #[proc_macro]
+// pub fn hack_impls(input: TokenStream) -> TokenStream {
+//     println!("{:#?}", input);
+//
+//     let actual_type = quote::quote! { type_name::<#input[0]>() };
+//     let quote = quote::quote! { impls::impls!(#actual_type, ) };
+//     // let actual_type_of_generic = quote::quote! { impls::impls!(#input[0]: #input[2]) };
+//
+//     TokenStream::new()
+// }
 // #[proc_macro_derive(Generics)]
 // pub fn generics_macro(input: TokenStream) -> TokenStream {
 //     // Parse the input tokens into a syntax tree

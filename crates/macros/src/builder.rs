@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023. James Draycott <me@racci.dev>
+ * Copyright (c) 2023-2024. James Draycott <me@racci.dev>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -7,7 +7,8 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License along with this program.
  * If not, see <https://www.gnu.org/licenses/>.
@@ -15,7 +16,7 @@
 
 use proc_macro::TokenStream;
 use quote::{quote, ToTokens};
-use syn::{parse_quote, Block, Data, DeriveInput, Expr, Fields, Ident, Type};
+use syn::{Data, DeriveInput, Expr, Fields, GenericArgument, Ident, Type};
 
 pub fn builder(input: DeriveInput) -> TokenStream {
     // Parse the input tokens into a syntax tree
@@ -32,7 +33,7 @@ pub fn builder(input: DeriveInput) -> TokenStream {
 
         // Combine the generated code
         let generated_code = quote! {
-            impl lib::ui::Buildable for #struct_name {
+            impl lib::ui::builder::buildable::Buildable for #struct_name {
                 type Builder = #builder_name;
             }
 
@@ -54,16 +55,14 @@ fn generate_builder_struct(builder_name: &Ident, data: &syn::DataStruct) -> proc
         Err(err) => return err,
     };
 
-    let quoted_fields = fields.iter().map(|(name, ty, _, _)| {
-        quote! {
-            #name: Option<#ty>
-        }
-    });
+    let quoted_fields = fields.iter().map(|(name, ty, _, _)| quote!(#name: Option<#ty>));
 
     quote! {
         #[derive(Default)]
-        pub struct #builder_name {
+        pub struct #builder_name<'b> {
             #(#quoted_fields,)*
+
+            _phantom: std::marker::PhantomData<&'b ()>,
         }
     }
 }
@@ -79,73 +78,14 @@ fn generate_builder_impl(
         Err(err) => return err,
     };
 
-    let field_fillers = fields.iter().map(|(name, ty, _, default)| {
-        macro_rules! create_impls {
-            ($trait:path) => {
-                quote! {{
-                    trait DoesNotImpl<T> {
-                        const IMPLS: bool = false;
-
-                        // async fn fill(name: &str, filler: &lib::ui::Filler, default: Option<T>) -> ! {
-                        //     panic!("Field {} does not implement {}", name, stringify!($trait));
-                        // }
-                    }
-                    impl<T: ?Sized> DoesNotImpl for T {}
-
-                    struct Wrapper<T: ?Sized>(std::marker::PhantomData<T>);
-
-                    #[allow(dead_code)]
-                    impl<T: ?Sized + $trait> Wrapper<T> {
-                        const IMPLS: bool = true;
-                    }
-
-                    use #ty as _type;
-                    <Wrapper<_type>>::IMPLS
-                }}
-            };
-        }
-
-        let is_bool = ty.to_token_stream().to_string() == "bool";
-        let is_buildable = create_impls!(lib::ui::Buildable);
-        let is_from_str = create_impls!(std::str::FromStr);
-
-        let buildable_ident = Ident::new(&format!("{}_BUILDABLE", name), name.span());
-        let from_str_ident = Ident::new(&format!("{}_FROM_STR", name), name.span());
-
-        let default_expr = if default.is_none() {
-            quote! { None }
-        } else {
-            quote! { Some(#default) }
-        };
-
+    let field_fillers = fields.iter().map(|(name, ty, _, _)| {
         let filler = quote! {
-            <Wrapper<#ty>>::fill(stringify!(#name), filler, #default_expr).await?
+            self.#name = Some(lib::ui::builder::dummy::try_fill::<_, #ty>(unsafe { std::mem::transmute_copy(&#builder_name::DEFINITIONS[stringify!(#name)]) }, filler).await?);
         };
 
         filler.into_token_stream()
-
-        // let filler = if is_bool {
-        //     quote! { filler.fill_bool(stringify!(#name), #default_expr).await?; }
-        // } else {
-        //     quote! {
-        //         const #buildable_ident: bool = #is_buildable;
-        //         const #from_str_ident: bool = #is_from_str;
-        //
-        //         // if buildable_ident is true force transmute type to Buildable
-        //         if #buildable_ident {
-        //             use lib::ui::Buildable as _;
-        //
-        //             transmute::<_, &mut dyn lib::ui::Buildable>(filler).fill_input(stringify!(#name), #default_expr).await?;
-        //             let builder = <#ty as lib::ui::Buildable>::builder();
-        //             builder.fill(&mut filler).await?;
-        //         } else if #from_str_ident {
-        //             filler.fill_input(stringify!(#name), Some(#default_expr)).await?;
-        //         } else {
-        //             panic!("Field is not a bool or a builder");
-        //         }
-        //     }
-        // };
     });
+
     let field_builders = fields.iter().map(|(name, _, optional, default)| {
         if *optional {
             if let Some(default) = default {
@@ -159,26 +99,90 @@ fn generate_builder_impl(
             }
         } else {
             quote! {
-                #name: self.#name.take().ok_or_else(|| anyhow::anyhow!("Field {} is required", stringify!(#name)))?
+                #name: self.#name.take().ok_or_else(|| lib::ui::builder::error::BuildError::MissingField { field: stringify!(#name).to_string() })?
             }
         }
     });
 
+    let insert_definitions = fields.iter().map(|(name, ty, _, default)| {
+        println!("Finding definition pure type for {name:#} of type {ty:?}");
+
+        let default = if default.is_none() {
+            quote! { None }
+        } else {
+            quote! { Some(|| #default) }
+        };
+
+        let init = match ty.to_token_stream().to_string().as_str() {
+            "bool" => {
+                println!("Found bool");
+                quote! {
+                    lib::ui::builder::filler::TypeWrapped::Bool(PhantomData::<bool>, lib::ui::builder::filler::FillableDefinition {
+                        name: stringify!(#name),
+                        default: #default,
+                    })
+                }
+            }
+            "String" => {
+                println!("Found string");
+                quote! {
+                    lib::ui::builder::filler::TypeWrapped::String(PhantomData::<String>, lib::ui::builder::filler::FillableDefinition {
+                        name: stringify!(#name),
+                        default: #default,
+                    })
+                }
+            }
+            _ => {
+                println!("Found unknown struct, looking for impls");
+                quote! {
+                    if impls::impls!(#ty: lib::ui::builder::buildable::Buildable) {
+                        lib::ui::builder::filler::TypeWrapped::Buildable(PhantomData::<#ty>, lib::ui::builder::filler::FillableDefinition {
+                            name: stringify!(#name),
+                            default: #default,
+                        })
+                    } else if impls::impls!(#ty: std::str::FromStr) {
+                        lib::ui::builder::filler::TypeWrapped::String(PhantomData::<#ty>, lib::ui::builder::filler::FillableDefinition {
+                            name: stringify!(#name),
+                            default: #default,
+                        })
+                    } else {
+                        panic!("Unknown type");
+                    }
+                }
+            }
+        };
+
+        quote! {
+            map.insert(stringify!(#name), #init)
+        }
+    });
+
     quote! {
-        impl lib::ui::Builder for #builder_name {
+        impl<'b> lib::ui::builder::Builder for #builder_name<'b> {
             type Buildable = #struct_name;
 
-            async fn fill<F: lib::ui::builder::Filler>(&mut self, filler: &mut F) -> anyhow::Result<()> {
+            async fn fill<F: lib::ui::builder::filler::Filler>(mut self, filler: &mut F) -> lib::ui::builder::error::FillResult<Self> {
                 #(#field_fillers)*
 
-                Ok(())
+                Ok(self)
             }
 
-            async fn build(self) -> anyhow::Result<#struct_name> {
-                Ok(#struct_name {
+            async fn build(mut self) -> lib::ui::builder::error::BuildResult<Self::Buildable> {
+                Ok(Self::Buildable {
                     #(#field_builders,)*
                 })
             }
+        }
+
+        impl<'b> #builder_name<'b> {
+            // type FillableImpl = impl ?core::marker::Sized + std::any::Any;
+            const DEFINITIONS: std::collections::HashMap<&'b str, lib::ui::buildable::filler::TypeWrapped> = {
+                use std::collections::HashMap;
+
+                let mut map = HashMap::new();
+                #(#insert_definitions)*
+                map
+            };
         }
     }
 }
@@ -191,7 +195,7 @@ fn get_fields(
         Fields::Named(fields) => {
             let mut vec = Vec::new();
             for field in fields.named.iter() {
-                let ty = &field.ty;
+                let mut ty = &field.ty;
                 let ident = match &field.ident {
                     Some(ident) => ident,
                     None => {
@@ -203,17 +207,36 @@ fn get_fields(
 
                 let mut optional = false;
                 let mut default = None;
+
+                if let Type::Path(path) = ty {
+                    let segment = &path.path.segments[0];
+                    if segment.ident == "Option" {
+                        if let syn::PathArguments::AngleBracketed(args) = &segment.arguments {
+                            if args.args.len() != 1 {
+                                return Err(quote! {
+                                    compile_error!("Option type argument must have exactly one type argument");
+                                });
+                            }
+
+                            let arg = &args.args[0];
+                            if let GenericArgument::Type(inner_type) = arg {
+                                ty = inner_type;
+                                optional = true;
+                            } else {
+                                return Err(quote! {
+                                    compile_error!("Option type argument must have exactly one type argument");
+                                });
+                            };
+                        }
+                    }
+                }
+
                 for attr in &field.attrs {
                     if !attr.path().is_ident("builder") {
                         continue;
                     }
 
                     attr.parse_nested_meta(|meta| {
-                        if meta.path.is_ident("optional") {
-                            optional = true;
-                            return Ok(());
-                        }
-
                         if meta.path.is_ident("default") {
                             // get the default expr
                             match meta.value()?.parse()? {

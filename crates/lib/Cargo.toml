@@ -11,10 +11,13 @@ ui-cli = ["indicatif", "inquire", "tracing-indicatif"]
 ui-gui = ["iced", "iced_aw"]
 ui-repl = ["ui-cli", "shlex"]
 
+builder = []
 updater = ["self_update"]
 
 [dependencies]
-derive_builder = "0.12.0"
+impls = "1.0.3"
+macros = { path = "../macros" }
+
 # Cli & UI
 clap = { workspace = true }
 indicatif = { workspace = true, optional = true }
