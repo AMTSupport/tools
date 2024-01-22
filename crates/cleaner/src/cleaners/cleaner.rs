@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 James Draycott <me@racci.dev>
+ * Copyright (c) 2023-2024. James Draycott <me@racci.dev>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -7,11 +7,11 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License along with this program.
+ * If not, see <https://www.gnu.org/licenses/>.
  */
 
 use crate::cleaners::location::Location;
@@ -205,10 +205,16 @@ pub struct CleanedFile {
 pub enum MissedFile {
     #[error("The file {0} didn't pass all rule")]
     Rule(PathBuf, u64),
+
     #[error("The file {0} is currently in use by another process")]
     InUse(PathBuf, u64),
+
     #[error("Unable to remove file {0} due to missing permissions")]
     Permission(PathBuf, u64),
+
+    #[error("Unable to remove file {0} due to an invalid filename, filename length {}", .0.clone().into_os_string().len())]
+    Invalid(PathBuf, u64),
+
     #[error("Unable to remove file {0} due to an unknown error")]
     Other(PathBuf, u64, #[source] io::Error),
 }
@@ -225,7 +231,7 @@ pub(super) fn collect_locations(iter: Vec<Location>, rules: Rules) -> (Vec<PathB
 
     (
         tuple.0,
-        tuple.1.into_iter().map(|f| MissedFile::Rule(f.clone(), f.metadata().unwrap().len())).collect(),
+        tuple.1.into_iter().map(|f| MissedFile::Rule(f.clone(), f.metadata().map_or(0, |m| m.len()))).collect(),
     )
 }
 
@@ -264,6 +270,7 @@ pub(super) async fn clean_files(cleaner: Cleaner, files: Vec<PathBuf>, runtime: 
             Err(e) => match e.kind() {
                 io::ErrorKind::ExecutableFileBusy => Err(MissedFile::InUse(file, metadata.len())),
                 io::ErrorKind::PermissionDenied => Err(MissedFile::Permission(file, metadata.len())),
+                io::ErrorKind::NotFound => Err(MissedFile::Invalid(file, metadata.len())),
                 _ => {
                     warn!("Failed to remove file due to unknown error: {e}");
                     Err(MissedFile::Other(file, metadata.len(), e))

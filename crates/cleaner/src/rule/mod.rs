@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 James Draycott <me@racci.dev>
+ * Copyright (c) 2023-2024. James Draycott <me@racci.dev>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -7,11 +7,11 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License along with this program.
+ * If not, see <https://www.gnu.org/licenses/>.
  */
 
 pub(crate) mod age;
@@ -25,12 +25,16 @@ use std::path::{Path, PathBuf};
 use thiserror::Error;
 use tracing::{error, instrument, trace};
 
+pub type RuleResult<T> = Result<T, RuleError>;
 pub type Rules = Vec<Rule>;
 
 #[derive(Error, Debug)]
 pub enum RuleError {
-    #[error("getting metadata for {1}")]
+    #[error("getting metadata for {1}: {0}")]
     MetadataError(#[source] io::Error, PathBuf),
+
+    #[error("parsing time {1}: {0}")]
+    TimeMetaError(#[source] Box<dyn std::error::Error>, PathBuf),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -54,9 +58,9 @@ impl Rule {
 }
 
 #[instrument(level = "TRACE")]
-pub(super) fn meta(path: &Path) -> Result<Metadata> {
+pub(super) fn meta(path: &Path) -> RuleResult<Metadata> {
     path.metadata()
         .inspect(|m| trace!("Metadata acquired for {}: {:?}", path.display(), m))
         .inspect_err(|_err| error!("Failed to get metadata for {}", path.display()))
-        .map_err(|err| RuleError::MetadataError(err, path.to_path_buf()).into())
+        .map_err(|err| RuleError::MetadataError(err, path.to_path_buf()))
 }

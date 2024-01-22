@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 James Draycott <me@racci.dev>
+ * Copyright (c) 2023-2024. James Draycott <me@racci.dev>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -7,11 +7,11 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License along with this program.
+ * If not, see <https://www.gnu.org/licenses/>.
  */
 
 use crate::rule::{Rule, RuleError};
@@ -35,7 +35,7 @@ pub(super) fn test(rule: Rule, path: &Path) -> bool {
     let meta = match super::meta(path) {
         Ok(m) => m,
         Err(err) => {
-            error!("Failed to get file {} metadata: {err}", path.display());
+            error!("{err:#}");
             return false;
         }
     };
@@ -48,9 +48,9 @@ pub(super) fn test(rule: Rule, path: &Path) -> bool {
     }
     .inspect(|date| trace!("File {} was {date:?}", path.display()))
     .inspect_err(|err| error!("Failed to get file {} date: {err}", path.display()))
-    .map(|d| d.elapsed().unwrap())
-    .map(|d| Duration::from_std(d).unwrap())
-    .map_err(|err| RuleError::MetadataError(err, path.to_path_buf()));
+    .map_err(|err| RuleError::MetadataError(err, path.to_path_buf()))
+    .and_then(|d| d.elapsed().map_err(|err| RuleError::TimeMetaError(Box::new(err), path.to_path_buf())))
+    .and_then(|d| Duration::from_std(d).map_err(|err| RuleError::TimeMetaError(Box::new(err), path.to_path_buf())));
 
     let from_date = match accessed {
         Ok(d) => d,

@@ -10,6 +10,11 @@ description = "A cleaning tool written in Rust"
 name = "cleaner"
 path = "src/main.rs"
 
+[features]
+default = ["ui-cli"]
+
+ui-cli = ["lib/ui-cli"]
+
 [dependencies]
 lib = { path = "../lib" }
 macros = { path = "../macros" }
