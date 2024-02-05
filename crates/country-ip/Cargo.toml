@@ -16,6 +16,8 @@ default = ["ui-cli"]
 ui-cli = ["lib/ui-cli", "indicatif", "tracing-indicatif"]
 #ui-gui = ["lib/ui-gui", "iced", "iced_aw"]
 
+updater = ["lib/updater"]
+
 [dependencies]
 lib = { path = "../lib" }
 macros = { path = "../macros" }

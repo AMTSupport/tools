@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 James Draycott <me@racci.dev>
+ * Copyright (c) 2024. James Draycott <me@racci.dev>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -7,24 +7,27 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License along with this program.
+ * If not, see <https://www.gnu.org/licenses/>.
  */
 
-use tracing::instrument;
+use tracing::{error, instrument};
 
-#[instrument(level = "TRACE", ret)]
+#[instrument(level = "TRACE")]
 pub(crate) fn needs_reboot() -> bool {
     use registry::Hive;
     use registry::Security;
 
-    let regkey = Hive::LocalMachine.open(
+    let Ok(regkey) = Hive::LocalMachine.open(
         r"SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update",
         Security::Read,
-    )?;
+    ) else {
+        error!("Failed to open registry key for Windows Update");
+        return false;
+    };
 
     regkey.value("RebootRequired").is_ok()
 }

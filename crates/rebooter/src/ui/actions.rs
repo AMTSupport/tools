@@ -1,9 +1,36 @@
+/*
+ * Copyright (c) 2024. James Draycott <me@racci.dev>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with this program.
+ * If not, see <https://www.gnu.org/licenses/>.
+ */
+
 use crate::reason;
-use clap::Subcommand;
+use clap::Parser;
 use reason::Reason;
 
-#[derive(Subcommand)]
+#[derive(Debug, Parser)]
 pub enum Action {
+    /// Test if the reasons would be valid and require a reboot.
+    Query {
+        #[arg(default_values_t = Reason::get_variants(), value_enum)]
+        reasons: Vec<Reason>,
+    },
+
     /// Test if the reason would be valid and require a reboot.
-    Test(Reason),
+    ///
+    /// If the reason is valid, schedule a reboot for the given time.
+    QueryAndSchedule {
+        #[arg(default_values_t = Reason::get_variants(), value_enum)]
+        reasons: Vec<Reason>,
+    },
 }

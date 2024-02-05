@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024. James Draycott <me@racci.dev>
+ * Copyright (c) 2023-2024. James Draycott <me@racci.dev>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,8 +14,9 @@
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
-pub mod endpoint;
-#[cfg(feature = "endpoint/hudu")]
-pub mod hudu;
-#[cfg(feature = "endpoint/n-able")]
-pub mod nable;
+use std::collections::HashMap;
+
+pub struct TemplateCheck {
+    id: String,
+    arguments: HashMap<String, String>,
+}

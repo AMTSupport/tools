@@ -36,12 +36,13 @@ tracing-appender = { workspace = true }
 thiserror = { workspace = true }
 anyhow = { workspace = true }
 
-uptime_lib = "0.2.2"
+uptime_lib = "0.3.0"
 sysexits = "0.7.1"
-planif = "0.2"
+planif = "1.0.0"
+notify-rust = "4.10.0"
 
 [target.'cfg(windows)'.dependencies]
-planif = "0.2"
+planif = "1.0.0"
 registry = "1.2.3"
 
 [dev-dependencies]

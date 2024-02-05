@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024. James Draycott <me@racci.dev>
+ * Copyright (c) 2023-2024. James Draycott <me@racci.dev>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,8 +14,23 @@
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
-pub mod endpoint;
-#[cfg(feature = "endpoint/hudu")]
-pub mod hudu;
-#[cfg(feature = "endpoint/n-able")]
-pub mod nable;
+pub mod check;
+pub mod task;
+
+use lib::named::Named;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+
+pub struct Template {
+    common_name: String,
+    checks: Vec<check::TemplateCheck>,
+    tasks: Vec<task::TemplateTask>,
+}
+
+pub trait UniqueName: Named {
+    fn unique_name(&self) -> String {
+        format!("{}-{}", <Self as Named>::NAME, self.unique_suffix())
+    }
+
+    fn unique_suffix(&self) -> String;
+}

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 James Draycott <me@racci.dev>
+ * Copyright (c) 2024. James Draycott <me@racci.dev>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -7,15 +7,16 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License along with this program.
+ * If not, see <https://www.gnu.org/licenses/>.
  */
 
 use super::oneshot::OneshotAction;
 use lib::cli::Flags as CommonFlags;
+use lib::populate;
 use lib::ui::cli::error::CliError;
 use lib::ui::cli::oneshot::OneshotHandler;
 use lib::ui::cli::{CliResult, CliUi};
@@ -34,9 +35,7 @@ impl OneshotHandler for CountryIPCli {
     type Action = OneshotAction;
 
     async fn handle(&mut self, command: Self::Action, flags: &CommonFlags) -> CliResult<()> {
-        if self._guard.is_none() {
-            self._guard = Some(lib::log::init(env!("CARGO_PKG_NAME"), flags));
-        }
+        populate!(self, flags);
 
         let span = info_span!("feedback");
         span.pb_set_style(&lib::ui::cli::progress::style_spinner());

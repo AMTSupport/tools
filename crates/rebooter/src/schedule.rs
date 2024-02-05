@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 James Draycott <me@racci.dev>
+ * Copyright (c) 2024. James Draycott <me@racci.dev>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -7,25 +7,25 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License along with this program.
+ * If not, see <https://www.gnu.org/licenses/>.
  */
 
 use crate::reason::Reason;
 use anyhow::Result;
-use chrono::{DateTime, Local};
+use chrono::NaiveDateTime;
 
 #[derive(Debug)]
 pub struct ScheduledReboot {
     reason: Reason,
-    when: DateTime<Local>,
+    when: NaiveDateTime,
 }
 
 impl ScheduledReboot {
-    pub fn new(reason: Reason, when: DateTime<Local>) -> Self {
+    pub fn new(reason: Reason, when: NaiveDateTime) -> Self {
         Self { reason, when }
     }
 
@@ -36,12 +36,18 @@ impl ScheduledReboot {
         use planif::schedule_builder::{Action, ScheduleBuilder};
         use planif::settings::Settings;
 
-        let sb = ScheduleBuilder::new()?
+        let when = DateTime::<Local>::from_naive_utc_and_offset(self.when, Local::now().offset().fix());
+        let sb = ScheduleBuilder::new()
+            .unwrap()
             .create_time()
-            .author("Rebooter")?
-            .description(&format!("Rebooter: {}", self.reason))?
-            .trigger("Time Trigger", true)?
-            .start_boundary(&*self.when.format("%Y-%M-%DT%H:%M:%S").to_string())?
+            .author("Rebooter")
+            .unwrap()
+            .description(&format!("Rebooter: {}", self.reason))
+            .unwrap()
+            .trigger("Time Trigger", true)
+            .unwrap()
+            .start_boundary(&*when.format("%Y-%M-%DT%H:%M:%S").to_string())
+            .unwrap()
             .settings(Settings {
                 allow_demand_start: Some(true),
                 allow_hard_terminate: Some(false),
@@ -63,19 +69,42 @@ impl ScheduledReboot {
                 restart_interval: None,
                 start_when_available: Some(true),
                 xml_text: None,
-            })?
+            })
+            .unwrap()
             .action(Action::new(
                 "exec",
                 "shutdown.exe",
                 "C:\\Windows\\System32",
                 &format!("/r /t 0 /c \"{}\"", self.reason),
-            ))?
-            .build()?
-            .register("Rebooter", TaskCreationFlags::CreateOrUpdate.into())?;
+            ))
+            .unwrap()
+            .build()
+            .unwrap()
+            .register("Rebooter", TaskCreationFlags::CreateOrUpdate as i32)
+            .unwrap();
+
+        Ok(())
     }
 
     #[cfg(not(windows))]
     pub fn submit(&self) -> Result<()> {
         unimplemented!("Scheduling is not supported on this platform")
+    }
+
+    pub fn notify(&self) -> Result<()> {
+        use notify_rust::Notification;
+        use notify_rust::NotificationHint;
+        use notify_rust::NotificationUrgency;
+
+        Notification::new()
+            .summary("Rebooter")
+            .body(&format!("Rebooting in 5 minutes: {}", self.reason))
+            .icon("system-reboot")
+            .hint(NotificationHint::Category("device".into()))
+            .hint(NotificationHint::Urgency(NotificationUrgency::Critical))
+            .timeout(5000)
+            .show()?;
+
+        Ok(())
     }
 }

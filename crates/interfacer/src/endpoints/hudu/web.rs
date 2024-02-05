@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 James Draycott <me@racci.dev>
+ * Copyright (c) 2024. James Draycott <me@racci.dev>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -7,11 +7,11 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License along with this program.
+ * If not, see <https://www.gnu.org/licenses/>.
  */
 
 use crate::hudu::structs::company::{Companies, Company};
@@ -65,11 +65,8 @@ where
         headers.insert(API_HEADER, api_key.parse()?);
         headers.insert(header::ACCEPT, "application/json; charset=utf-8".parse()?);
 
-        let base_client = reqwest::Client::builder()
-            .user_agent(crate::AGENT)
-            .default_headers(headers)
-            .gzip(true)
-            .build()?;
+        let base_client =
+            reqwest::Client::builder().user_agent(crate::AGENT).default_headers(headers).gzip(true).build()?;
 
         let client = reqwest_middleware::ClientBuilder::new(base_client)
             .with(Cache(HttpCache {
@@ -128,10 +125,9 @@ where
             .context(format!("Send rest request for company {id}"))
             .and_then(check_auth)
         {
-            Ok(response) => response
-                .json::<Company>()
-                .await
-                .context(format!("Deserialise response for company {id}", id = id)),
+            Ok(response) => {
+                response.json::<Company>().await.context(format!("Deserialise response for company {id}", id = id))
+            }
             Err(e) => {
                 error!("Error getting company {id}: {:#?}", e);
                 Err(anyhow::anyhow!("Error getting company {id}", id = id))
@@ -164,11 +160,9 @@ where
 
     // TODO :: Stream
     loop {
-        let builder =
-            builder.try_clone().context("Clone request builder")?.query(&[("page", &page)]);
+        let builder = builder.try_clone().context("Clone request builder")?.query(&[("page", &page)]);
 
-        let response =
-            builder.send().await.context(format!("Send paginated request for page {page}"))?;
+        let response = builder.send().await.context(format!("Send paginated request for page {page}"))?;
 
         #[derive(serde::Deserialize)]
         struct VecHandler<I> {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024. James Draycott <me@racci.dev>
+ * Copyright (c) 2023-2024. James Draycott <me@racci.dev>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,22 +14,29 @@
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
-use chrono::Duration;
-use std::sync::LazyLock;
-use tracing::{error, instrument};
+use self::super::UniqueName;
+use std::collections::HashMap;
 
-static MAXIMUM_UPTIME: LazyLock<Duration> = LazyLock::new(|| Duration::minutes(1));
+pub struct TemplateTask {
+    /// The unique ID of the task within N-Able.
+    id: String,
 
-#[instrument(level = "TRACE", ret)]
-pub(crate) fn needs_reboot(maximum: Option<&Duration>) -> bool {
-    let Ok(Ok(uptime)) = uptime_lib::get()
-        .inspect_err(|err| {
-            error!("failed to get uptime: {err}");
-        })
-        .map(Duration::from_std)
-    else {
-        return false;
-    };
+    /// The arguments that are passed to the task.
+    arguments: HashMap<String, String>,
 
-    uptime > *maximum.unwrap_or(&MAXIMUM_UPTIME)
+    /// The schedule of the task.
+    schedule: TemplateTaskSchedule,
+
+    unique_name: fn(&Self) -> String,
+}
+
+impl UniqueName for TemplateTask {
+    fn unique_suffix(&self) -> String {
+        (self.unique_name)(self)
+    }
+}
+
+pub struct TemplateTaskSchedule {
+    days: u8,
+    time: u16,
 }

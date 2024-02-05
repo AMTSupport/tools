@@ -8,10 +8,11 @@ name = "interfacer"
 path = "src/main.rs"
 
 [features]
-default = ["ui-cli"]
+default = ["ui-cli", "endpoint-hudu", "endpoint-nable"]
 
-#ui-tui = ["ratatouille", "crossterm"]
 ui-cli = ["indicatif", "inquire"]
+endpoint-hudu = []
+endpoint-nable = []
 
 [dependencies]
 lib = { path = "../lib" }
