@@ -1,14 +1,16 @@
 {
-  description = "Foo Bar Rust Project";
+  description = "Tools Rust Project";
 
   nixConfig = {
     extra-substituters = [
       "https://amt.cachix.org"
       "https://racci.cachix.org"
+      "https://nix-community.cachix.org"
     ];
     extra-trusted-public-keys = [
       "amt.cachix.org-1:KiJsXTfC7rGJc4DmNlLA56caUUWuc8YsOfzpPgredJI="
       "racci.cachix.org-1:Kl4opLxvTV9c77DpoKjUOMLDbCv6wy3GVHWxB384gxg="
+      "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
      ];
   };
 
@@ -22,12 +24,18 @@
     fenix = { url = "github:nix-community/fenix"; inputs.nixpkgs.follows = "nixpkgs"; };
 
     cocogitto = { url = "github:DaRacci/cocogitto"; inputs.nixpkgs.follows = "nixpkgs"; };
+    nix-config = { url = "github:DaRacci/nix-config"; inputs = {
+        flake-utils = { url = "github:numtide/flake-utils"; inputs.systems.follows = "systems"; };
+        fenix = { url = "github:nix-community/fenix"; inputs.nixpkgs.follows = "nixpkgs"; };
+        cocogitto = { url = "github:DaRacci/cocogitto"; inputs.nixpkgs.follows = "nixpkgs"; };
+      };
+    };
   };
 
-  outputs = { nixpkgs, flake-utils, crane, fenix, cocogitto, ... }@inputs:
+  outputs = { nixpkgs, flake-utils, crane, fenix, cocogitto, nix-config, ... }@inputs:
     let
       # TODO - Darwin support (error: don't yet have a `targetPackages.darwin.LibsystemCross for x86_64-apple-darwin`)
-      targets = [ "x86_64-linux" ] ++ [ "x86_64-windows" ];
+      targets = [ "x86_64-linux" "x86_64-windows" ];
       onAll = localSystem: f: (builtins.foldl' (attr: target: attr // (f target)) { } targets);
     in
     flake-utils.lib.eachDefaultSystem (localSystem:
@@ -64,9 +72,7 @@
           };
         };
 
-        devShells = {
-          default = pkgs.callPackage ./shell.nix { inherit localSystem flake-utils crane fenix cocogitto; };
-        };
+        devShells.default = nix-config.devShells.${localSystem}.rust-nightly;
 
         checks =
           let
