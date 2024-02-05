@@ -218,15 +218,15 @@ impl Tag {
 
 builder!(AutoPrune = [
     /// How many hours of backups should be kept.
-    hours => usize = 0,
+    hours => usize = 12,
     /// How many days of backups should be kept.
-    days => usize,
+    days => usize = 7,
     /// How many per week backups should be kept.
-    weeks => usize,
+    weeks => usize = 2,
     /// How many per month backups should be kept.
-    months => usize,
+    months => usize = 1,
     /// The minimum number of backups to keep ignoring the keep_for duration.
-    keep_latest => usize
+    keep_latest => usize = 5
 ]);
 
 impl FromStr for AutoPrune {
