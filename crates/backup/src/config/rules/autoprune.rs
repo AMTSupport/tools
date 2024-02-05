@@ -189,9 +189,9 @@ impl Tag {
             return (vec![Tag::None], str);
         }
 
-        let tag_prefix = tags.iter().fold(String::new(), |combinding, next| {
-            let mut str = combinding.clone();
-            if !combinding.is_empty() {
+        let tag_prefix = tags.iter().fold(String::new(), |combining, next| {
+            let mut str = combining.clone();
+            if !combining.is_empty() {
                 str.push('-');
             }
 
