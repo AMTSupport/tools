@@ -14,24 +14,13 @@
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
-#![feature(path_file_prefix)]
-#![feature(type_alias_impl_trait)]
-#![feature(trait_alias)]
-#![feature(exit_status_error)]
-#![feature(unwrap_infallible)]
-#![feature(slice_pattern)]
-#![feature(let_chains)]
-#![feature(result_option_inspect)]
-#![feature(thin_box)]
-#![feature(async_closure)]
-#![feature(file_create_new)]
-#![feature(const_trait_impl)]
-#![feature(lazy_cell)]
-#![feature(result_flattening)]
-#![feature(fn_traits)]
-#![feature(stmt_expr_attributes)]
-#![feature(exact_size_is_empty)]
+use crate::generate_object;
 
-pub mod config;
-pub mod sources;
-pub mod ui;
+generate_object!(Account {
+    account_name > a => String > String {
+
+    },
+    [ name: String, uuid: String ] for tags: Vec<String> => {
+
+    },
+});

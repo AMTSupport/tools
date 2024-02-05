@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 James Draycott <me@racci.dev>
+ * Copyright (c) 2024. James Draycott <me@racci.dev>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -7,33 +7,29 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License along with this program.
+ * If not, see <https://www.gnu.org/licenses/>.
  */
 
 use crate::config::backend::Backend;
 use crate::config::config::Config;
-use crate::config::rules::autoprune::AutoPrune;
-use crate::config::rules::Rules;
 use crate::config::runtime::Runtime;
 use crate::sources::exporter::ExporterSource;
+use crate::ui::cli::ui::BackupCli;
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
-use inquire::validator::Validation;
 use inquire::{PathFilter, PathSelect, PathSelectionMode};
 use lib::pathed::ensure_directory_exists;
 use lib::ui::cli::continue_loop;
 use lib::ui::cli::progress;
+use lib::ui::UiBuildableFiller;
 use macros::CommonFields;
 use std::env;
 use std::path::PathBuf;
-use std::str::FromStr;
 use tracing::{error, instrument, trace};
-use lib::ui::UiBuidableFiller;
-use crate::ui::cli::ui::BackupCli;
 
 #[derive(Debug, Parser, CommonFields)]
 pub enum Action {
@@ -89,7 +85,7 @@ impl Action {
 
         match self {
             Action::Init { .. } => {
-                runtime.config.rules = BackupCli::fill()?;
+                runtime.config.rules = BackupCli::fill().await?;
                 runtime.config.exporters = new_exporters(runtime).await?;
                 runtime.config.mutated = true;
 
@@ -100,7 +96,7 @@ impl Action {
                 // TODO :: Use builder stuff for this
 
                 if Confirm::new("Do you want to modify the rules?").with_default(true).prompt()? {
-                    runtime.config.rules = new_rules()?;
+                    runtime.config.rules = BackupCli::fill().await?;
                     runtime.config.mutated = true;
                 }
 
@@ -209,40 +205,40 @@ pub(crate) async fn new_exporters(runtime: &Runtime) -> Result<Vec<Backend>> {
     Ok(exporters)
 }
 
-#[instrument(level = "TRACE", ret, err)]
-fn new_rules() -> Result<Rules> {
-
-
-    let autoprune = if inquire::Confirm::new("Do you want to enable auto-pruning?").with_default(true).prompt()? {
-        let mut autoprune = AutoPrune { ..Default::default() };
-
-        if let Ok(days) = inquire::Text::new("How long do you want to retain backups for?")
-            .with_default(&autoprune.days.to_string())
-            .with_validator(|v: &_| match usize::from_str(v).is_ok() {
-                true => Ok(Validation::Valid),
-                false => Ok(Validation::Invalid("Please enter a valid number of days".into())),
-            })
-            .prompt()
-        {
-            autoprune.days = usize::from_str(&days)?;
-        }
-
-        if let Ok(minimum) =
-            inquire::Text::new("How many backups do you want to retain at a minimum, ignoring the age of the backup?")
-                .with_default(&autoprune.keep_latest.to_string())
-                .with_validator(|v: &_| match usize::from_str(v).is_ok() {
-                    true => Ok(Validation::Valid),
-                    false => Ok(Validation::Invalid("Please enter a valid number of backups".into())),
-                })
-                .prompt()
-        {
-            autoprune.keep_latest = usize::from_str(&minimum)?;
-        }
-
-        Some(autoprune)
-    } else {
-        None
-    };
-
-    Ok(Rules { auto_prune: autoprune })
-}
+// #[instrument(level = "TRACE", ret, err)]
+// fn new_rules() -> Result<Rules> {
+//
+//
+//     let autoprune = if inquire::Confirm::new("Do you want to enable auto-pruning?").with_default(true).prompt()? {
+//         let mut autoprune = AutoPrune { ..Default::default() };
+//
+//         if let Ok(days) = inquire::Text::new("How long do you want to retain backups for?")
+//             .with_default(&autoprune.days.to_string())
+//             .with_validator(|v: &_| match usize::from_str(v).is_ok() {
+//                 true => Ok(Validation::Valid),
+//                 false => Ok(Validation::Invalid("Please enter a valid number of days".into())),
+//             })
+//             .prompt()
+//         {
+//             autoprune.days = usize::from_str(&days)?;
+//         }
+//
+//         if let Ok(minimum) =
+//             inquire::Text::new("How many backups do you want to retain at a minimum, ignoring the age of the backup?")
+//                 .with_default(&autoprune.keep_latest.to_string())
+//                 .with_validator(|v: &_| match usize::from_str(v).is_ok() {
+//                     true => Ok(Validation::Valid),
+//                     false => Ok(Validation::Invalid("Please enter a valid number of backups".into())),
+//                 })
+//                 .prompt()
+//         {
+//             autoprune.keep_latest = usize::from_str(&minimum)?;
+//         }
+//
+//         Some(autoprune)
+//     } else {
+//         None
+//     };
+//
+//     Ok(Rules { auto_prune: autoprune })
+// }

@@ -18,6 +18,7 @@ ui-cli = ["lib/ui-cli"]
 [dependencies]
 lib = { path = "../lib" }
 macros = { path = "../macros" }
+impls = "1.0.3"
 
 # Runtimes
 tokio = { workspace = true }

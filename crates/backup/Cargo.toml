@@ -1,20 +1,22 @@
 [package]
 name = "backup"
 version = "0.1.0"
-edition = "2021"
 categories = ["command-line-utilities", "system", "utilities", "cli"]
 keywords = ["backup"]
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+license-file.workspace = true
 
 [[bin]]
 name = "backup"
 path = "src/main.rs"
 
 [features]
-default = ["ui-cli", "sources-s3", "sources-bitwarden", "sources-1password"]
+default = ["ui-cli", "sources-s3", "sources-bitwarden"]
 binary-downloader = ["bytes", "rand", "const_format"]
 
 ui-cli = ["indicatif", "inquire", "lib/ui-cli"]
-#ui-tui = ["ratatui", "crossterm", "lib/ui-tui"]
 
 sources-s3 = ["opendal", "futures"]
 sources-bitwarden = ["binary-downloader"]

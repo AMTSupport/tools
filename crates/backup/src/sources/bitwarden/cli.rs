@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024. James Draycott <me@racci.dev>
+ * Copyright (c) 2023-2024. James Draycott <me@racci.dev>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,24 +14,17 @@
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
-#![feature(path_file_prefix)]
-#![feature(type_alias_impl_trait)]
-#![feature(trait_alias)]
-#![feature(exit_status_error)]
-#![feature(unwrap_infallible)]
-#![feature(slice_pattern)]
-#![feature(let_chains)]
-#![feature(result_option_inspect)]
-#![feature(thin_box)]
-#![feature(async_closure)]
-#![feature(file_create_new)]
-#![feature(const_trait_impl)]
-#![feature(lazy_cell)]
-#![feature(result_flattening)]
-#![feature(fn_traits)]
-#![feature(stmt_expr_attributes)]
-#![feature(exact_size_is_empty)]
+use crate::sources::bitwarden::BitWardenCore;
+use crate::sources::getter::CliGetter;
+use serde::{Deserialize, Serialize};
 
-pub mod config;
-pub mod sources;
-pub mod ui;
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase", tag = "status")]
+enum LoginStatus {
+    Unauthenticated,
+    Authenticated(String),
+}
+
+impl CliGetter<BitWardenCore, LoginStatus, [&'static str; 1]> for LoginStatus {
+    const ARGS: [&'static str; 1] = ["status"];
+}

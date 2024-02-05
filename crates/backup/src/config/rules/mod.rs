@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 James Draycott <me@racci.dev>
+ * Copyright (c) 2024. James Draycott <me@racci.dev>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -7,11 +7,11 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License along with this program.
+ * If not, see <https://www.gnu.org/licenses/>.
  */
 
 pub mod autoprune;
@@ -25,13 +25,7 @@ use lib::builder;
 use std::path::Path;
 use tracing::trace;
 
-// #[derive(Default, Debug, PartialEq, Clone, Serialize, Deserialize)]
-// pub struct Rules {
-//     pub auto_prune: Option<AutoPrune>,
-// }
-
-builder!(Rules = [
-    other_rule => String,
+builder!(#[derive(Default)] Rules = [
     [auto_prune] => AutoPrune,
 ]);
 
