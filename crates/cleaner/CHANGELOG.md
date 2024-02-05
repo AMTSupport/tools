@@ -2,6 +2,15 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [cleaner-v0.1.2](https://github.com/AMTSupport/tools/compare/cleaner-v0.1.1..cleaner-v0.1.2) - 2024-02-05
+#### <!-- 1 -->🐛 Bug Fixes
+- unwrap errors and crashing - ([46a6080](https://github.com/AMTSupport/tools/commit/46a60808fe0fcffe908e262d9015f312ebcf0a09)) - DaRacci
+#### <!-- 9 -->⚙️ Miscellaneous Tasks
+- misc changes and working stuff - ([96193d0](https://github.com/AMTSupport/tools/commit/96193d0f13605dde84739df57ed11c011ffab799)) - DaRacci
+- Add README.md - ([9c0ac05](https://github.com/AMTSupport/tools/commit/9c0ac05241d27c2f1b7e33cb54f5ef89d3114f17)) - DaRacci
+
+- - -
+
 ## [cleaner-v0.1.1](https://github.com/AMTSupport/tools/compare/backup-v0.1.0..cleaner-v0.1.1) - 2023-10-09
 #### <!-- 2 -->🚜 Refactor
 - log at warn so quite output works with it. - ([2b22073](https://github.com/AMTSupport/tools/commit/2b22073f70f23cdd858de297e003f4680fcf79c4)) - DaRacci
