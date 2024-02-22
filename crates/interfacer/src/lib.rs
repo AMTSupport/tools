@@ -14,12 +14,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#![feature(async_fn_in_trait)]
 #![feature(async_closure)]
 #![feature(lazy_cell)]
-#![feature(type_name_of_val)]
 #![feature(once_cell_try)]
-#![feature(inherent_associated_types)]
 
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Deserializer};

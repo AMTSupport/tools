@@ -16,7 +16,6 @@
 
 #![feature(async_closure)]
 #![feature(lazy_cell)]
-#![feature(async_fn_in_trait)]
 
 use anyhow::Result;
 use clap::{Parser, Subcommand, ValueEnum};

@@ -19,7 +19,6 @@
 #![feature(const_option)]
 #![feature(auto_traits)]
 #![feature(negative_impls)]
-#![feature(result_option_inspect)]
 #![feature(associated_type_defaults)]
 #![feature(trait_alias)]
 #![feature(trivial_bounds)]

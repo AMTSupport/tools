@@ -15,9 +15,7 @@
  */
 
 #![feature(proc_macro_diagnostic)]
-#![feature(result_option_inspect)]
 #![feature(downcast_unchecked)]
-#![feature(type_name_of_val)]
 #![feature(cfg_eval)]
 #![feature(cfg_match)]
 #![feature(assert_matches)]

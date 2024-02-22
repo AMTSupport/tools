@@ -18,7 +18,6 @@
 #![feature(assert_matches)]
 #![feature(type_alias_impl_trait)]
 #![feature(associated_type_defaults)]
-#![feature(async_fn_in_trait)]
 
 use std::sync::Arc;
 // use futures_util::StreamExt;

@@ -15,7 +15,6 @@
  */
 
 #![feature(exclusive_range_pattern)]
-#![feature(async_fn_in_trait)]
 
 use anyhow::Result;
 use lib::ui::cli::CliUi;
