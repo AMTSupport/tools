@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024. James Draycott <me@racci.dev>
+ * Copyright (C) 2023-2024. James Draycott me@racci.dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -10,8 +10,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program.
- * If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
 use crate::cleaners::location::Location;
@@ -31,18 +31,18 @@ use tracing::{instrument, trace, warn};
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Delegation, EnumVariants, ValueEnum, EnumNames)]
 #[delegate(trait = CleanerInternal)]
 pub enum Cleaner {
-    #[delegate(path = crate::cleaners::impls::log::LogCleaner)]
-    Logs,
     #[delegate(path = crate::cleaners::impls::browser::BrowserCleaner)]
     Browsers,
-    #[delegate(path = crate::cleaners::impls::shader::ShaderCleaner)]
-    Shaders,
-    #[delegate(path = crate::cleaners::impls::thumbnail::ThumbnailCleaner)]
-    Thumbnails,
-    #[delegate(path = crate::cleaners::impls::temp::TempCleaner)]
-    Temp,
     #[delegate(path = crate::cleaners::impls::downloads::DownloadsCleaner)]
     Downloads,
+    #[delegate(path = crate::cleaners::impls::log::LogCleaner)]
+    Logs,
+    #[delegate(path = crate::cleaners::impls::shader::ShaderCleaner)]
+    Shaders,
+    #[delegate(path = crate::cleaners::impls::temp::TempCleaner)]
+    Temp,
+    #[delegate(path = crate::cleaners::impls::thumbnail::ThumbnailCleaner)]
+    Thumbnails,
     #[delegate(path = crate::cleaners::impls::trash::TrashCleaner)]
     Trash,
     // Environment,
@@ -236,10 +236,10 @@ pub(super) fn collect_locations(iter: Vec<Location>, rules: Rules) -> (Vec<PathB
 }
 
 #[instrument(level = "TRACE", skip(files, runtime))]
-pub(super) async fn clean_files(cleaner: Cleaner, files: Vec<PathBuf>, runtime: &'static Runtime) -> CleanupResult {
+pub(super) async fn clean_files(cleaner: &Cleaner, files: Vec<PathBuf>, runtime: &'static Runtime) -> CleanupResult {
     if files.is_empty() {
         return CleanupResult::Skipped {
-            cleaner,
+            cleaner: *cleaner,
             reason: SkipReason::NoFiles,
         };
     }
@@ -287,9 +287,12 @@ pub(super) async fn clean_files(cleaner: Cleaner, files: Vec<PathBuf>, runtime: 
     }
 
     match missed.is_empty() {
-        true => CleanupResult::Cleaned { cleaner, cleaned },
+        true => CleanupResult::Cleaned {
+            cleaner: *cleaner,
+            cleaned,
+        },
         false => CleanupResult::Partial {
-            cleaner,
+            cleaner: *cleaner,
             cleaned,
             missed,
         },
@@ -297,7 +300,7 @@ pub(super) async fn clean_files(cleaner: Cleaner, files: Vec<PathBuf>, runtime: 
 }
 
 pub(super) async fn basic_files<C: CleanerInternal>(
-    relational: Cleaner,
+    relational: &Cleaner,
     cleaner: &C,
     runtime: &'static Runtime,
 ) -> CleanupResult {

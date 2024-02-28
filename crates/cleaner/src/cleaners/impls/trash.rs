@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 James Draycott <me@racci.dev>
+ * Copyright (C) 2024. James Draycott me@racci.dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -7,11 +7,11 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
 use crate::cleaners::cleaner::{basic_files, Cleaner, CleanerInternal, CleanupResult};
@@ -38,7 +38,6 @@ impl CleanerInternal for TrashCleaner {
 
     #[cfg(windows)]
     fn locations(&self) -> Vec<Location> {
-        use super::{PROGRAM_DATA, WINDIR};
         use lib::fs::DRIVES;
 
         DRIVES
@@ -48,6 +47,6 @@ impl CleanerInternal for TrashCleaner {
     }
 
     async fn clean(&self, runtime: &'static Runtime) -> CleanupResult {
-        basic_files(Cleaner::Trash, self, runtime).await
+        basic_files(&Cleaner::Trash, self, runtime).await
     }
 }
