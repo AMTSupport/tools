@@ -23,7 +23,6 @@ use async_trait::async_trait;
 #[derive(Default, Debug, Clone, Copy)]
 pub struct ShaderCleaner;
 
-// TODO - Browser Shader Cache
 #[async_trait]
 impl CleanerInternal for ShaderCleaner {
     fn rules(&self) -> Rules {
@@ -43,7 +42,17 @@ impl CleanerInternal for ShaderCleaner {
             Location::Sub(&USERS, "AppData/Local/NVIDIA/DXCache/*".into()),
             Location::Sub(&USERS, "AppData/Local/D3DSCache/*".into()),
             // Chromium GPU Cache
+            Location::Sub(&USERS, "AppData/Local/Google/Chrome/User Data/GrShaderCache/*".into()),
+            Location::Sub(
+                &USERS,
+                "AppData/Local/Google/Chrome/User Data/Default/GPUCache/*".into(),
+            ),
             Location::Sub(&USERS, "AppData/Roaming/Microsoft/Teams/GPUCache/*".into()),
+            // Firefox GPU Cache
+            Location::Sub(
+                &USERS,
+                "AppData/Roaming/Mozilla/Firefox/Profiles/*/shader-cache/*".into(),
+            ),
         ]
     }
 
