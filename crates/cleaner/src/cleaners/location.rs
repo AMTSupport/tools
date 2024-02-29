@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024. James Draycott <me@racci.dev>
+ * Copyright (C) 2023-2024. James Draycott me@racci.dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -10,8 +10,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program.
- * If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
 use glob::Paths;
@@ -69,6 +69,11 @@ fn recurse(top_init: Vec<PathBuf>) -> Vec<PathBuf> {
                 continue;
             }
 
+            if path.is_symlink() {
+                warn!("Path {} is a symlink; we don't dare touch these!", path.display());
+                continue;
+            }
+
             if !path.is_dir() {
                 error!("Path {} is not a directory; this shouldn't happen!", path.display());
                 continue;
@@ -97,7 +102,7 @@ fn recurse(top_init: Vec<PathBuf>) -> Vec<PathBuf> {
             continue;
         }
 
-        if path.is_file() {
+        if path.is_file() || path.is_symlink() {
             let parent = path.parent().unwrap_or_else(|| {
                 error!("Path {} has no parent; this shouldn't happen!", path.display());
                 exit(1)
@@ -109,6 +114,11 @@ fn recurse(top_init: Vec<PathBuf>) -> Vec<PathBuf> {
 
             // SAFETY: We just inserted the parent into the collection.
             collection.get_mut(parent).unwrap().push(path.to_path_buf());
+            continue;
+        }
+
+        if path.is_symlink() {
+            trace!("Path {} is a symlink; treating as file.", path.display());
             continue;
         }
 
