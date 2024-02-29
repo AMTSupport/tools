@@ -39,15 +39,19 @@ impl CleanerInternal for LogCleaner {
 
     #[cfg(windows)]
     fn locations(&self) -> Vec<Location> {
-        use super::{PROGRAM_DATA, WINDIR};
+        use super::{PROGRAM_DATA, USERS, WINDIR};
+
+        #[inline]
+        fn str(path: std::path::PathBuf) -> String {
+            path.to_string_lossy().to_string()
+        }
 
         vec![
-            Location::Globbing(PROGRAM_DATA.join("NVIDIA/*").to_string_lossy().to_string()),
-            Location::Globbing(
-                PROGRAM_DATA.join("Microsoft/Windows/WER/ReportArchive/*").to_string_lossy().to_string(),
-            ),
-            Location::Globbing(WINDIR.join("Panther/*").to_string_lossy().to_string()),
-            Location::Globbing(WINDIR.join("Minidump/*").to_string_lossy().to_string()),
+            Location::Globbing(str(PROGRAM_DATA.join("NVIDIA/*"))),
+            Location::Globbing(str(PROGRAM_DATA.join("Microsoft/Windows/WER/ReportArchive/*"))),
+            Location::Globbing(str(WINDIR.join("Panther/*"))),
+            Location::Globbing(str(WINDIR.join("Minidump/*"))),
+            Location::Sub(&USERS, "AppData/Local/CrashDumps/*".into()),
         ]
     }
 
