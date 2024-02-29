@@ -32,7 +32,7 @@
     };
   };
 
-  outputs = { nixpkgs, flake-utils, crane, fenix, cocogitto, nix-config, ... }@inputs:
+  outputs = { self, nixpkgs, flake-utils, crane, fenix, cocogitto, nix-config, ... }@inputs:
     let
       # TODO - Darwin support (error: don't yet have a `targetPackages.darwin.LibsystemCross for x86_64-apple-darwin`)
       targets = [ "x86_64-linux" "x86_64-windows" ];
@@ -55,7 +55,7 @@
                 members = cargoToml.workspace.default-members or [ ];
                 getCargoToml = path: builtins.fromTOML (builtins.readFile (./. + "/${path}" + "/Cargo.toml"));
                 memberName = path: let cargo = getCargoToml path; in cargo.package.name;
-                getPkg = workspace: pkgs.callPackage ./default.nix { inherit localSystem crossSystem flake-utils crane fenix workspace; };
+                getPkg = workspace: pkgs.callPackage ./default.nix { inherit self localSystem crossSystem flake-utils crane fenix workspace; };
               in
               if builtins.length members >= 1 then
                 builtins.listToAttrs (builtins.map (member: { name = disambiguate (memberName member); value = let split = builtins.split "/" member; in getPkg (builtins.elemAt split (builtins.length split - 1)); }) members)
