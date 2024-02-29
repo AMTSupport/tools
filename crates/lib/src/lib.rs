@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024. James Draycott <me@racci.dev>
+ * Copyright (C) 2023-2024. James Draycott me@racci.dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -10,29 +10,30 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program.
- * If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
-#![feature(lazy_cell)]
-#![feature(const_for)]
-#![feature(const_option)]
-#![feature(auto_traits)]
-#![feature(negative_impls)]
 #![feature(associated_type_defaults)]
+#![feature(async_closure)]
+#![feature(auto_traits)]
+#![feature(cfg_match)]
+#![feature(const_for)]
+#![feature(const_format_args)]
+#![feature(const_option)]
+#![feature(core_intrinsics)]
+#![feature(fn_traits)]
+#![feature(impl_trait_in_assoc_type)]
+#![feature(lazy_cell)]
+#![feature(let_chains)]
+#![feature(negative_impls)]
+#![feature(result_flattening)]
+#![feature(stmt_expr_attributes)]
 #![feature(trait_alias)]
 #![feature(trivial_bounds)]
-#![feature(stmt_expr_attributes)]
-#![feature(cfg_match)]
-#![feature(const_format_args)]
-#![feature(impl_trait_in_assoc_type)]
-#![feature(type_alias_impl_trait)]
-#![feature(let_chains)]
 #![feature(try_trait_v2)]
-#![feature(core_intrinsics)]
-#![feature(result_flattening)]
-#![feature(async_closure)]
-#![feature(fn_traits)]
+#![feature(type_alias_impl_trait)]
+#![allow(async_fn_in_trait)]
 
 pub mod cli;
 pub mod fs;

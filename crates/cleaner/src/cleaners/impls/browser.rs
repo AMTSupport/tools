@@ -44,9 +44,15 @@ impl CleanerInternal for BrowserCleaner {
         let prefix = "AppData/Local/";
 
         vec![
+            // Internet Explorer
             Location::Sub(&USERS, format!("{prefix}Microsoft/Windows/INetCache/IE/*")),
+            // Edge
             Location::Sub(&USERS, format!("{prefix}Microsoft/Edge/User Data/Default/Cache/*")),
+            Location::Sub(&USERS, format!("{prefix}Microsoft/Edge/User Data/Profile*/Cache/*")),
+            // Chrome
             Location::Sub(&USERS, format!("{prefix}Google/Chrome/User Data/Default/Cache/*")),
+            Location::Sub(&USERS, format!("{prefix}Google/Chrome/User Data/Profile*/Cache/*")),
+            // Firefox
             Location::Sub(
                 &USERS,
                 format!("{prefix}Mozilla/Firefox/Profiles/*.default-release/cache2/*"),

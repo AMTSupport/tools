@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024. James Draycott <me@racci.dev>
+ * Copyright (C) 2023-2024. James Draycott me@racci.dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -10,8 +10,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program.
- * If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
 #![feature(proc_macro_diagnostic)]
@@ -27,7 +27,6 @@ use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use std::any::{type_name, type_name_of_val};
-use syn::parse::Parser;
 use syn::spanned::Spanned;
 use syn::{parse_macro_input, Data, DeriveInput, Ident, Path, TypePath};
 
