@@ -19,6 +19,7 @@ use crate::ui::cli::oneshot::OneshotHandler;
 use anyhow::{anyhow, Context, Result};
 use inquire::validator::StringValidator;
 use inquire::Text;
+use std::fmt::Debug;
 use tracing::{trace, warn};
 
 pub mod error;
@@ -33,14 +34,12 @@ pub mod ui_inquire;
 
 pub type CliResult<T> = Result<T, CliError>;
 
-auto trait FeatureTrait {}
-
 crate::feature_trait! {
     pub trait CliUi where {
         #[cfg(feature = "ui-repl")]
-        where { Self: OneshotHandler + repl::ReplHandler },
+        where { Self: Debug + OneshotHandler + repl::ReplHandler },
         #[cfg(not(feature = "ui-repl"))]
-        where { Self: OneshotHandler }
+        where { Self: Debug + OneshotHandler }
     } for {
         /// Run the CLI Application.
         ///
@@ -158,7 +157,7 @@ crate::feature_trait! {
 //     }
 // }
 
-pub fn continue_loop<I>(vec: &Vec<I>, prompt_type: &str) -> bool {
+pub fn continue_loop<I>(vec: &[I], prompt_type: &str) -> bool {
     if vec.is_empty() {
         return true;
     }
@@ -224,9 +223,8 @@ macro_rules! handler {
         use $crate::ui::cli::CliResult as _CliResult;
         use clap::{Parser as _Parser, Subcommand as _Subcommand};
         use std::fmt::Debug as _Debug;
-        use paste::paste as _paste;
 
-        _paste! {$vis trait [<$name Handler>] {
+        paste::paste! {$vis trait [<$name Handler>] {
             type Action: _Debug + _Parser + _Subcommand;
 
             async fn handle(&mut self, command: Self::Action, flags: &_CommonFlags) -> _CliResult<()>;
@@ -234,7 +232,7 @@ macro_rules! handler {
             $($($item)*)?
         }}
 
-        _paste! {#[derive(_Debug, _Parser)] $vis struct [<$name Parser>]<O> where O: _Debug + _Parser + _Subcommand {
+        paste::paste! {#[derive(_Debug, _Parser)] $vis struct [<$name Parser>]<O> where O: _Debug + _Parser + _Subcommand {
             #[clap(subcommand)]
             pub action: $ty,
 

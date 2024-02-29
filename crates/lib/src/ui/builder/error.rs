@@ -44,8 +44,14 @@ pub enum FillError {
     #[error("unable to fill {field} from input, invalid input: {input}")]
     InvalidInput { field: String, input: String },
 
+    #[error("unable to fill {field} from filler {filler}")]
+    InvalidFiller { field: String, filler: String },
+
     #[error("no fillers available for {field}")]
     NoFillers { field: String },
+
+    #[error("no value found for {field}")]
+    NoValue { field: String },
 
     #[error("unknown error: {0}")]
     Unknown(#[from] Box<dyn std::error::Error>),

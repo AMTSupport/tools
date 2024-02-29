@@ -15,16 +15,14 @@
  */
 
 use crate::ui::builder::error::{FillError, FillResult};
-use crate::ui::builder::filler::{FillableDefinition, Filler, TypeWrappedRet};
+use crate::ui::builder::filler::{FillableDefinition, Filler};
+use crate::ui::cli::CliUi;
 use std::fmt::Debug;
-use std::marker::PhantomData;
 use std::str::FromStr;
 
-pub struct CliFiller;
-
-impl Filler for CliFiller {
-    async fn fill_bool(&mut self, fillable: FillableDefinition<bool>) -> FillResult<TypeWrappedRet<bool>> {
-        inquire::Confirm::new(&*format!("enter a value for {}", fillable.name))
+impl<C: CliUi> Filler for C {
+    async fn fill_bool(&mut self, fillable: &FillableDefinition<bool>) -> FillResult<bool> {
+        inquire::Confirm::new(&format!("enter a value for {}", fillable.name))
             .with_placeholder("y/n")
             .with_error_message("invalid input, please enter y/n")
             .with_default(fillable.default.is_some_and(|v| v()))
@@ -33,7 +31,6 @@ impl Filler for CliFiller {
                 field: fillable.name.to_string(),
                 input: e.to_string(),
             })
-            .map(|v| TypeWrappedRet::Bool(v))
     }
 
     // async fn fill_choice<T>(&mut self, fillable: Fillable<T>, items: Vec<T>, default: Option<T>) -> FillResult<T> {
@@ -60,23 +57,21 @@ impl Filler for CliFiller {
     //         .into()
     // }
 
-    async fn fill_input<T>(&mut self, fillable: FillableDefinition<T>) -> FillResult<TypeWrappedRet<T>>
+    async fn fill_input<T>(&mut self, fillable: &FillableDefinition<T>) -> FillResult<T>
     where
-        T: Debug + FromStr,
+        T: FromStr + Clone + Debug,
     {
-        inquire::Text::new(&*format!("enter a value for {}", fillable.name))
+        inquire::Text::new(&format!("enter a value for {}", fillable.name))
             .prompt()
             .map_err(|e| FillError::InvalidInput {
                 field: fillable.name.to_string(),
                 input: e.to_string(),
             })
-            .map(|s| {
+            .and_then(|s| {
                 s.parse().map_err(|_| FillError::InvalidInput {
                     field: fillable.name.to_string(),
                     input: s.to_string(),
                 })
             })
-            .flatten()
-            .map(|v| TypeWrappedRet::String(v, PhantomData::<T>))
     }
 }

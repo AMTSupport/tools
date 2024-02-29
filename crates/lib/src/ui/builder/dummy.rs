@@ -15,186 +15,81 @@
  */
 
 use crate::ui::builder::buildable::Buildable;
-use crate::ui::builder::error::{FillError, FillResult};
-use crate::ui::builder::filler::{FillableDefinition, Filler, TypeWrapped, TypeWrappedRet};
-use crate::ui::builder::Builder;
 use std::fmt::Debug;
-use std::marker::PhantomData;
-use std::mem::transmute;
-use std::str::FromStr;
-use tracing::debug;
 
-// trait MaybeImplements<Trait: ?Sized, Ret> {
-//     fn call(&self) -> Option<Ret>;
-// }
-//
-// impl<T: Buildable, B: Builder> MaybeImplements<dyn Buildable<Builder = B>, B> for T {
-//     fn call(&self) -> Option<B> {
-//         Some(T::builder())
-//     }
-// }
-//
-// auto trait NotBuildable {}
-// impl<T> !NotBuildable for T where T: Buildable {}
-//
-// impl<T, B> MaybeImplements<dyn Buildable<Builder = B>, B> for T
-// where
-//     T: NotBuildable,
-//     B: Buildable,
-// {
-//     fn call(&self) -> Option<B> {
-//         None
-//     }
-// }
-
-trait DoesNotImpl<T> {
-    fn builder(&self) -> Option<T>;
-}
-
-impl<T: Sized, B: Sized> DoesNotImpl<B> for T {
-    fn builder(&self) -> Option<B> {
-        None
-    }
-}
-
-struct Wrapper<T: Sized>(PhantomData<T>);
-impl<T: Buildable> Wrapper<T> {
-    fn builder(&self) -> Option<<T as Buildable>::Builder> {
-        Some(T::builder())
-    }
-}
-
-macro_rules! impls {
-    ($([$($var:ident: $ty:ty),+])? $pd:ident > $v:path > $r:ty => $f:expr) => {{
-        trait DoesNotImpl<T: Sized> {
-            async fn call(&self$(, $($var: $ty),+)?) -> Option<T>;
+#[macro_export]
+macro_rules! impls_utils {
+    ($($async:ident fn)? $([$($(+)? $common_impl:ty)+])? |$phantom_data:ident $(, $($variable:ident: $variable_type:ty),+)?| $impl_target:path => $return_type:ty $(| $alt_wrapper_return_type:ty)? => $f:expr) => {{
+        trait DoesNotImpl<T: Sized + Clone + Debug> {
+            $($async)? fn call(&self$(, $($variable: $variable_type),+)?) -> $crate::ui::builder::error::FillResult<$return_type>;
         }
 
-        impl<T: Sized, B: Sized> DoesNotImpl<B> for T {
-            async fn call(&self$(, $($var: $ty),+)?) -> Option<B> {
-                None
+        impl<B: Debug + Sized, T: Sized + Clone + Debug> DoesNotImpl<T> for B {
+            #[allow(unused)]
+            // #[tracing::instrument(level = "TRACE", err, ret)]
+            $($async)? fn call(&self$(, $(paste::paste! { [< _ $variable >] }: $variable_type),+)?) -> $crate::ui::builder::error::FillResult<$return_type> {
+                Err($crate::ui::builder::error::FillError::InvalidFiller { field: "blah".to_string(), filler: stringify!($impl_target).to_string() })
             }
         }
 
-        struct Wrapper<T: Sized>(PhantomData<T>);
-        impl<T: $v> Wrapper<T> {
-            async fn call(&self$(, $($var: $ty),+)?) -> Option<$r> {$f}
+        #[derive(Debug)]
+        struct Wrapper<T: Sized + Clone + Debug $($(+ $common_impl)+)?>(PhantomData<T>);
+        impl<T: Sized + Clone + Debug + $impl_target $($(+ $common_impl)+)?> Wrapper<T> {
+            #[allow(unused)]
+            // #[tracing::instrument(level = "TRACE", err, ret)]
+            $($async)? fn call(&self$(, $($variable: $variable_type),+)?) -> $crate::impls_utils!(@return $return_type $(| $alt_wrapper_return_type)?) {return $f}
         }
 
-        let wrapper = Wrapper($pd);
-        return if let Some(value) = wrapper.call($(, $($var),+)?).await {
-            Ok(value);
-        } else {
-            tracing::warn!("filler for {} returned None", stringify!($v));
-            Err(FillError::Unknown(Box::new("filler returned None")))
-        }
+        let wrapper = Wrapper($phantom_data);
+        $crate::impls_utils!(@wrapper_call $($async)? wrapper.call($($($variable),+)?))
     }};
+
+    // Adds support for using an alternate return type for the actual wrapper function.
+    (@return $return_type:ty) => {
+        $crate::ui::builder::error::FillResult<$return_type>
+    };
+    (@return $return_type:ty | $alt_return_type:ty) => {
+        $crate::ui::builder::error::FillResult<$alt_return_type>
+    };
+
+    // This is a hack to allow the macro to work with and without the async keyword.
+    (@wrapper_call async $wrapper:ident.call($($($variable:ident),+)?)) => {
+        $wrapper.call($($($variable),+)?).await
+    };
+    (@wrapper_call $wrapper:ident.call($($($variable:ident),+)?)) => {
+        $wrapper.call($($($variable),+)?)
+    };
 }
 
-// macro_rules! impls_ret {
-//     ([$fillable:ident, $filler:ident] $t:ty: $v:path => $f:expr) => {
-//         let opt = async {
-//             trait DoesNotImpl {
-//                 #[tracing::instrument(level = "TRACE", skip(_fillable, _filler))]
-//                 async fn call<F: Filler>(_fillable: Fillable<Self>, _filler: &mut F) -> FillResult<Option<Self>> where Self: Sized {
-//                     Ok(None)
-//                 }
-//             }
+// #[instrument(level = "TRACE", err, ret)]
+// pub async fn try_fill<F: Filler, T: Sized + Clone + Debug>(wrapped: &TypeWrapped<T>, filler: &mut F) -> FillResult<T> {
+//     match wrapped {
+//         TypeWrapped::Bool(def) => {
+//             debug!("filling bool {}", def.name);
 //
-//             impl<T: Sized> DoesNotImpl for T {}
-//
-//             struct Wrapper<T: Sized>(std::marker::PhantomData<T>);
-//
-//             impl<Trans: $v> Wrapper<Trans> {
-//                 #[tracing::instrument(level = "TRACE", skip(fillable, filler))]
-//                 async fn call<F: Filler>(fillable: Fillable<Trans>, filler: &mut F) -> FillResult<Option<Trans>> {
-//                     let value = {$f}(fillable, filler).await?;
-//                     Ok(Some(unsafe { std::intrinsics::transmute_unchecked::<_, Trans>(value) }))
-//                 }
-//             }
-//
-//             if $fillable.default.is_some() {
-//                 tracing::warn!("default value is ignored currently.");
-//             }
-//
-//             <Wrapper<$t>>::call(unsafe { std::mem::transmute_copy(&$fillable) }, $filler).await
-//         }.await?;
-//
-//         if let Some(value) = opt {
-//             // After unwrapping the result and making sure its not None, we can safely transmute it back into the original type.
-//             return Ok(unsafe { transmute_unchecked::<_, T>(value) });
-//         } else {
-//             tracing::warn!("filler for {} returned None", $fillable.name);
+//             filler.fill_bool(def).await.map(|v| unsafe { transmute_unchecked(v) })
 //         }
-//     };
+//         TypeWrapped::String(def) => {
+//             debug!("filling string {}", def.name);
+//
+//             let pd = def._pd;
+//             impls_utils!(async fn |pd, filler: &mut impl Filler, def: &FillableDefinition<T>| FromStr => T => {
+//                 filler.fill_input(def).await.map(|v| {
+//                     unsafe { transmute_unchecked(v) }
+//                 })
+//             })
+//         }
+//         TypeWrapped::Buildable(def) => {
+//             debug!("filling buildable {}", def.name);
+//
+//             let pd = def._pd;
+//             impls_utils!(async fn |pd, filler: &mut impl Filler| Buildable => T | T::Builder => {
+//                 use crate::ui::builder::Builder;
+//
+//                 let mut builder = T::builder();
+//                 builder.fill(filler).await?;
+//                 Ok(builder)
+//             })
+//         }
+//     }
 // }
-
-pub async fn try_fill<F: Filler, T>(wrapped: TypeWrapped<T>, filler: &mut F) -> FillResult<TypeWrappedRet<T>> {
-    /// Transmute the Src into Dst, invoke the function and then transmute the Dst back into Src.
-    // async fn transmute_invoke_return<O, T, R, F>(
-    //     fillable: Fillable<O>,
-    //     f: impl FnOnce(Fillable<T>) -> F,
-    // ) -> FillResult<O>
-    // where
-    //     F: Future<Output = FillResult<R>>,
-    // {
-    //     // let fillable = Fillable::<T> {
-    //     //     default: fillable.default.map(|v| unsafe { transmute_unchecked(v) }),
-    //     //     ..fillable.clone()
-    //     // };
-    //
-    //     let trans = unsafe { std::mem::transmute(fillable) };
-    //     let ret = f(trans).await?;
-    //     Ok(unsafe { transmute_unchecked::<R, O>(ret) })
-    // }
-    match wrapped {
-        TypeWrapped::Bool(def) => {
-            debug!("filling bool {}", def.name);
-            filler.fill_bool(def).await.map(|v| TypeWrappedRet::Bool(unsafe { transmute(v) }))
-        }
-        TypeWrapped::String { def, .. } => {
-            debug!("filling string {}", def.name);
-            impls!([filler: F, def: FillableDefinition<T>] FromStr > TypeWrappedRet<T> => {
-                let value = filler.fill_input(def, PhantomData::<T>).await?;
-                Some(TypeWrappedRet::String(unsafe { transmute(value) }, PhantomData::<T>))
-            });
-        }
-        TypeWrapped::Buildable { pd, def } => {
-            debug!("filling buildable {}", def.name);
-
-            let wrapper = Wrapper(pd);
-            let builder = wrapper.builder().unwrap();
-            // let builder = pd.call().ok_or(FillError::Unknown(Box::new("failed to get builder")))?;
-            let builder = builder.fill(filler).await?;
-
-            match builder.build().await {
-                Ok(v) => Ok(TypeWrappedRet::Buildable(v, pd)),
-                Err(e) => Err(FillError::Unknown(Box::new(e))),
-            }
-        }
-    }
-
-    // match fillable.pure_type {
-    //     PureType::Bool => {
-    //         debug!("filling bool {}", fillable.name);
-    //         return transmute_invoke_return(fillable, |fillable| filler.fill_bool(fillable)).await;
-    //     }
-    //     PureType::FromStr => {
-    //         debug!("filling string {}", fillable.name);
-    //
-    //         impls_ret!([fillable, filler] T: FromStr => async move |fillable, filler: &mut F| {
-    //             filler.fill_input(fillable).await
-    //         });
-    //     }
-    //     PureType::Buildable => {
-    //         debug!("filling buildable {}", fillable.name);
-    //
-    //         impls_ret!([fillable, filler] T: Buildable => async move |_, filler: &mut F| {
-    //             let builder = Trans::builder();
-    //             let builder = builder.fill(filler).await?;
-    //
-    //             builder.build().await.map_err(|e| FillError::Unknown(Box::new(e)))
-    //         });
-    //     }
-    // };
-}
