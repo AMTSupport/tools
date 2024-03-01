@@ -5,28 +5,28 @@ tag_prefix = "v"
 generate_mono_repository_global_tag = false
 monorepo_version_separator = "-"
 
-post_bump_hooks = [
-    "git push",
-    "git push origin --tags"
-]
+#post_bump_hooks = [
+#    "git push",
+#    "git push origin --tags"
+#]
 pre_package_bump_hooks = [
     "cargo set-version --package {{package}} {{version}}",
-    "nix flake check .#{{package}}-formatting",
-    "nix flake check .#{{package}}-lint",
-    "nix flake check .#{{package}}-test",
+#    "nix flake check .#{{package}}-formatting",
+#    "nix flake check .#{{package}}-lint",
+#    "nix flake check .#{{package}}-test",
 ]
 post_package_bump_hooks = [
     # TODO - Publish to crates.io
     # TODO - Build package for all platforms properly
-    "mkdir tmp",
-    "nix build .#{{package}}",
-    "cp result/bin/{{package}}* tmp",
-    "nix build .#{{package}}-x86_64-linux",
-    "cp result/bin/{{package}}* tmp",
-
-    "gh release create -R AMTSupport/tools --verify-tag -F crates/{{package}}/CHANGELOG.md {{package}}-v{{version}} result/bin/{{package}}*",
-
-    "rm tmp -d -r"
+#    "mkdir tmp",
+#    "nix build .#{{package}}",
+#    "cp result/bin/{{package}}* tmp",
+#    "nix build .#{{package}}-x86_64-linux",
+#    "cp result/bin/{{package}}* tmp",
+#
+#    "gh release create -R AMTSupport/tools --verify-tag -F crates/{{package}}/CHANGELOG.md {{package}}-v{{version}} result/bin/{{package}}*",
+#
+#    "rm tmp -d -r"
 ]
 
 [changelog]

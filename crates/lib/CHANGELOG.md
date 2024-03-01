@@ -2,6 +2,34 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [lib-v0.2.0](https://github.com/AMTSupport/tools/compare/lib-v0.1.1..lib-v0.2.0) - 2024-03-01
+#### <!-- 0 -->⛰️  Features
+- add chrome and edge profiles - ([9e0d633](https://github.com/AMTSupport/tools/commit/9e0d633fd146560c2a893cf1e274982e715fbd31)) - DaRacci
+- sort of complete builder i think. - ([9d32b20](https://github.com/AMTSupport/tools/commit/9d32b200ff0a9cd6f655bc401161fcd1d00f73ba)) - DaRacci
+#### <!-- 1 -->🐛 Bug Fixes
+- implement replhandler for oneshothandler - ([de0f357](https://github.com/AMTSupport/tools/commit/de0f357902fe00abd6faa8a8cdc3bcd7a10b9efb)) - DaRacci
+#### <!-- 9 -->⚙️ Miscellaneous Tasks
+- more work on builders, still fucked - ([a6db281](https://github.com/AMTSupport/tools/commit/a6db28134086b608d5787e9dad0f949973be864c)) - DaRacci
+- remove feature flags for now stable features. - ([7e11c09](https://github.com/AMTSupport/tools/commit/7e11c09c511ebd07e78461007becd3c4cafd4a0d)) - DaRacci
+- work on updater and builder macros - ([d1944c8](https://github.com/AMTSupport/tools/commit/d1944c82dde192c75cea65ea4a6af5fe6ecb3ecd)) - DaRacci
+- work on ui builder macro - ([2360297](https://github.com/AMTSupport/tools/commit/23602975e255bf2044fce1a6dbb2a6f3589b5606)) - DaRacci
+
+- - -
+
+## [lib-v0.2.0](https://github.com/AMTSupport/tools/compare/lib-v0.1.1..lib-v0.2.0) - 2024-03-01
+#### <!-- 0 -->⛰️  Features
+- add chrome and edge profiles - ([9e0d633](https://github.com/AMTSupport/tools/commit/9e0d633fd146560c2a893cf1e274982e715fbd31)) - DaRacci
+- sort of complete builder i think. - ([9d32b20](https://github.com/AMTSupport/tools/commit/9d32b200ff0a9cd6f655bc401161fcd1d00f73ba)) - DaRacci
+#### <!-- 1 -->🐛 Bug Fixes
+- implement replhandler for oneshothandler - ([de0f357](https://github.com/AMTSupport/tools/commit/de0f357902fe00abd6faa8a8cdc3bcd7a10b9efb)) - DaRacci
+#### <!-- 9 -->⚙️ Miscellaneous Tasks
+- more work on builders, still fucked - ([a6db281](https://github.com/AMTSupport/tools/commit/a6db28134086b608d5787e9dad0f949973be864c)) - DaRacci
+- remove feature flags for now stable features. - ([7e11c09](https://github.com/AMTSupport/tools/commit/7e11c09c511ebd07e78461007becd3c4cafd4a0d)) - DaRacci
+- work on updater and builder macros - ([d1944c8](https://github.com/AMTSupport/tools/commit/d1944c82dde192c75cea65ea4a6af5fe6ecb3ecd)) - DaRacci
+- work on ui builder macro - ([2360297](https://github.com/AMTSupport/tools/commit/23602975e255bf2044fce1a6dbb2a6f3589b5606)) - DaRacci
+
+- - -
+
 ## [lib-v0.1.1](https://github.com/AMTSupport/tools/compare/backup-v0.1.0..lib-v0.1.1) - 2023-10-09
 #### <!-- 1 -->🐛 Bug Fixes
 - broken logging - ([120f0ff](https://github.com/AMTSupport/tools/commit/120f0ff842d7c4b037d8b65b4598bc2c6590f48d)) - DaRacci
