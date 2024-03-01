@@ -16,6 +16,9 @@ pre_package_bump_hooks = [
 #    "nix flake check .#{{package}}-test",
 ]
 post_package_bump_hooks = [
+    "git push",
+    "git push origin --tags",
+
     # TODO - Publish to crates.io
     # TODO - Build package for all platforms properly
     "mkdir tmp",
@@ -24,7 +27,7 @@ post_package_bump_hooks = [
     "nix build .#{{package}}-x86_64-windows",
     "cp result/bin/{{package}}* tmp",
 
-    "gh release create -R AMTSupport/tools --verify-tag -F crates/{{package}}/CHANGELOG.md {{package}}-v{{version}} result/bin/{{package}}*",
+    "gh release create -R AMTSupport/tools --verify-tag -F CHANGELOG.md {{package}}-v{{version}} tmp/{{package}}*",
 
     "rm tmp -d -r"
 ]
