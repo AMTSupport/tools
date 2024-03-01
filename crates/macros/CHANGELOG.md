@@ -2,6 +2,16 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [macros-v0.2.0](https://github.com/AMTSupport/tools/compare/backup-v0.1.0..macros-v0.2.0) - 2024-03-01
+#### <!-- 0 -->⛰️  Features
+- add chrome and edge profiles - ([48541c6](https://github.com/AMTSupport/tools/commit/48541c6980fc6d09368f596d68b874bd613841c6)) - DaRacci
+- sort of complete builder i think. - ([9d32b20](https://github.com/AMTSupport/tools/commit/9d32b200ff0a9cd6f655bc401161fcd1d00f73ba)) - DaRacci
+#### <!-- 9 -->⚙️ Miscellaneous Tasks
+- remove feature flags for now stable features. - ([f3a9e67](https://github.com/AMTSupport/tools/commit/f3a9e67f99442db47c22280b2dad908a8d5eefda)) - DaRacci
+- work on updater and builder macros - ([d1944c8](https://github.com/AMTSupport/tools/commit/d1944c82dde192c75cea65ea4a6af5fe6ecb3ecd)) - DaRacci
+
+- - -
+
 ## [macros-v0.1.0](https://github.com/AMTSupport/tools/compare/5678af914fbd25777e9a28dbaaf557a016530b7d..macros-v0.1.0) - 2023-10-05
 #### <!-- 0 -->⛰️  Features
 - **(macros)** enumregex and enumname macros - ([124a030](https://github.com/AMTSupport/tools/commit/124a0306053439ad0b140df15a0e8e329ceca807)) - DaRacci
