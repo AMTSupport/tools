@@ -2,6 +2,18 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [cleaner-v0.2.0](https://github.com/AMTSupport/tools/compare/cleaner-v0.1.2..cleaner-v0.2.0) - 2024-03-01
+#### <!-- 0 -->⛰️  Features
+- add chrome and edge profiles - ([48541c6](https://github.com/AMTSupport/tools/commit/48541c6980fc6d09368f596d68b874bd613841c6)) - DaRacci
+- add crash dumps to log cleanup - ([dfdb109](https://github.com/AMTSupport/tools/commit/dfdb109bc02627aadd03905f25010af6d6d3bc53)) - DaRacci
+- add gpu cache locations - ([814643b](https://github.com/AMTSupport/tools/commit/814643ba06eb0d0bd2ee3f05a4406827758e0a85)) - DaRacci
+#### <!-- 1 -->🐛 Bug Fixes
+- critical issue with how symlinks were 'not' handled. - ([3292b27](https://github.com/AMTSupport/tools/commit/3292b27179a317ee2139305fb20e6df5a61091b1)) - DaRacci
+#### <!-- 2 -->🚜 Refactor
+- pass cleaner enum as reference - ([0f511da](https://github.com/AMTSupport/tools/commit/0f511daeac061c730668266029cfa08d42c2cbbc)) - DaRacci
+
+- - -
+
 ## [cleaner-v0.1.2](https://github.com/AMTSupport/tools/compare/cleaner-v0.1.1..cleaner-v0.1.2) - 2024-02-05
 #### <!-- 1 -->🐛 Bug Fixes
 - unwrap errors and crashing - ([46a6080](https://github.com/AMTSupport/tools/commit/46a60808fe0fcffe908e262d9015f312ebcf0a09)) - DaRacci
