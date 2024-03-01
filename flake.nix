@@ -76,24 +76,17 @@
 
         checks =
           let
-            nativeOutputs = builtins.filter (o: o.isNative) (builtins.attrValues (builtins.mapAttrs
-              (name: output: {
-                inherit name;
-                inherit (output.passthru) isNative;
+            nativeOutputs = builtins.filter (o: o.isNative) (builtins.attrValues (builtins.mapAttrs (name: output: {
+              inherit name;
+              inherit (output.passthru) isNative;
 
-                inherit (output) crateFmt crateClippy crateTest;
-              })
-              cargoOutputs));
+              inherit (output) crateFmt crateClippy crateTest;
+            }) cargoOutputs));
           in
-          builtins.foldl'
-            (attr: packageChecks: (attr // packageChecks))
-            { }
-            (builtins.map
-              (crate: {
-                "${crate.name}-formatting" = crate.crateFmt;
-                "${crate.name}-clippy" = crate.crateClippy;
-                "${crate.name}-test" = crate.crateTest;
-              })
-              nativeOutputs);
+          builtins.foldl' (attr: packageChecks: (attr // packageChecks)) { } (builtins.map (crate: {
+            "${crate.name}-formatting" = crate.crateFmt;
+            "${crate.name}-lint" = crate.crateClippy;
+            "${crate.name}-test" = crate.crateTest;
+          }) nativeOutputs);
       });
 }
