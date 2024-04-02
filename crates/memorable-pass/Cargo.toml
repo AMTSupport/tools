@@ -16,7 +16,7 @@ path = "src/main.rs"
 [features]
 default = ["ui-cli"]
 
-ui-cli = ["lib/ui-cli"]
+ui-cli = ["lib/ui-cli", "lib/ui-cli-formatting"]
 
 [dependencies]
 lib = { path = "../lib" }
@@ -32,7 +32,7 @@ clap = { workspace = true }
 #clap_complete = { workspace = true }
 
 # Data
-rand = { workspace = true, small_rng = true }
+rand = { workspace = true, features = ["small_rng"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 rust-embed = { workspace = true }
@@ -50,7 +50,7 @@ derivative = { version = "2.2.0" }
 # Logging & Errors
 env_logger = "*"
 test-log = { version = "0.2.12", features = ["trace"] }
-tracing-subscriber = { workspace = true, default-features = false, features = ["env-filter", "fmt"] }
+tracing-subscriber = { workspace = true, features = ["env-filter", "fmt"] }
 
 regex = "1.9.5"
 

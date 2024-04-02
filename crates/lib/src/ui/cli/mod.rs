@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024. James Draycott <me@racci.dev>
+ * Copyright (C) 2024. James Draycott me@racci.dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -10,8 +10,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program.
- * If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
 use crate::ui::cli::error::CliError;
@@ -31,6 +31,7 @@ pub mod progress;
 pub mod repl;
 #[path = "inquire.rs"]
 pub mod ui_inquire;
+pub mod flags;
 
 pub type CliResult<T> = Result<T, CliError>;
 
@@ -178,8 +179,8 @@ pub fn continue_loop<I>(vec: &[I], prompt_type: &str) -> bool {
 
 // TODO:: Derive title from key
 pub fn env_or_prompt<V>(key: &str, validator: V) -> Result<String>
-where
-    V: StringValidator + 'static,
+    where
+        V: StringValidator + 'static,
 {
     match std::env::var(key) {
         Ok(str) => match validator.validate(&str) {

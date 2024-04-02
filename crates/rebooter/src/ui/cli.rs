@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024. James Draycott <me@racci.dev>
+ * Copyright (C) 2024. James Draycott me@racci.dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -10,15 +10,15 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program.
- * If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
 use crate::schedule::ScheduledReboot;
 use crate::ui::actions::Action;
 use anyhow::Result;
 use chrono::{Local, NaiveDateTime, NaiveTime};
-use lib::cli::Flags as CommonFlags;
+use lib::ui::cli::flags::CommonFlags;
 use lib::populate;
 use lib::ui::cli::oneshot::OneshotHandler;
 use lib::ui::cli::{CliResult, CliUi};
@@ -32,8 +32,8 @@ pub struct RebooterCli {
 
 impl Ui for RebooterCli {
     fn new(_args: Self::Args) -> Result<Self>
-    where
-        Self: Sized,
+        where
+            Self: Sized,
     {
         Ok(Self { _guard: None })
     }

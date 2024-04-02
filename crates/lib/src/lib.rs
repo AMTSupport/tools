@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024. James Draycott me@racci.dev
+ * Copyright (C) 2024. James Draycott me@racci.dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,8 +34,8 @@
 #![feature(try_trait_v2)]
 #![feature(type_alias_impl_trait)]
 #![allow(async_fn_in_trait)]
+#![allow(internal_features)]
 
-pub mod cli;
 pub mod fs;
 pub mod helper;
 pub mod log;

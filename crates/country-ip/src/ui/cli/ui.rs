@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024. James Draycott <me@racci.dev>
+ * Copyright (C) 2024. James Draycott me@racci.dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -10,12 +10,12 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program.
- * If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
 use super::oneshot::OneshotAction;
-use lib::cli::Flags as CommonFlags;
+use lib::ui::cli::flags::CommonFlags;
 use lib::populate;
 use lib::ui::cli::error::CliError;
 use lib::ui::cli::oneshot::OneshotHandler;

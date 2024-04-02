@@ -55,7 +55,7 @@ permissions = "0.5.1"
 # Logging & Errors
 env_logger = "*"
 test-log = { version = "0.2.12", features = ["trace"] }
-tracing-subscriber = { workspace = true, default-features = false, features = ["env-filter", "fmt"] }
+tracing-subscriber = { workspace = true, features = ["env-filter", "fmt"] }
 
 # Fs & IO
 assert_fs = "1.0.13"

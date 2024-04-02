@@ -2,7 +2,7 @@
 name = "country-ip"
 version = "0.1.0"
 edition = "2021"
-categories = ["command-line-utilities", "utilities", "cli", "library", "lib"]
+categories = ["command-line-utilities"]
 keywords = ["random", "ip", "testing", "geo", "country"]
 description = "A command line utility to generate random IP addresses from a given country."
 
@@ -49,9 +49,9 @@ rand = { version = "0.8.5", features = ["small_rng"] }
 cidr = "0.2.2"
 
 # Futures & Async
-futures = { workspace = true, default-features = false, features = ["std"] }
+futures = { workspace = true, features = ["std"] }
 async-trait = { workspace = true }
-async-compression = { workspace = true, default-features = false }
+async-compression = { workspace = true }
 tokio-util = { workspace = true, features = ["compat"] }
 rayon = { workspace = true }
 
@@ -62,4 +62,4 @@ keshvar = { version = "0.3.0", features = ["search-iso-short-name"] }
 [dev-dependencies]
 env_logger = "*"
 test-log = { version = "0.2.12", features = ["trace"] }
-tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "fmt"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }

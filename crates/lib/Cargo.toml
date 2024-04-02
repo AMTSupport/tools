@@ -8,6 +8,7 @@ default = ["ui-cli"]
 
 ui-tui = ["ratatui", "crossterm"]
 ui-cli = ["indicatif", "inquire", "tracing-indicatif"]
+ui-cli-formatting = []
 ui-gui = ["iced", "iced_aw"]
 ui-repl = ["ui-cli", "shlex"]
 

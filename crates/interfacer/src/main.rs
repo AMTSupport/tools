@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 James Draycott <me@racci.dev>
+ * Copyright (C) 2024. James Draycott me@racci.dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -7,11 +7,11 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
 #![feature(async_closure)]
@@ -21,7 +21,7 @@ use anyhow::Result;
 use clap::{Parser, Subcommand, ValueEnum};
 use csv::{Writer, WriterBuilder};
 use endpoints::nable::endpoints::NSightEndpoint;
-use lib::cli::Flags;
+use lib::ui::cli::flags::CommonFlags;
 use lib::log;
 use macros::{EnumNames, EnumVariants};
 use rest::endpoints;
@@ -39,7 +39,7 @@ struct Cli {
     endpoint: Endpoints,
 
     #[command(flatten)]
-    flags: Flags,
+    flags: CommonFlags,
 }
 
 #[derive(Debug, Subcommand)]
@@ -99,7 +99,8 @@ async fn main() -> Result<()> {
                         });
 
                         writer.flush().unwrap();
-                    };
+                    }
+                    ;
 
                     match response {
                         Response::Clients(clients) => write(writer, &clients.items.items),

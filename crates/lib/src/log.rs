@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 James Draycott <me@racci.dev>
+ * Copyright (C) 2024. James Draycott me@racci.dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -7,14 +7,14 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
-use crate::cli::Flags as CommonFlags;
+use crate::ui::cli::flags::CommonFlags;
 use std::env;
 use tracing::{subscriber, Level, Subscriber};
 use tracing_appender::non_blocking::WorkerGuard;
@@ -41,8 +41,8 @@ fn add_file_writer<S>(
     impl Subscriber + for<'span> LookupSpan<'span> + Send + Sync + 'static,
     WorkerGuard,
 )
-where
-    S: Subscriber + for<'span> LookupSpan<'span> + Send + Sync + 'static,
+    where
+        S: Subscriber + for<'span> LookupSpan<'span> + Send + Sync + 'static,
 {
     let file_appender = tracing_appender::rolling::daily(env::temp_dir().join("logs"), env!["CARGO_PKG_NAME"]);
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
@@ -58,8 +58,8 @@ fn add_ui_layer<S>(
     registry: S,
     flags: &CommonFlags,
 ) -> impl Subscriber + for<'span> LookupSpan<'span> + Send + Sync + 'static
-where
-    S: Subscriber + for<'span> LookupSpan<'span> + Send + Sync + 'static,
+    where
+        S: Subscriber + for<'span> LookupSpan<'span> + Send + Sync + 'static,
 {
     use indicatif::ProgressStyle;
     use tracing_indicatif::{filter::IndicatifFilter, IndicatifLayer};
@@ -70,7 +70,7 @@ where
         ProgressStyle::with_template(
             "{spinner:.green} {span_child_prefix}{span_name:.cyan/blue}{{{span_fields:.purple}}}",
         )
-        .unwrap(),
+            .unwrap(),
     );
 
     let verbosity = if flags.quiet { 0 } else { flags.verbose };
@@ -104,8 +104,8 @@ fn add_ui_layer<S>(
     registry: S,
     _flags: &CommonFlags,
 ) -> impl Subscriber + for<'span> LookupSpan<'span> + Send + Sync + 'static
-where
-    S: Subscriber + for<'span> LookupSpan<'span> + Send + Sync + 'static,
+    where
+        S: Subscriber + for<'span> LookupSpan<'span> + Send + Sync + 'static,
 {
     registry
 }

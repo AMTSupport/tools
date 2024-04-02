@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 James Draycott <me@racci.dev>
+ * Copyright (C) 2024. James Draycott me@racci.dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -7,17 +7,22 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
-use clap::Parser;
 
+use clap::{Parser, ValueEnum};
+
+/// A struct that contains common flags for the CLI
+///
+/// These flags are always available to the CLI,
+/// though the implementation is up to the final application.
 #[derive(Default, Debug, Clone, Copy, Parser)]
-pub struct Flags<const HIDE: bool = false> {
+pub struct CommonFlags<const HIDE: bool = false> {
     /// The verbosity of the terminal logger
     #[arg(short, long, hide = HIDE, global = true, action = clap::ArgAction::Count)]
     pub verbose: u8,
@@ -29,4 +34,20 @@ pub struct Flags<const HIDE: bool = false> {
     /// If the program should be run in a quiet mode
     #[arg(short, long, hide = HIDE, global = true, action = clap::ArgAction::SetTrue)]
     pub quiet: bool,
+
+    /// If the program should print in a JSON format
+    #[cfg(feature = "ui-cli-formatting")]
+    #[arg(short, long, hide = HIDE, global = true, value_enum)]
+    pub format: OutputFormat,
+}
+
+#[cfg(feature = "ui-cli-formatting")]
+#[derive(Default, Debug, Clone, Copy, ValueEnum)]
+pub enum OutputFormat {
+    /// Print the output in a human-readable format
+    #[default]
+    Human,
+
+    /// Print the output in a JSON format
+    Json,
 }

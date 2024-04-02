@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024. James Draycott <me@racci.dev>
+ * Copyright (C) 2024. James Draycott me@racci.dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -10,8 +10,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program.
- * If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
 use crate::reason::Reason;
@@ -93,15 +93,15 @@ impl ScheduledReboot {
 
     pub fn notify(&self) -> Result<()> {
         use notify_rust::Notification;
-        use notify_rust::NotificationHint;
-        use notify_rust::NotificationUrgency;
+        // use notify_rust::NotificationHint;
+        // use notify_rust::NotificationUrgency;
 
         Notification::new()
             .summary("Rebooter")
             .body(&format!("Rebooting in 5 minutes: {}", self.reason))
             .icon("system-reboot")
-            .hint(NotificationHint::Category("device".into()))
-            .hint(NotificationHint::Urgency(NotificationUrgency::Critical))
+            // .hint(NotificationHint::Category("device".into()))
+            // .hint(NotificationHint::Urgency(NotificationUrgency::Critical))
             .timeout(5000)
             .show()?;
 
