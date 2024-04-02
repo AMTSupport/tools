@@ -1,3 +1,7 @@
 /target
-/result
 /backup
+
+# Nix
+/result
+.direnv
+.devenv

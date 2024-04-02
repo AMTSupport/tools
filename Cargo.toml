@@ -41,7 +41,7 @@ ratatui = { version = "0.23.0" }
 serde = { version = "^1.0.183", features = ["derive"] }
 serde_json = { version = "^1.0.104" }
 toml = { version = "0.8.0" }
-chrono = { version = "^0.4.26" }
+chrono = { version = "^0.4.26", default-features = false }
 rand = { version = "^0.8.5" }
 rust-embed = { version = "^8.0.0" }
 zip = { version = "0.6.6" }
@@ -51,7 +51,7 @@ reqwest = { version = "^0.11.18", features = ["gzip", "rustls"] }
 
 # Logging & Errors
 tracing = "0.1.*"
-tracing-subscriber = { version = "0.3.*", features = ["fmt"] }
+tracing-subscriber = { version = "0.3.*", default-features = false, features = ["fmt"] }
 tracing-appender = { version = "0.2.2" }
 tracing-indicatif = { version = "0.3.5" }
 thiserror = "1.0.*"
@@ -59,10 +59,10 @@ anyhow = "1.0.*"
 no-panic = "0.1.26"
 
 # Futures and Async
-futures = "0.3.28"
+futures = { version = "0.3.28", default-features = false }
 futures-util = "0.3.28"
 async-trait = "0.1.73"
-async-compression = "0.4.3"
+async-compression = { version = "0.4.3", default-features = false }
 tokio-stream = "0.1.14"
 tokio-util = "0.7.9"
 rayon = "1.7.0"
