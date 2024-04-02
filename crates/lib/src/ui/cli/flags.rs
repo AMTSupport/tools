@@ -32,7 +32,7 @@ pub struct CommonFlags<const HIDE: bool = false> {
     pub dry_run: bool,
 
     /// If the program should be run in a quiet mode
-    #[arg(short, long, hide = HIDE, global = true, action = clap::ArgAction::SetTrue)]
+    #[arg(short, long, hide = HIDE, global = true, action = clap::ArgAction::SetTrue, default_value_if("format", OutputFormat::Json, "true"))]
     pub quiet: bool,
 
     /// If the program should print in a JSON format
@@ -41,6 +41,10 @@ pub struct CommonFlags<const HIDE: bool = false> {
     pub format: OutputFormat,
 }
 
+/// The output format for the CLI
+///
+/// This is only available if the `ui-cli-formatting` feature is enabled.
+/// When formatting is set to non `Human` the quiet mode / flag is implied.
 #[cfg(feature = "ui-cli-formatting")]
 #[derive(Default, Debug, Clone, Copy, ValueEnum)]
 pub enum OutputFormat {

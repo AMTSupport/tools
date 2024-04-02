@@ -220,7 +220,7 @@ macro_rules! handler {
         $crate::handler!($vis $name<O> $([ $($fvis $fname $fty)* ])? $({ $($item)* })?);
     };
     ($vis:vis $name:ident<$ty:ty> $([ $($(#[$fmeta:meta])* $fvis:vis $fname:ident: $fty:ty)* ])? $({ $($item:item)* })?) => {
-        use $crate::cli::Flags as _CommonFlags;
+        use $crate::ui::cli::flags::CommonFlags as _CommonFlags;
         use $crate::ui::cli::CliResult as _CliResult;
         use clap::{Parser as _Parser, Subcommand as _Subcommand};
         use std::fmt::Debug as _Debug;

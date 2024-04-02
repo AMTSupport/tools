@@ -14,10 +14,12 @@
  * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
+use serde::Serialize;
+use serde_json::json;
 use crate::config;
 use crate::rules::Rules;
 use crate::ui::cli::action::Action;
-use lib::ui::cli::flags::CommonFlags;
+use lib::ui::cli::flags::{CommonFlags, OutputFormat};
 use lib::ui::cli::oneshot::OneshotHandler;
 use lib::ui::cli::{CliResult, CliUi};
 use lib::ui::Ui;
@@ -47,8 +49,21 @@ impl OneshotHandler for MemorablePassCli {
                 let passwords = crate::generate(&rules).await;
                 self.rules.replace(rules);
 
-                info!("Generated passwords:\n{passwords}", passwords = passwords.join("\n"));
-                if flags.
+                match flags.format {
+                    OutputFormat::Human => {
+                        info!("Generated passwords:\n{passwords}", passwords = passwords.join("\n"));
+                    }
+                    OutputFormat::Json => {
+                        let json = json! {
+                            {
+                                "passwords": passwords,
+                                "rules": self.rules
+                            }
+                        };
+
+                        println!("{json:#}");
+                    }
+                }
             }
         }
 
@@ -58,8 +73,8 @@ impl OneshotHandler for MemorablePassCli {
 
 impl Ui<CliResult<Self>> for MemorablePassCli {
     fn new(_args: Self::Args) -> CliResult<Self>
-    where
-        Self: Sized,
+        where
+            Self: Sized,
     {
         // Preload the words
         Handle::current().spawn(async {
