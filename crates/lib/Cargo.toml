@@ -16,14 +16,14 @@ builder = []
 updater = ["self_update"]
 
 [dependencies]
-impls = "1.0.3"
+impls.workspace = true
 macros = { path = "../macros" }
 
 # Cli & UI
-clap = { workspace = true }
+clap.workspace = true
 indicatif = { workspace = true, optional = true }
 inquire = { workspace = true, optional = true }
-shlex = { version = "1.2.0", default-features = false, optional = true }
+shlex = { workspace = true, optional = true }
 
 # TUI
 ratatui = { workspace = true, features = ["all-widgets"], optional = true }
@@ -44,17 +44,17 @@ anyhow = { workspace = true }
 # Updater
 self_update = { workspace = true, optional = true }
 
-sysexits = "0.7.2"
-cfg-if = "1.0"
-paste = "1.0.14"
+sysexits.workspace = true
+cfg-if.workspace = true
+paste.workspace = true
 
 no-panic.workspace = true
 const_format.workspace = true
-syn = "2.0.38"
+syn.workspace = true
 
 [target.'cfg(unix)'.dependencies]
-rustix = { version = "0.38.14", features = ["process"] }
+rustix = { workspace = true, features = ["process"] }
 
 [target.'cfg(windows)'.dependencies]
-is_elevated = "0.1.2"
+is_elevated.workspace = true
 #winres = "0.1.12"

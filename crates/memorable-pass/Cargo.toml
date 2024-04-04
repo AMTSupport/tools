@@ -23,36 +23,35 @@ lib = { path = "../lib" }
 macros = { path = "../macros" }
 
 # Runtimes
-tokio = { workspace = true }
+tokio.workspace = true
+
+# Async
 tokio-stream.workspace = true
-futures-util = "0.3.28"
+futures-util.workspace = true
 
 # Cli & UI
-clap = { workspace = true }
-#clap_complete = { workspace = true }
+clap.workspace = true
+clap_complete.workspace = true
 
 # Data
 rand = { workspace = true, features = ["small_rng"] }
 serde = { workspace = true, features = ["derive"] }
-serde_json = { workspace = true }
-rust-embed = { workspace = true }
+serde_json.workspace = true
+rust-embed.workspace = true
 
 # Logging & Errors
 tracing.workspace = true
 tracing-subscriber.workspace = true
 tracing-appender.workspace = true
-#thiserror.workspace = true
 anyhow.workspace = true
 
-derivative = { version = "2.2.0" }
+derivative.workspace = true
 
 [dev-dependencies]
-# Logging & Errors
-env_logger = "*"
-test-log = { version = "0.2.12", features = ["trace"] }
+env_logger.workspace = true
+test-log.workspace = true
 tracing-subscriber = { workspace = true, features = ["env-filter", "fmt"] }
-
-regex = "1.9.5"
+regex.workspace = true
 
 [build-dependencies]
 #reqwest = { workspace = true, features = ["blocking","stream"] }

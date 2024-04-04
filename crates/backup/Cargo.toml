@@ -41,7 +41,7 @@ crossterm = { workspace = true, optional = true }
 # Data / Serialization
 serde = { workspace = true }
 serde_json = { workspace = true }
-chrono = { workspace = true, features = ["serde","clock"] }
+chrono = { workspace = true, features = ["serde", "clock"] }
 zip = { workspace = true, features = ["zstd", "bzip2", "deflate", "deflate-zlib"], optional = true } # TODO :: Downsize features
 
 # Networking
@@ -54,13 +54,13 @@ tracing-appender = { workspace = true }
 thiserror = { workspace = true }
 anyhow = { workspace = true }
 
-fs-err = "2.9.0"
-filetime = "0.2.22"
-glob = "0.3.1"
-readable-regex = "0.1.0-alpha1"
-paste = "1.0.14"
+fs-err.workspace = true
+filetime.workspace = true
+glob.workspace = true
+readable-regex.workspace = true
+paste.workspace = true
 
-opendal = { version = "0.40.0", features = ["services-s3", "rustls"], optional = true }
+opendal = { version = "0.45.1", features = ["services-s3", "rustls"], optional = true }
 
 # Futures & Async
 futures = { workspace = true, optional = true }
@@ -69,26 +69,26 @@ tokio-stream = { workspace = true }
 rayon = { workspace = true }
 
 # For downloading cli binaries
-bytes = { version = "1.5.0", optional = true }
-rand = { version = "0.8.*", optional = true }
-const_format = { version = "0.2.31", optional = true }
-tempfile = "3.8.0"
-regex = "1.9.5"
+bytes = { workspace = true, optional = true }
+rand = { workspace = true, optional = true }
+const_format = { workspace = true, optional = true }
+tempfile.workspace = true
+regex.workspace = true
 
-[dependencies.value-bag]
-version = "1.4.0"
+#[dependencies.value-bag]
+#version = "1.4.0"
 
 [dev-dependencies]
 # Logging & Errors
-env_logger = "*"
-test-log = { version = "0.2.12", features = ["trace"] }
-tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "fmt"] }
+env_logger.workspace = true
+test-log = { workspace = true, features = ["trace"] }
+tracing-subscriber = { workspace = true, default-features = false, features = ["env-filter", "fmt"] }
 
 # Generating random data for tests
-fake = { version = "2.6", features=["derive", "chrono", "serde_json", "maybe-non-empty-collections"]}
-rand = "0.8"
+fake = { workspace = true, features = ["derive", "chrono", "serde_json", "maybe-non-empty-collections"] }
+rand.workspace = true
 
 # Fs & IO
-tempdir = "0.3.7"
-assert_fs = "1.0.13"
+tempdir.workspace = true
+assert_fs.workspace = true
 

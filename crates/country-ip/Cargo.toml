@@ -14,7 +14,6 @@ path = "src/lib.rs"
 default = ["ui-cli"]
 
 ui-cli = ["lib/ui-cli", "indicatif", "tracing-indicatif"]
-#ui-gui = ["lib/ui-gui", "iced", "iced_aw"]
 
 updater = ["lib/updater"]
 
@@ -23,10 +22,10 @@ lib = { path = "../lib" }
 macros = { path = "../macros" }
 
 # Runtimes
-tokio = { workspace = true }
+tokio.workspace = true
 
 # Cli & UI
-clap = { workspace = true }
+clap.workspace = true
 indicatif = { workspace = true, optional = true }
 
 # GUI
@@ -37,12 +36,12 @@ iced_aw = { workspace = true, optional = true }
 reqwest = { workspace = true, features = ["stream"] }
 
 # Logging & Errors
-tracing = { workspace = true }
-tracing-subscriber = { workspace = true }
-tracing-appender = { workspace = true }
+tracing.workspace = true
+tracing-subscriber.workspace = true
+tracing-appender.workspace = true
 tracing-indicatif = { workspace = true, optional = true }
-thiserror = { workspace = true }
-anyhow = { workspace = true }
+thiserror.workspace = true
+anyhow.workspace = true
 
 rand = { version = "0.8.5", features = ["small_rng"] }
 
@@ -50,16 +49,16 @@ cidr = "0.2.2"
 
 # Futures & Async
 futures = { workspace = true, features = ["std"] }
-async-trait = { workspace = true }
-async-compression = { workspace = true }
+async-trait.workspace = true
+async-compression.workspace = true
 tokio-util = { workspace = true, features = ["compat"] }
-rayon = { workspace = true }
+rayon.workspace = true
 
 # Countries
-keshvar = { version = "0.3.0", features = ["search-iso-short-name"] }
+keshvar = { version = "0.5.0", features = ["search-iso-short-name"] }
 
 # Testing
 [dev-dependencies]
-env_logger = "*"
-test-log = { version = "0.2.12", features = ["trace"] }
-tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+env_logger.workspace = true
+test-log.workspace = true
+tracing-subscriber.workspace = true

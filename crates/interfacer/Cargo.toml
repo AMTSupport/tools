@@ -19,23 +19,23 @@ lib = { path = "../lib" }
 macros = { path = "../macros" }
 
 # Runtimes
-tokio = { workspace = true }
+tokio.workspace = true
 
 # Cli & UI
-clap = { workspace = true }
+clap.workspace = true
 indicatif = { workspace = true, optional = true }
 inquire = { workspace = true, optional = true }
 
 # Data & Serialization
-serde = { workspace = true }
+serde.workspace = true
+quick-xml.workspace = true
 chrono = { workspace = true, features = ["serde"] }
-quick-xml = { version = "0.30.0", features = ["serde", "serialize"] }
 
 # Networking
-reqwest = { workspace = true, features = ["json", "gzip", "cookies","deflate"] }
-reqwest-middleware = "0.2.2"
-http-cache-reqwest = { version = "0.11.1", features = ["manager-moka"] }
-thirtyfour = "0.31.0"
+reqwest = { workspace = true, features = ["json", "gzip", "cookies", "deflate"] }
+reqwest-middleware.workspace = true
+http-cache-reqwest.workspace = true
+thirtyfour.workspace = true
 
 # Logging & Errors
 tracing = { workspace = true }
@@ -44,8 +44,8 @@ thiserror = { workspace = true }
 anyhow = { workspace = true }
 
 # Data
-csv = { git = "https://github.com/gootorov/rust-csv.git", branch = "serde-flatten" }
-serde_with = "3.3.0"
+csv.workspace = true
+serde_with.workspace = true
 
 #async-trait = "0.1.68"
 #async-lazy = "0.1.0"
@@ -57,9 +57,9 @@ serde_with = "3.3.0"
 
 # Testing
 [dev-dependencies]
-env_logger = "*"
-test-log = { version = "0.2.12", features = ["trace"] }
-tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "fmt"] }
+env_logger.workspace = true
+test-log.workspace = true
+tracing-subscriber = { workspace = true, default-features = false, features = ["env-filter", "fmt"] }
 
 
 #[patch.crates-io]

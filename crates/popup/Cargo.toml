@@ -21,10 +21,10 @@ clap = { workspace = true }
 chrono = { workspace = true, default-features = false }
 
 # Logging & Errors
-tracing = { workspace = true }
-tracing-subscriber = { workspace = true }
-thiserror = { workspace = true }
-anyhow = { workspace = true }
+tracing.workspace = true
+tracing-subscriber.workspace = true
+thiserror.workspace = true
+anyhow.workspace = true
 
 # GUI
 iced = { workspace = true, optional = true }
@@ -40,5 +40,5 @@ registry = "1.2.3"
 winrt-notification = "0.5.1"
 
 [dev-dependencies]
-fake = { version = "2.6", features=["derive", "chrono", "maybe-non-empty-collections"]}
-rand = "0.8"
+fake = { workspace = true, features = ["derive", "chrono", "maybe-non-empty-collections"] }
+rand.workspace = true
