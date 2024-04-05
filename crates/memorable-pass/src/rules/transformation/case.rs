@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 James Draycott <me@racci.dev>
+ * Copyright (C) 2023-2024. James Draycott me@racci.dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -7,11 +7,11 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
 use crate::processor::word::Word;
@@ -41,7 +41,7 @@ impl Rule for CaseTransformation {
         _passable: &mut Self::Passable,
     ) -> Vec<Action> {
         let copy = *self;
-        vec![Action::Transformation(Priority::High, ActionCondition::Always, move |str| match &copy {
+        vec![Action::Transformation(Priority::High, ActionCondition::Always, Box::new(move |str| match &copy {
             CaseTransformation::None => str.to_string(),
             CaseTransformation::Uppercase => str.to_ascii_uppercase(),
             CaseTransformation::Capitalise => str.replacen(&str[0..1], &str[0..1].to_uppercase(), 1),
@@ -65,7 +65,7 @@ impl Rule for CaseTransformation {
                     })
                     .collect::<String>()
             }
-        })]
+        }))]
     }
 }
 

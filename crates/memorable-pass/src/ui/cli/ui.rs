@@ -14,7 +14,6 @@
  * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
-use serde::Serialize;
 use serde_json::json;
 use crate::config;
 use crate::rules::Rules;

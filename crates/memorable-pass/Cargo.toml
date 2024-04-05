@@ -14,7 +14,7 @@ name = "memorable-pass"
 path = "src/main.rs"
 
 [features]
-default = ["ui-cli"]
+default = ["ui-cli", "lib/updater"]
 
 ui-cli = ["lib/ui-cli", "lib/ui-cli-formatting"]
 
@@ -35,7 +35,7 @@ clap.workspace = true
 rand = { workspace = true, features = ["small_rng"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
-rust-embed.workspace = true
+rust-embed = { workspace = true, features = ["debug-embed"] }
 
 # Logging & Errors
 tracing.workspace = true
@@ -50,6 +50,9 @@ env_logger.workspace = true
 test-log.workspace = true
 tracing-subscriber = { workspace = true, features = ["env-filter", "fmt"] }
 regex.workspace = true
+
+[profile.dev]
+
 
 [build-dependencies]
 #reqwest = { workspace = true, features = ["blocking","stream"] }
