@@ -9,20 +9,8 @@ path = "src/lib.rs"
 proc-macro = true
 
 [dependencies]
-syn.workspace = true
+syn = { workspace = true, features = ["extra-traits"] }
 quote.workspace = true
 proc-macro2.workspace = true
-downcast-rs.workspace = true
-
-# Compile time quote parsing
 impls.workspace = true
-litrs.workspace = true
-paste.workspace = true
-evcxr.workspace = true
-prettyplease.workspace = true
-
-# Logging & Errors
-tracing.workspace = true
-tracing-subscriber.workspace = true
-thiserror.workspace = true
 anyhow.workspace = true

@@ -9,15 +9,15 @@ default = ["ui-cli"]
 ui-tui = ["ratatui", "crossterm"]
 ui-cli = ["indicatif", "inquire", "tracing-indicatif"]
 ui-cli-formatting = []
-ui-gui = ["iced", "iced_aw"]
+ui-gui = [] #["iced", "iced_aw"]
 ui-repl = ["ui-cli", "shlex"]
 
 builder = []
-updater = ["self_update"]
+updater = ["self_update", "const_format"]
 
 [dependencies]
-impls.workspace = true
-macros = { path = "../macros" }
+#impls.workspace = true
+#macros = { path = "../macros" }
 
 # Cli & UI
 clap.workspace = true
@@ -30,8 +30,8 @@ ratatui = { workspace = true, features = ["all-widgets"], optional = true }
 crossterm = { workspace = true, optional = true }
 
 # GUI
-iced = { workspace = true, optional = true }
-iced_aw = { workspace = true, optional = true }
+#iced = { workspace = true, optional = true }
+#iced_aw = { workspace = true, optional = true }
 
 # Logging & Errors
 tracing = { workspace = true }
@@ -48,9 +48,8 @@ sysexits.workspace = true
 cfg-if.workspace = true
 paste.workspace = true
 
-no-panic.workspace = true
-const_format.workspace = true
-syn.workspace = true
+const_format = { workspace = true, optional = true }
+#syn.workspace = true
 
 [target.'cfg(unix)'.dependencies]
 rustix = { workspace = true, features = ["process"] }

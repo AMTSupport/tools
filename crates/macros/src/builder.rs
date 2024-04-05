@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024. James Draycott <me@racci.dev>
+ * Copyright (C) 2023-2024. James Draycott me@racci.dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -10,8 +10,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program.
- * If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
 use proc_macro::TokenStream;
@@ -105,8 +105,6 @@ fn generate_builder_impl(
     });
 
     let insert_definitions = fields.iter().map(|(name, ty, _, default)| {
-        println!("Finding definition pure type for {name:#} of type {ty:?}");
-
         let default = if default.is_none() {
             quote! { None }
         } else {
@@ -201,7 +199,7 @@ fn get_fields(
                     None => {
                         return Err(
                             quote! { compile_error!("Builder macro can only be used on structs with named fields"); },
-                        )
+                        );
                     }
                 };
 
@@ -258,7 +256,7 @@ fn get_fields(
                                 expr => {
                                     return Err(
                                         meta.error(format!("expected literal, block, call or macro, found {expr:?}"))
-                                    )
+                                    );
                                 }
                             }
 
@@ -270,7 +268,7 @@ fn get_fields(
                             meta.path.get_ident().expect("expected ident")
                         )))
                     })
-                    .expect("failed to parse builder attribute");
+                        .expect("failed to parse builder attribute");
                 }
 
                 vec.push((ident.clone(), ty.clone(), optional, default));

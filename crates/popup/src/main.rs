@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 James Draycott <me@racci.dev>
+ * Copyright (C) 2023-2024. James Draycott me@racci.dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -7,20 +7,21 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
 use iced::alignment::Vertical;
 use iced::theme::Palette;
 use iced::widget::{button, column, row, text, text_input, Column, Container};
-use iced::window::Position;
+use iced::window::{Id, Position};
 use iced::window::{Action, Mode};
 use iced::{alignment::Horizontal, executor, widget, window, Application, Color, Command, Element, Length, Settings};
 use std::process::ExitCode;
+use std::sync::Arc;
 use tracing::trace;
 
 #[derive(Default)]
@@ -53,8 +54,8 @@ impl Application for Informer {
         };
 
         let cmd = Command::batch([
-            Command::single(CommandAction::Window(Action::GainFocus)),
-            Command::single(CommandAction::Window(Action::ChangeMode(Mode::Fullscreen))),
+            Command::single(CommandAction::Window(Action::GainFocus(Id::MAIN))),
+            Command::single(CommandAction::Window(Action::ChangeMode(Id::MAIN, Mode::Fullscreen))),
         ]);
 
         (application, cmd)
@@ -72,7 +73,7 @@ impl Application for Informer {
             }
             Message::Exit(reason) => {
                 trace!("Exiting: {}", reason);
-                window::close()
+                window::close(Id::MAIN)
             }
             Message::Event(msg) => {
                 trace!("Event: {}", msg);
@@ -143,12 +144,11 @@ impl Application for Informer {
         use iced_aw::{modal, Card};
 
         let overlay = Card::new(
-            widget::Text::new("My Modal").into(),
-            widget::Text::new("This is a modal!").into(),
-        )
-        .foot(footer)
-        .max_width(300.0)
-        .on_close(Message::Exit("Modal closed".into()));
+            widget::Text::new("My Modal"),
+            widget::Text::new("This is a modal!"),
+        ).foot(footer)
+            .max_width(300.0)
+            .on_close(Message::Exit("Modal closed".into()));
 
         modal::Modal::new(content, Some(overlay))
             .backdrop(Message::Event("Backdrop clicked".into()))
@@ -167,7 +167,7 @@ impl Application for Informer {
     fn theme(&self) -> Self::Theme {
         use iced::Theme::{Custom, Dark};
 
-        Custom(Box::from(iced::theme::Custom::new(Palette {
+        Custom(Arc::new(iced::theme::Custom::new("default".to_string(), Palette {
             text: Color::WHITE,
             // primary: Color::from_rgb(0.11, 0.42, 0.87),
             background: Color::from_rgb(0.11, 0.42, 0.87),
@@ -197,11 +197,10 @@ async fn main() -> anyhow::Result<ExitCode> {
             You will be rebooted at 2 AM;
             please close all work you may have.
             "#
-            .trim()
-            .to_string(),
+                .trim()
+                .to_string(),
             true,
         ),
-        exit_on_close_request: false,
         ..Default::default()
     };
 
