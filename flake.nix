@@ -120,6 +120,15 @@
             cargo-nextest
             cargo-cranky
             cargo-edit
+            cargo-machete
+            cargo-deadlinks
+            cargo-unused-features
+            cargo-hack
+            cargo-modules
+            cargo-geiger
+            cargo-audit
+            cargo-bloat
+            cargo-diet
           ] ++ config.pre-commit.settings.enabledPackages;
 
           env = useMold true pkgs "X86_64_UNKNOWN_LINUX_GNU" // {
@@ -231,19 +240,16 @@
             ];
           };
 
-          allTargets = lib.mapAttrs
-            (name: crate: {
-              all = pkgs.symlinkJoin {
-                inherit name;
-                description = "Compile all targets for ${name}";
-                paths = lib.trivial.pipe crate.allTargets [
-                  lib.attrValues
-                  (builtins.map (target: target.packages.release))
-                ];
-              };
-            })
-            config.nci.outputs;
-        };
+       } // (lib.trivial.pipe config.nci.outputs [
+            (lib.filterAttrs (name: _: name != "tools"))
+            lib.attrValues
+            (builtins.map (crate: lib.attrValues crate.allTargets))
+            lib.flatten
+            (builtins.map (target: target.packages.release))
+            (builtins.filter (package: package.out.stdenv.system != system))
+            (builtins.map (package: lib.nameValuePair "${package.name}-${package.out.stdenv.system}" package))
+            lib.listToAttrs
+        ]);
       };
   };
 }
