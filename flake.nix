@@ -198,6 +198,8 @@
                       # Use mold linker for linux targets
                       env = useMold default pkgs envTarget;
                     };
+
+                  drvConfig = depsDrvConfig;
                 }))
               builtins.listToAttrs
             ];
