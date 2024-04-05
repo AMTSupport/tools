@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024. James Draycott <me@racci.dev>
+ * Copyright (C) 2024. James Draycott me@racci.dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -10,12 +10,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program.
- * If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see https://www.gnu.org/licenses/.
  */
-
-use crate::ui::builder::buildable::Buildable;
-use std::fmt::Debug;
 
 #[macro_export]
 macro_rules! impls_utils {
@@ -37,7 +34,7 @@ macro_rules! impls_utils {
         impl<T: Sized + Clone + Debug + $impl_target $($(+ $common_impl)+)?> Wrapper<T> {
             #[allow(unused)]
             // #[tracing::instrument(level = "TRACE", err, ret)]
-            $($async)? fn call(&self$(, $($variable: $variable_type),+)?) -> $crate::impls_utils!(@return $return_type $(| $alt_wrapper_return_type)?) {return $f}
+            $($async)? fn call(&self$(, $($variable: $variable_type),+)?) -> $crate::impls_utils!(@return $return_type $(| $alt_wrapper_return_type)?) {return $f;}
         }
 
         let wrapper = Wrapper($phantom_data);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024. James Draycott <me@racci.dev>
+ * Copyright (C) 2024. James Draycott me@racci.dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -10,13 +10,13 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program.
- * If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
 use crate::ui::builder::buildable::Buildable;
 use crate::ui::builder::error::{BuildResult, FillResult};
-use crate::ui::builder::filler::Filler;
+use crate::ui::builder::filler::{FillableDefinition, Filler, TypeWrapped};
 use std::fmt::Debug;
 
 pub mod buildable;
@@ -39,16 +39,16 @@ pub trait Builder: Default + Debug {
 
 #[derive(Debug, Clone)]
 pub struct BuilderHolder<T>
-where
-    T: Sized + Clone + Debug,
+    where
+        T: Sized + Clone + Debug,
 {
     pub value: Option<T>,
     pub def: TypeWrapped<T>,
 }
 
 impl<T> BuilderHolder<T>
-where
-    T: Sized + Clone + Debug,
+    where
+        T: Sized + Clone + Debug,
 {
     pub fn new(def: FillableDefinition<T>) -> Self {
         Self {

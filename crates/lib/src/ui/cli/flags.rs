@@ -27,18 +27,22 @@ pub struct CommonFlags<const HIDE: bool = false> {
     #[arg(short, long, hide = HIDE, global = true, action = clap::ArgAction::Count)]
     pub verbose: u8,
 
-    /// If there shouldn't be any changes made and only a dry run should be performed
+    /// If there shouldn't be any changes made and only a dry run should be performed.
     #[arg(short, long, hide = HIDE, global = true, action = clap::ArgAction::SetTrue)]
     pub dry_run: bool,
 
     /// If the program should be run in a quiet mode
-    #[arg(short, long, hide = HIDE, global = true, action = clap::ArgAction::SetTrue, default_value_if("format", OutputFormat::Json, "true"))]
+    #[arg(short, long, hide = HIDE, global = true, action = clap::ArgAction::SetTrue, default_value_if("format", "OutputFormat::Json", "true"))]
     pub quiet: bool,
 
     /// If the program should print in a JSON format
     #[cfg(feature = "ui-cli-formatting")]
-    #[arg(short, long, hide = HIDE, global = true, value_enum)]
+    #[arg(short, long, hide = HIDE, global = true, value_enum, default_value_t = OutputFormat::Human)]
     pub format: OutputFormat,
+
+    #[cfg(feature = "updater")]
+    #[arg(short, long, hide = HIDE, global = true, action = clap::ArgAction::SetTrue)]
+    pub update: bool,
 }
 
 /// The output format for the CLI

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024. James Draycott <me@racci.dev>
+ * Copyright (C) 2024. James Draycott me@racci.dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -10,28 +10,26 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program.
- * If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
+use std::env::consts;
+
 use anyhow::Result;
-use no_panic::no_panic;
 use self_update::backends::github::Update;
-use self_update::{cargo_crate_version, Status};
 
 const REPO_OWNER: &str = "AMTSupport";
 const REPO_NAME: &str = "tools";
 
-#[inline]
-#[no_panic]
-pub fn update() -> Result<()> {
+pub async fn update() -> Result<()> {
     const VERSION: &str = env!("CARGO_PKG_VERSION");
     const EXECUTABLE: &str = const_format::formatcp!(
         "{PKG_NAME}-{ARCH}-{PLATFORM}{EXT}",
         PKG_NAME = env!("CARGO_PKG_NAME"),
-        ARCH = env!("CARGO_CFG_TARGET_ARCH"),
-        PLATFORM = env!("CARGO_CFG_TARGET_OS"),
-        EXT = if cfg!(windows) { ".exe" } else { "" },
+        ARCH = consts::ARCH,
+        PLATFORM = consts::OS,
+        EXT = consts::EXE_EXTENSION,
     );
 
     Update::configure()
