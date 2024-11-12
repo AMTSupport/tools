@@ -15,47 +15,84 @@
   };
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
     devenv.url = "github:cachix/devenv";
-    nci.url = "github:yusdacra/nix-cargo-integration";
-    pre-commit-hooks-nix.url = "github:cachix/pre-commit-hooks.nix";
+    pre-commit-hooks-nix = { url = "github:cachix/pre-commit-hooks.nix"; inputs.nixpkgs.follows = "nixpkgs"; };
+    crane = { url = "github:ipetkov/crane"; };
     fenix = { url = "github:nix-community/fenix"; inputs.nixpkgs.follows = "nixpkgs"; };
+    # Unpin when https://github.com/yusdacra/nix-cargo-integration/issues/159 is resolved
+    nci = { url = "github:yusdacra/nix-cargo-integration"; };
   };
 
-  outputs = inputs@{ self, flake-parts, ... }: flake-parts.lib.mkFlake { inherit inputs; } {
+  outputs = inputs@{ self, flake-parts, crane, ... }: flake-parts.lib.mkFlake { inherit inputs; } {
     imports = [
       inputs.pre-commit-hooks-nix.flakeModule
       inputs.devenv.flakeModule
       inputs.nci.flakeModule
     ];
 
-    systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
+    systems = [ "x86_64-linux" ];
+
+    debug = true;
 
     perSystem = { config, system, pkgs, lib, ... }:
       let
-        rustToolchain = let fenixPkgs = inputs.fenix.packages.${system}; in fenixPkgs.combine [
+        # outputTargets = [
+        #   "x86_64-unknown-linux-gnu"
+        #   "aarch64-unknown-linux-gnu"
+        #   #          "x86_64-apple-darwin" # error: don't yet have a `targetPackages.darwin.LibsystemCross for x86_64-apple-darwin`
+        #   #          "aarch64-apple-darwin" # can't compile from linux to darwin
+        #   "x86_64-pc-windows-gnu"
+        #   "aarch64-pc-windows-gnullvm"
+        # ];
+
+        ourLib = import ./lib.nix {
+          inherit pkgs;
+          fenixPkgs = inputs.fenix.packages.${system};
+          craneLib = inputs.crane.mkLib pkgs;
+        };
+
+        rustToolchain = let fenixPkgs = inputs.fenix.packages.${system}; in fenixPkgs.combine ([
           fenixPkgs.complete.cargo
           fenixPkgs.complete.rustc
           fenixPkgs.complete.rust-src
           fenixPkgs.complete.rust-analyzer
           fenixPkgs.complete.clippy
           fenixPkgs.complete.rustfmt
-        ];
+        ]); #(map (target: fenixPkgs.targets.${target}.latest.rust-std) outputTargets));
 
-        useMold = isNative: pkgs: envTarget: lib.mkIf (isNative && pkgs.stdenv.targetPlatform.isLinux) (
-          let
-            clang = "${pkgs.clang}/bin/${pkgs.clang.targetPrefix}clang";
-          in
-          {
-            "CC" = clang;
-#            "CC_${envTarget}" = clang;
-            "CARGO_TARGET_${envTarget}_LINKER" = clang;
-            "CARGO_TARGET_${envTarget}_RUSTFLAGS" = "-C link-arg=-fuse-ld=${lib.getExe pkgs.mold}";
-          }
-        );
+        # makeLinkerEnv = isNative: crossPkgs: target:
+        #   let
+        #     linker =
+        #       if isNative
+        #       then "${crossPkgs.clang}/bin/${crossPkgs.clang.targetPrefix}clang"
+        #       else let inherit (crossPkgs.stdenv) cc; in "${cc}/bin/${cc.targetPrefix}cc";
+        #   in
+        #   {
+        #     # "CC" = linker;
+        #     "CC_${target}" = linker;
+        #     "CARGO_TARGET_${target}_LINKER" = linker;
+
+        #     "CARGO_TARGET_${target}_RUSTFLAGS" =
+        #       if isNative && crossPkgs.stdenv.targetPlatform.isLinux
+        #       then "-C link-arg=-fuse-ld=${lib.getExe crossPkgs.mold}"
+        #       else null;
+
+        #     "CARGO_TARGET_${target}_RUNNER" =
+        #       if isNative
+        #       then null
+        #       else if crossPkgs.stdenv.targetPlatform.isWindows
+        #       then
+        #         pkgs.writeScript "wine-wrapper" ''
+        #           #!${lib.getExe pkgs.bash}
+        #           export WINEPREFIX="$(mktemp -d)"
+        #           exec ${(lib.getExe (pkgs.wine.override { wineBuild = "wine64"; }))} $@
+        #         ''
+        #       else "${pkgs.qemu}/bin/qemu-${crossPkgs.targetPlatform.qemuArch}";
+        #   };
       in
-      rec {
+      {
         pre-commit.settings.hooks = {
           actionlint.enable = true;
 
@@ -85,7 +122,10 @@
           typos.enable = true;
         };
 
-        devenv.shells.default = rec {
+        devenv.shells.default = {
+          # Fixes https://github.com/cachix/devenv/issues/528
+          containers = lib.mkForce { };
+
           difftastic.enable = true;
 
           languages.rust = {
@@ -106,6 +146,7 @@
             openssl
             clang
             mold
+            libz
 
             pkg-config
             rustToolchain
@@ -129,9 +170,10 @@
             cargo-audit
             cargo-bloat
             cargo-diet
+            cargo-xwin # Required for building windows aarch targets.
           ] ++ config.pre-commit.settings.enabledPackages;
 
-          env = useMold true pkgs "X86_64_UNKNOWN_LINUX_GNU" // {
+          env = /*makeLinkerEnv true pkgs "X86_64_UNKNOWN_LINUX_GNU" //*/ {
             LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath (with pkgs; [
               openssl
               clang
@@ -140,116 +182,142 @@
           };
         };
 
-        nci = rec {
-          toolchains = {
-            build = rustToolchain;
-            shell = devenv.shells.default;
-          };
+        packages = lib.trivial.pipe ourLib.workspaceOutputs [
+          (builtins.map (craneOutputs: craneOutputs.default))
+          (builtins.map (package: lib.nameValuePair package.pname package))
+          lib.listToAttrs
+        ];
 
-          projects.tools = {
-            path = self;
-            export = true;
+        # nci = rec {
+        #   # toolchains = {
+        #   #   build = rustToolchain;
+        #   #   shell = rustToolchain;
+        #   # };
 
-            profiles = {
-              dev = { };
-              release = {
-                runTests = true;
-              };
-            };
+        #   projects.tools = {
+        #     path = self;
+        #     export = true;
 
-            targets = lib.trivial.pipe [
-              "unknown-linux-gnu"
-              "pc-windows-gnu"
-              #            "apple-darwin"
-            ] [
-              (map (target: [
-                "x86_64-${target}"
-              ] ++ lib.optionals (target != "pc-windows-gnu") [ "aarch64-${target}" ]))
-              lib.flatten
-              (map (target:
-                let
-                  envTarget = builtins.replaceStrings [ "-" ] [ "_" ] (lib.toUpper target);
-                  nixTarget = builtins.replaceStrings [ "-gnu" "-pc" "-unknown" "-apple" ] [ "" "" "" "" ] target;
-                in
-                lib.nameValuePair target rec {
-                  # Default if native
-                  default = system == nixTarget;
-                  # No dev profile for non-native targets
-                  profiles = if default then (builtins.attrNames projects.tools.profiles) else [ "release" ];
-                  # Only run tests on native target
-                  # profiles.release.runTests = default;
+        #     profiles = {
+        #       dev = { };
+        #       release = { };
+        #     };
 
-                  depsDrvConfig =
-                    let
-                      crossPackages =
-                        if default then pkgs
-                        else if nixTarget == "x86_64-linux" then pkgs.pkgsCross.gnu64
-                        else if nixTarget == "x86_64-windows" then pkgs.pkgsCross.mingwW64
-                        else if nixTarget == "aarch64-linux" then pkgs.pkgsCross.aarch64-multiplatform
-                        else pkgs.pkgsCross.${nixTarget};
-                    in
-                    {
-                      deps.stdenv = crossPackages.clangStdenv;
+        #     targets = lib.trivial.pipe outputTargets [
+        #       (map (target:
+        #         let
+        #           envTarget = builtins.replaceStrings [ "-" ] [ "_" ] (lib.toUpper target);
+        #           nixTarget = builtins.replaceStrings [ "-gnullvm" "-gnu" "-pc" "-unknown" "-apple" ] [ "" "" "" "" "" ] target;
+        #           split = lib.strings.splitString "-" nixTarget;
+        #           arch = builtins.elemAt (split) 0;
+        #           platform = builtins.elemAt (split) 1;
 
-                      mkDerivation = {
-                        # Make sure some windows build dependencies are available.
-                        depsBuildBuild = lib.optionals crossPackages.targetPlatform.isWindows (with crossPackages; [
-                          stdenv.cc
-                          windows.mingw_w64_pthreads
-                          windows.pthreads
-                        ]);
+        #           isNative = system == nixTarget;
+        #           isDarwin = platform == "apple";
+        #           isWindows = platform == "windows";
+        #           isLinux = platform == "linux";
+        #         in
+        #         lib.nameValuePair target rec {
+        #           # Default if native
+        #           default = isNative;
+        #           # No dev profile for non-native targets
+        #           profiles = if default then (builtins.attrNames projects.tools.profiles) else [ "release" ];
 
-                        # Common build inputs
-                        buildInputs = [ pkgs.openssl ];
-                        nativeBuildInputs = [ pkgs.pkg-config ];
-                      };
+        #           depsDrvConfig =
+        #             let
+        #               crossPackages =
+        #                 if isNative then pkgs
+        #                 else if nixTarget == "x86_64-linux" then pkgs.pkgsCross.gnu64
+        #                 else if platform == "windows" then pkgs.pkgsCross.mingwW64
+        #                 else if platform == "darwin" then pkgs.pkgsCross.${nixTarget}
+        #                 else if arch == "aarch64" then pkgs.pkgsCross.mingwW64
+        #                 else throw "Unsupported target: ${nixTarget}";
+        #             in
+        #             {
+        #               mkDerivation = {
+        #                 # Make sure some windows build dependencies are available.
+        #                 depsBuildBuild = (lib.optionals crossPackages.targetPlatform.isWindows [
+        #                   crossPackages.stdenv.cc
+        #                   crossPackages.windows.mingw_w64_pthreads
+        #                   crossPackages.windows.pthreads
+        #                 ]);
 
-                      # Use mold linker for linux targets
-                      env = useMold default pkgs envTarget;
-                    };
+        #                 # Common build inputs
+        #                 buildInputs = [ pkgs.openssl ];
+        #                 nativeBuildInputs = [ pkgs.pkg-config ];
 
-                  drvConfig = depsDrvConfig;
-                }))
-              builtins.listToAttrs
-            ];
-          };
-        };
+        #                 passthru = {
+        #                   inherit arch platform isNative isDarwin isWindows isLinux;
+        #                 };
+        #               };
 
-        # Create a symlink to all binaries for each crate
-        # Create a symlink to all binaries for each target
-        packages = {
-          all = pkgs.symlinkJoin {
-            name = "all";
-            description = "Compile all crates for all targets";
-            paths = lib.trivial.pipe config.nci.outputs [
-              (lib.filterAttrs (name: _: name != "tools"))
-              lib.attrValues
-              (builtins.map (crate: lib.attrValues crate.allTargets))
-              lib.flatten
-              (builtins.map (target: target.packages.release))
-            ];
-          };
+        #               env = makeLinkerEnv default crossPackages envTarget;
+        #             };
 
-          allNative = pkgs.symlinkJoin {
-            name = "allNative";
-            description = "Compile all crates for the native target";
-            paths = lib.trivial.pipe config.nci.outputs [
-              (lib.filterAttrs (name: _: name != "tools"))
-              lib.attrValues
-              (builtins.map (crate: crate.packages.release))
-            ];
-          };
+        #           drvConfig = depsDrvConfig;
+        #         }))
+        #       builtins.listToAttrs
+        #     ];
+        #   };
+        # };
 
-       } // (lib.trivial.pipe config.nci.outputs [
-            (lib.filterAttrs (name: _: name != "tools"))
-            lib.attrValues
-            (builtins.map (crate: lib.attrValues crate.allTargets))
-            lib.flatten
-            (builtins.map (target: target.packages.release))
-            (builtins.filter (package: package.out.stdenv.system != system))
-            (builtins.map (package: lib.nameValuePair "${package.name}-${package.out.stdenv.system}" package))
-            lib.listToAttrs
-        ]);
+        # packages =
+        #   let
+        #     allCratesTargetsReleases = lib.trivial.pipe config.nci.outputs [
+        #       (lib.filterAttrs (name: _: name != "tools"))
+        #       lib.attrValues
+        #       (builtins.map (crate: lib.attrValues crate.allTargets))
+        #       lib.flatten
+        #     ];
+
+        #     # craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
+        #   in
+        #   {
+        #     all = pkgs.symlinkJoin {
+        #       name = "all";
+        #       description = "Compile all crates for all targets";
+        #       paths = builtins.map (target: target.packages.release) allCratesTargetsReleases;
+        #     };
+
+        #     # test = craneLib.buildPackage {
+        #     #   cname = "test";
+        #     #   pname = "test";
+        #     #   version = "0.2.0";
+        #     #   src = craneLib.path ./.;
+        #     #   strictDeps = false;
+        #     #   doCheck = false;
+        #     #   cargoLock = craneLib.path ./Cargo.lock;
+
+        #     #   cargoExtraArgs = "--package lib";
+        #     #   CARGO_BUILD_TARGET = "aarch64-pc-windows-gnullvm";
+
+        #     # };
+        #   } // (lib.trivial.pipe config.nci.outputs [
+        #     (lib.filterAttrs (name: _: name != "tools"))
+        #     lib.attrValues
+        #     (builtins.map (crate: lib.attrValues crate.allTargets))
+        #     lib.flatten
+        #     (builtins.map (target: target.packages.release))
+        #     (builtins.filter (package: !package.out.passthru.isNative))
+        #     (builtins.map (package: lib.nameValuePair "${package.name}-${package.out.passthru.arch}-${package.out.passthru.platform}" package))
+        #     lib.listToAttrs
+        #   ])/* // (lib.trivial.pipe allCratesTargetsReleases [ # Work around for adding build support for arm on windows, because there is no native build support on Nix for it.
+        #     # Filter to the native target for each crate
+        #     (builtins.filter (package: package.out.passthru.isNative))
+        #     # From the native target get the information for creating a derivation from runCommand
+        #     (builtins.map (package: lib.nameValuePair "${package.name}-${package.out.passthru.arch}-${package.out.passthru.platform}" ))
+
+        #     ])*/ // (lib.trivial.pipe [ "windows" "darwin" "linux" ] [
+        #     (map (platform: lib.nameValuePair "all-${platform}" (pkgs.symlinkJoin {
+        #       name = "all-${platform}";
+        #       description = "Compile all crates for the ${platform} target";
+        #       paths = lib.trivial.pipe allCratesTargetsReleases [
+        #         (builtins.filter (package: package.out.passthru.platform == platform))
+        #         (builtins.map (target: target.packages.release))
+        #       ];
+        #     })))
+        #     lib.listToAttrs
+        #   ]);
       };
   };
 }

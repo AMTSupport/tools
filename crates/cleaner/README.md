@@ -14,7 +14,7 @@
 
 ```sh
 # Nix (Recommended) (Release binaries are cached)
-nix run github:AMTSupport/tools#cleaner
+nix run github:AMTSupport/tools#cleaner --accept-flake-config
 
 # Cargo
 cargo install --git https://github.com/AMTSupport/tools cleaner
