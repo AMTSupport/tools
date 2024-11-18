@@ -9,7 +9,6 @@
 
 , hostPkgs
 , target
-, systemSuffix
 }:
 let
   inherit (hostPkgs) lib;
@@ -26,12 +25,12 @@ let
     CARGO_BUILD_TARGET = target.rust.cargoShortTarget;
   } // (lib.optionalAttrs (!isNative) {
     "CARGO_TARGET_${target.rust.cargoEnvVarTarget}_RUNNER" = hostPkgs.lib.getExe' hostPkgs.qemu "qemu-${target.pkgsCross.targetPlatform.qemuArch}";
-  }) // (lib.optionalAttrs (target.pkgsCross.targetPlatform.isLinux) rec {
+  }) // (lib.optionalAttrs target.pkgsCross.targetPlatform.isLinux rec {
     "CC" = "${hostPkgs.clang}/bin/${target.pkgsCross.clang.targetPrefix}clang";
     "CC_${target.rust.cargoEnvVarTarget}" = CC;
     "CARGO_TARGET_${target.rust.cargoEnvVarTarget}_LINKER" = CC;
     "CARGO_TARGET_${target.rust.cargoEnvVarTarget}_RUSTFLAGS" = "-C link-arg=-fuse-ld=${lib.getExe hostPkgs.mold}";
-  }) // (lib.optionalAttrs (target.pkgsCross.targetPlatform.isWindows) {
+  }) // (lib.optionalAttrs target.pkgsCross.targetPlatform.isWindows {
     "CARGO_TARGET_${target.rust.cargoEnvVarTarget}_RUNNER" = hostPkgs.writeScript "wine-wrapper" ''
       #!${hostPkgs.stdenv.shell}
       export WINEPREFIX="$(mktemp -d)"
@@ -41,19 +40,18 @@ let
 
   commonDeps = {
     depsBuildBuild = [ target.pkgsCross.stdenv.cc ]
-      ++ lib.optionals (!isNative) (with hostPkgs; [ qemu ])
+      ++ lib.optionals (!isNative && !target.pkgsCross.targetPlatform.isWindows) (with hostPkgs; [ qemu ])
       ++ lib.optionals (target.pkgsCross.targetPlatform.isWindows && target.pkgsCross.stdenv.isx86_64) (with target.pkgsCross; [ windows.mingw_w64_pthreads windows.pthreads ]);
 
-    buildInputs = [ ]
-      ++ lib.optionals (target.pkgsCross.targetPlatform.isLinux) (with target.pkgsCross; [ target.pkgsCross.openssl clang mold ])
-      ++ lib.optionals (target.pkgsCross.targetPlatform.isWindows) (with target.pkgsCross; [ windows.mingw_w64_headers ]);
+    buildInputs = lib.optionals target.pkgsCross.targetPlatform.isLinux (with target.pkgsCross; [ target.pkgsCross.openssl clang mold ])
+      ++ lib.optionals target.pkgsCross.targetPlatform.isWindows (with target.pkgsCross; [ windows.mingw_w64_headers ]);
 
     nativeBuildInputs = with hostPkgs; [ pkg-config ]
-      ++ lib.optionals (target.pkgsCross.targetPlatform.isWindows) ([ (pkgs.wine.override { wineBuild = "wine64"; }) ]);
+      ++ lib.optionals target.pkgsCross.targetPlatform.isWindows [ (pkgs.wine.override { wineBuild = "wine64"; }) ];
 
     LD_LIBRARY_PATH = lib.makeLibraryPath (with hostPkgs; [
       openssl
-    ] ++ lib.optionals (target.pkgsCross.targetPlatform.isLinux) (with target.pkgsCross; [
+    ] ++ lib.optionals target.pkgsCross.targetPlatform.isLinux (with target.pkgsCross; [
       wayland
       libxkbcommon
       vulkan-loader
@@ -67,7 +65,7 @@ let
 
   commonArgs = commonDeps // commonEnvironment // {
     inherit cname version src;
-    pname = "${pname}-${systemSuffix}";
+    pname = "${pname}-${target.pkgsCross.targetPlatform.system}";
 
     cargoLock = craneLib.path ./Cargo.lock;
     cargoExtraArgs = "--package ${cname}";
@@ -111,7 +109,7 @@ rec {
   format = cargoFmt cargoArtifact null;
 
   default = library;
-} // (lib.optionalAttrs (hasBinary) rec {
+} // (lib.optionalAttrs hasBinary rec {
   executable = cargoBuild cargoArtifact (args: {
     cargoExtraArgs = "--bin ${args.cname}";
 

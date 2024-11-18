@@ -5,6 +5,10 @@ let
   src = craneLib.path ./.;
 in
 rec {
+  buildableTargets = lib.trivial.pipe targets [
+    (lib.filterAttrs (_: target: target.canBuild))
+  ];
+
   targets = {
     Linux-X86_64 = rec {
       pkgsCross = pkgs.pkgsCross.gnu64;
@@ -49,6 +53,21 @@ rec {
     };
   };
 
+  environmentForTarget = target: (lib.optionalAttrs target.pkgsCross.targetPlatform.isLinux {
+    "CC" = "${pkgs.clang}/bin/${target.pkgsCross.clang.targetPrefix}clang";
+    "CARGO_RUSTFLAGS" = "-C link-arg=-fuse-ld=${lib.getExe pkgs.mold}";
+  }) // (lib.optionalAttrs (target.pkgsCross.stdenv.buildPlatform.canExecute target.pkgsCross.stdenv.hostPlatform) {
+    "CARGO_RUNNER" =
+      if target.pkgsCross.targetPlatform.isWindows
+      then
+        pkgs.writeScript "wine-wrapper" ''
+          #!${pkgs.stdenv.shell}
+          export WINEPREFIX="$(mktemp -d)"
+          exec ${pkgs.wine.override { wineBuild = "wine64"; }}/bin/wine64 $@
+        ''
+      else pkgs.lib.getExe' pkgs.qemu "qemu-${target.pkgsCross.targetPlatform.qemuArch}";
+  });
+
   hasSubCrates = cargoToml: builtins.length (cargoToml.workspace.members or [ ]) >= 1;
 
   # TODO Support for non default members
@@ -59,7 +78,7 @@ rec {
         (builtins.map (crate: src + "/crates/${crate}/Cargo.toml"))
       ]
     else
-      lib.trivial.pipe (cargoToml.workspace.default-members) [
+      lib.trivial.pipe cargoToml.workspace.default-members [
         (builtins.map (src: src + "/${src}/Cargo.toml"))
       ];
 
@@ -75,7 +94,6 @@ rec {
 
         hostPkgs = pkgs;
         target = target.value;
-        systemSuffix = target.name;
 
         inherit src pname version craneLib fenixPkgs;
       }))
@@ -90,7 +108,7 @@ rec {
     then
       let workspaceCrates = getWorkspaceCrates cargoToml false; in
       lib.trivial.pipe workspaceCrates [
-        (builtins.map (crateToml: createPackages crateToml))
+        (builtins.map createPackages)
         lib.flatten
       ]
     else [ createPackages cargoTomlPath ];

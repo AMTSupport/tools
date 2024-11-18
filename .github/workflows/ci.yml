@@ -3,28 +3,32 @@ name: Continuous Integration
 on:
   push:
     branches: [master]
-    paths: [ "**/src/**", '.github/workflows/ci.yml' ]
+    paths: [
+      '**/src/**',
+      '.github/workflows/ci.yml',
+      'flake.nix'
+    ]
 
 jobs:
   flake-check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: cachix/install-nix-action@v22
-      - uses: DeterminateSystems/magic-nix-cache-action@v2
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v30
+      - uses: DeterminateSystems/magic-nix-cache-action@v8
 
-      - run: nix flake check
+      - run: nix flake check -L
 
   build-artifacts:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: cachix/install-nix-action@v22
-      - uses: DeterminateSystems/magic-nix-cache-action@v2
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v30
+      - uses: DeterminateSystems/magic-nix-cache-action@v8
 
-      - run: nix build
+      - run: nix build .#release
 
-      - uses: actions/upload-artifact@v3.0.0
+      - uses: actions/upload-artifact@v4.4.3
         if: ${{ !github.event.act }}
         with:
           name: tools
