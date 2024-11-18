@@ -118,7 +118,10 @@ pub fn delegate_trait(input: TokenStream) -> TokenStream {
 
             let path = meta.value()?.parse::<Path>()?;
             let const_ident = Ident::new(&format!("{}_INSTANCE", ident), ident.span());
-            let r#const = quote! { #[allow(non_upper_case_globals)] static #const_ident: _LazyLock<#enum_name::Delegate> = _LazyLock::new(|| Box::new(#path::new())); };
+            let r#const = quote! {
+                #[allow(non_upper_case_globals)]
+                static #const_ident: _LazyLock<#enum_name::Delegate> = _LazyLock::new(|| Box::new(#path::new()));
+            };
             let arm = quote! { #enum_name::#ident => &*#const_ident };
             consts.push(r#const);
             delegation_arms.push(arm);

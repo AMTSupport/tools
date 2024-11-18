@@ -28,7 +28,10 @@ pub fn names(input: DeriveInput) -> TokenStream {
     };
 
     let variant_names = variants::impl_names(data);
-    let lowercase_names = variant_names.iter().map(|v| v.to_string().to_lowercase()).collect::<Vec<String>>();
+    let lowercase_names = variant_names
+        .iter()
+        .map(|v| v.to_string().to_lowercase())
+        .collect::<Vec<String>>();
     quote! {
         #[automatically_derived]
         impl #name {

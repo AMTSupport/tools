@@ -22,7 +22,7 @@ const ERROR_MESSAGE: &str = "Failed to elevate privileges";
 
 pub fn elevated_privileges() -> bool {
     cfg_if! {
-         if #[cfg(windows)] {
+        if #[cfg(windows)] {
             is_elevated::is_elevated()
         } else if #[cfg(unix)] {
             rustix::process::getegid().is_root()

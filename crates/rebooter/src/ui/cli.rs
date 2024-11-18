@@ -18,8 +18,8 @@ use crate::schedule::ScheduledReboot;
 use crate::ui::actions::Action;
 use anyhow::Result;
 use chrono::{Local, NaiveDateTime, NaiveTime};
-use lib::ui::cli::flags::CommonFlags;
 use lib::populate;
+use lib::ui::cli::flags::CommonFlags;
 use lib::ui::cli::oneshot::OneshotHandler;
 use lib::ui::cli::{CliResult, CliUi};
 use lib::ui::Ui;
@@ -33,8 +33,8 @@ pub struct RebooterCli {
 
 impl Ui for RebooterCli {
     fn new(_args: Self::Args) -> Result<Self>
-        where
-            Self: Sized,
+    where
+        Self: Sized,
     {
         Ok(Self { _guard: None })
     }

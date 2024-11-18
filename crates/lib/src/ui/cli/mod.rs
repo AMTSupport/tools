@@ -19,20 +19,20 @@ use crate::ui::cli::oneshot::OneshotHandler;
 use anyhow::{anyhow, Context, Result};
 use inquire::validator::StringValidator;
 use inquire::Text;
-use ui_inquire::STYLE;
 use std::fmt::Debug;
 use tracing::{trace, warn};
+use ui_inquire::STYLE;
 
 pub mod error;
 #[cfg(feature = "builder")]
 pub mod filler;
+pub mod flags;
 pub mod oneshot;
 pub mod progress;
 #[cfg(feature = "ui-repl")]
 pub mod repl;
 #[path = "inquire.rs"]
 pub mod ui_inquire;
-pub mod flags;
 
 pub type CliResult<T> = Result<T, CliError>;
 
@@ -198,8 +198,8 @@ pub fn continue_loop<I>(vec: &[I], prompt_type: &str) -> bool {
 
 // TODO:: Derive title from key
 pub fn env_or_prompt<V>(key: &str, validator: V) -> Result<String>
-    where
-        V: StringValidator + 'static,
+where
+    V: StringValidator + 'static,
 {
     match std::env::var(key) {
         Ok(str) => match validator.validate(&str) {

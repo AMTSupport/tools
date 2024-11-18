@@ -115,7 +115,10 @@ impl Action {
                 }
 
                 // TODO :: Allow removal of existing exporters
-                if Confirm::new("Do you want to modify the exporters?").with_default(true).prompt()? {
+                if Confirm::new("Do you want to modify the exporters?")
+                    .with_default(true)
+                    .prompt()?
+                {
                     let exporters = new_exporters(cli.runtime.as_ref().unwrap()).await?;
                     if !exporters.is_empty() {
                         let config = &mut cli.runtime.as_mut().unwrap().config;

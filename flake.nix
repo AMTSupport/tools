@@ -73,6 +73,24 @@
             nixpkgs-fmt.enable = true;
             statix.enable = true;
             typos.enable = true;
+
+            clippy = {
+              enable = true;
+              package = rustToolchain;
+            };
+
+            rustfmt = {
+              enable = true;
+              packageOverrides = {
+                cargo = rustToolchain;
+                rustfmt = rustToolchain;
+              };
+            };
+
+            cargo-check = {
+              enable = true;
+              package = rustToolchain;
+            };
           };
         };
 

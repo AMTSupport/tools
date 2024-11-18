@@ -62,8 +62,7 @@ where
         headers.insert(API_HEADER, api_key.parse()?);
         headers.insert(header::ACCEPT, "application/json; charset=utf-8".parse()?);
 
-        let base_client =
-            reqwest::Client::builder().default_headers(headers).gzip(true).build()?;
+        let base_client = reqwest::Client::builder().default_headers(headers).gzip(true).build()?;
 
         let client = reqwest_middleware::ClientBuilder::new(base_client)
             .with(Cache(HttpCache {
@@ -98,7 +97,10 @@ where
             }
         };
 
-        Ok(companies.into_iter().map(|company| (company.id, company)).collect::<Companies>())
+        Ok(companies
+            .into_iter()
+            .map(|company| (company.id, company))
+            .collect::<Companies>())
     }
 
     async fn get_passwords(&self, _companies: &Companies) -> Result<Passwords> {
@@ -122,9 +124,10 @@ where
             .context(format!("Send rest request for company {id}"))
             .and_then(check_auth)
         {
-            Ok(response) => {
-                response.json::<Company>().await.context(format!("Deserialise response for company {id}", id = id))
-            }
+            Ok(response) => response
+                .json::<Company>()
+                .await
+                .context(format!("Deserialise response for company {id}", id = id)),
             Err(e) => {
                 error!("Error getting company {id}: {:#?}", e);
                 Err(anyhow::anyhow!("Error getting company {id}", id = id))
@@ -159,7 +162,10 @@ where
     loop {
         let builder = builder.try_clone().context("Clone request builder")?.query(&[("page", &page)]);
 
-        let response = builder.send().await.context(format!("Send paginated request for page {page}"))?;
+        let response = builder
+            .send()
+            .await
+            .context(format!("Send paginated request for page {page}"))?;
 
         #[derive(serde::Deserialize)]
         struct VecHandler<I> {

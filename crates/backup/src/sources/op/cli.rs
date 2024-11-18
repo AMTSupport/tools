@@ -198,14 +198,14 @@ pub mod user {
     fn test_serialisation() {
         let json = r#"
 {
-  "type": "MEMBER",
-  "id": "LAIQMSG1PWNMCA9LAS5KLSDURN",
-  "name": "Test Name",
-  "email": "test@gmail.com",
-  "state": "ACTIVE",
-  "created_at": "2023-01-28T06:14:27Z",
-  "updated_at": "2023-01-28T06:15:18Z",
-  "last_auth_at": "2023-06-23T08:14:56Z"
+    "type": "MEMBER",
+    "id": "LAIQMSG1PWNMCA9LAS5KLSDURN",
+    "name": "Test Name",
+    "email": "test@gmail.com",
+    "state": "ACTIVE",
+    "created_at": "2023-01-28T06:14:27Z",
+    "updated_at": "2023-01-28T06:15:18Z",
+    "last_auth_at": "2023-06-23T08:14:56Z"
 }
         "#
         .trim();
@@ -800,7 +800,11 @@ pub mod item {
                         sections.insert(0, one_pux::item::AdditionalSection::default())
                     }
 
-                    sections.first_mut().context("Get empty section for fields.")?.fields.push(field.into());
+                    sections
+                        .first_mut()
+                        .context("Get empty section for fields.")?
+                        .fields
+                        .push(field.into());
                     continue;
                 }
 

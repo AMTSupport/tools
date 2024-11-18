@@ -14,7 +14,6 @@
  * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
-use serde_json::json;
 use crate::config;
 use crate::rules::Rules;
 use crate::ui::cli::action::Action;
@@ -22,6 +21,7 @@ use lib::ui::cli::flags::{CommonFlags, OutputFormat};
 use lib::ui::cli::oneshot::OneshotHandler;
 use lib::ui::cli::{CliResult, CliUi};
 use lib::ui::Ui;
+use serde_json::json;
 use tokio::runtime::Handle;
 use tracing::{info, instrument};
 use tracing_appender::non_blocking::WorkerGuard;
@@ -72,8 +72,8 @@ impl OneshotHandler for MemorablePassCli {
 
 impl Ui<CliResult<Self>> for MemorablePassCli {
     fn new(_args: Self::Args) -> CliResult<Self>
-        where
-            Self: Sized,
+    where
+        Self: Sized,
     {
         // Preload the words
         Handle::current().spawn(async {

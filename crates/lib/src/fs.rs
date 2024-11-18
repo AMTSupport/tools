@@ -51,9 +51,11 @@ cfg_if! {
 }
 
 pub fn create_parents(path: &Path) -> Result<()> {
-    path.parent().with_context(|| format!("Get parent directory for {}", &path.display())).and_then(|p| {
-        fs::create_dir_all(p).with_context(|| format!("Creating parent directories for {}", &path.display()))
-    })
+    path.parent()
+        .with_context(|| format!("Get parent directory for {}", &path.display()))
+        .and_then(|p| {
+            fs::create_dir_all(p).with_context(|| format!("Creating parent directories for {}", &path.display()))
+        })
 }
 
 pub fn normalise_path(path: PathBuf) -> PathBuf {
@@ -78,7 +80,10 @@ pub fn normalise_path(path: PathBuf) -> PathBuf {
     // TODO -> What else do we need to replace?
     let mut p = if cfg!(windows) {
         let drive = p.next().expect("Get drive root");
-        let p = p.map(|v| v.replace(':', "_")).collect::<Vec<String>>().join(PATH_SEPARATOR.to_string().as_str());
+        let p = p
+            .map(|v| v.replace(':', "_"))
+            .collect::<Vec<String>>()
+            .join(PATH_SEPARATOR.to_string().as_str());
 
         format!("{drive}{PATH_SEPARATOR}{p}",)
     } else {

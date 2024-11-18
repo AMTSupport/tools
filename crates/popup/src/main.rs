@@ -85,8 +85,14 @@ impl Informer {
 
     fn view(&self) -> Element<Message> {
         let content = column![
-            text("AMT - Informer").size(18).align_x(Horizontal::Center).align_y(Vertical::Top),
-            text("Automated Message from AMT").size(16).align_x(Horizontal::Center).align_y(Vertical::Center),
+            text("AMT - Informer")
+                .size(18)
+                .align_x(Horizontal::Center)
+                .align_y(Vertical::Top),
+            text("Automated Message from AMT")
+                .size(16)
+                .align_x(Horizontal::Center)
+                .align_y(Vertical::Center),
             "",
             text(self.message.trim()).size(24).align_x(Horizontal::Center)
         ];

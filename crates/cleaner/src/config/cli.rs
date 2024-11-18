@@ -26,7 +26,6 @@ pub struct Cli {
 
     // #[command(subcommand)]
     // pub complete: Option<Shell>,
-
     #[arg(
     ignore_case = true,
     default_values_t = Cleaner::get_variants(),

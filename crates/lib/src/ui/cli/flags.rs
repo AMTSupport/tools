@@ -14,7 +14,6 @@
  * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
-
 use clap::Parser;
 
 /// A struct that contains common flags for the CLI

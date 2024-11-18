@@ -104,7 +104,12 @@ impl iced::Application for CountryIPApp {
             Page::Generate(page) => page.view(),
         };
 
-        Container::new(content).width(Length::Fill).height(Length::Fill).center_x().center_y().into()
+        Container::new(content)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .center_x()
+            .center_y()
+            .into()
     }
 
     fn theme(&self) -> Self::Theme {

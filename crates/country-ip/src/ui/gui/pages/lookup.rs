@@ -17,12 +17,12 @@
 use crate::db_ip;
 use crate::gui::application::WrappedCountry;
 use crate::gui::page::Page;
-use iced::widget::{column, Container, text, button, text_input};
+use iced::application::StyleSheet;
+use iced::widget::{button, column, text, text_input, Container};
 use iced::{Command, Renderer};
 use keshvar::Alpha2;
 use std::future::IntoFuture;
 use std::net::IpAddr;
-use iced::application::StyleSheet;
 
 #[derive(Debug, Clone)]
 pub enum LookupMessage {

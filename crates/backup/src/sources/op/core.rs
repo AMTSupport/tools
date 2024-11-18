@@ -75,7 +75,9 @@ impl Downloader for OnePasswordCore {
 
     fn base_command(config: &Runtime) -> Result<Command> {
         let mut command = Command::new(Self::binary(config)?);
-        command.arg("--cache").args(["--config", Self::data_dir(config)?.to_str().context("Convert path to &str")?]);
+        command
+            .arg("--cache")
+            .args(["--config", Self::data_dir(config)?.to_str().context("Convert path to &str")?]);
 
         Ok(command)
     }
@@ -103,7 +105,8 @@ impl Exporter for OnePasswordCore {
         let options = FileOptions::default();
         let attributes = Attributes::default();
         let serialised = to_string_pretty(&attributes).context("Serialise to 1PUX")?;
-        zip.start_file("export.attributes", options).context("Start writer for attrs.")?;
+        zip.start_file("export.attributes", options)
+            .context("Start writer for attrs.")?;
         zip.write_all(serialised.as_bytes()).context("Write attrs to zip file.")?;
 
         let (export, errors) = match Export::from(account, runtime, (main_bar, progress_bar)).await {
@@ -143,7 +146,9 @@ impl Prune for OnePasswordCore {
             self.account.unique_dir(config)?.display()
         );
 
-        glob::glob(&glob).with_context(|| format!("Glob for files in {}", glob)).map(|glob| glob.flatten().collect())
+        glob::glob(&glob)
+            .with_context(|| format!("Glob for files in {}", glob))
+            .map(|glob| glob.flatten().collect())
     }
 }
 

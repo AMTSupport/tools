@@ -49,7 +49,10 @@ pub(super) fn test(rule: Rule, path: &Path) -> bool {
     .inspect(|date| trace!("File {} was {date:?}", path.display()))
     .inspect_err(|err| error!("Failed to get file {} date: {err}", path.display()))
     .map_err(|err| RuleError::MetadataError(err, path.to_path_buf()))
-    .and_then(|d| d.elapsed().map_err(|err| RuleError::TimeMetaError(Box::new(err), path.to_path_buf())))
+    .and_then(|d| {
+        d.elapsed()
+            .map_err(|err| RuleError::TimeMetaError(Box::new(err), path.to_path_buf()))
+    })
     .and_then(|d| Duration::from_std(d).map_err(|err| RuleError::TimeMetaError(Box::new(err), path.to_path_buf())));
 
     let from_date = match accessed {

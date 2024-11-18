@@ -30,12 +30,15 @@ impl<C: CliUi> Filler for C {
         prompt.help_message = fillable.description;
         prompt.default = fillable.default;
 
-        prompt.with_render_config(*STYLE).with_placeholder("y/n").with_error_message("invalid input, please enter y/n").prompt().map_err(|e| {
-            FillError::InvalidInput {
+        prompt
+            .with_render_config(*STYLE)
+            .with_placeholder("y/n")
+            .with_error_message("invalid input, please enter y/n")
+            .prompt()
+            .map_err(|e| FillError::InvalidInput {
                 field: fillable.name.to_string(),
                 input: e.to_string(),
-            }
-        })
+            })
     }
 
     // async fn fill_choice<T>(&mut self, fillable: Fillable<T>, items: Vec<T>, default: Option<T>) -> FillResult<T> {

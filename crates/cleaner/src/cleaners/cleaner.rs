@@ -231,7 +231,11 @@ pub(super) fn collect_locations(iter: Vec<Location>, rules: Rules) -> (Vec<PathB
 
     (
         tuple.0,
-        tuple.1.into_iter().map(|f| MissedFile::Rule(f.clone(), f.metadata().map_or(0, |m| m.len()))).collect(),
+        tuple
+            .1
+            .into_iter()
+            .map(|f| MissedFile::Rule(f.clone(), f.metadata().map_or(0, |m| m.len())))
+            .collect(),
     )
 }
 

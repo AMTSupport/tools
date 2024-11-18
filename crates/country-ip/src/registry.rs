@@ -82,7 +82,11 @@ pub struct RegistryRecords {
 impl RecordDB for RegistryRecords {
     #[instrument(level = "TRACE", ret)]
     async fn lookup(&self, ip: &IpAddr) -> Option<Alpha2> {
-        self.inner.iter().par_bridge().find_first(|record| record.range().contains(ip)).map(|record| *record.alpha())
+        self.inner
+            .iter()
+            .par_bridge()
+            .find_first(|record| record.range().contains(ip))
+            .map(|record| *record.alpha())
     }
 
     #[instrument(level = "TRACE", ret)]
@@ -120,7 +124,10 @@ impl Registry {
                 _ => Afrinic,
             },
             Some(Region::Americas) => {
-                match country.maybe_subregion().with_context(|| format!("Failed to get subregion for country {country:?}"))? {
+                match country
+                    .maybe_subregion()
+                    .with_context(|| format!("Failed to get subregion for country {country:?}"))?
+                {
                     SubRegion::CentralAmerica => Lacnic,
                     SubRegion::NorthernAmerica => match country.alpha2() {
                         Alpha2::GL => Ripencc,
@@ -140,7 +147,10 @@ impl Registry {
                 }
             }
             Some(Region::Asia) => {
-                match country.maybe_subregion().with_context(|| format!("Failed to get subregion for country {country:?}"))? {
+                match country
+                    .maybe_subregion()
+                    .with_context(|| format!("Failed to get subregion for country {country:?}"))?
+                {
                     SubRegion::CentralAsia | SubRegion::WesternAsia => Ripencc,
                     SubRegion::EasternAsia | SubRegion::SouthEasternAsia => Apnic,
                     SubRegion::SouthernAsia => match country.alpha2() {

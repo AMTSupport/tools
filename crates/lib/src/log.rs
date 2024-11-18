@@ -41,8 +41,8 @@ fn add_file_writer<S>(
     impl Subscriber + for<'span> LookupSpan<'span> + Send + Sync + 'static,
     WorkerGuard,
 )
-    where
-        S: Subscriber + for<'span> LookupSpan<'span> + Send + Sync + 'static,
+where
+    S: Subscriber + for<'span> LookupSpan<'span> + Send + Sync + 'static,
 {
     let file_appender = tracing_appender::rolling::daily(env::temp_dir().join("logs"), env!["CARGO_PKG_NAME"]);
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
@@ -58,8 +58,8 @@ fn add_ui_layer<S>(
     registry: S,
     flags: &CommonFlags,
 ) -> impl Subscriber + for<'span> LookupSpan<'span> + Send + Sync + 'static
-    where
-        S: Subscriber + for<'span> LookupSpan<'span> + Send + Sync + 'static,
+where
+    S: Subscriber + for<'span> LookupSpan<'span> + Send + Sync + 'static,
 {
     use indicatif::ProgressStyle;
     use tracing_indicatif::{filter::IndicatifFilter, IndicatifLayer};
@@ -70,7 +70,7 @@ fn add_ui_layer<S>(
         ProgressStyle::with_template(
             "{spinner:.green} {span_child_prefix}{span_name:.cyan/blue}{{{span_fields:.purple}}}",
         )
-            .unwrap(),
+        .unwrap(),
     );
 
     let verbosity = if flags.quiet { 0 } else { flags.verbose };
@@ -104,8 +104,8 @@ fn add_ui_layer<S>(
     registry: S,
     _flags: &CommonFlags,
 ) -> impl Subscriber + for<'span> LookupSpan<'span> + Send + Sync + 'static
-    where
-        S: Subscriber + for<'span> LookupSpan<'span> + Send + Sync + 'static,
+where
+    S: Subscriber + for<'span> LookupSpan<'span> + Send + Sync + 'static,
 {
     registry
 }

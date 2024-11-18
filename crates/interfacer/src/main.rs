@@ -21,8 +21,8 @@ use anyhow::Result;
 use clap::{Parser, Subcommand, ValueEnum};
 use csv::{Writer, WriterBuilder};
 use endpoints::nable::endpoints::NSightEndpoint;
-use lib::ui::cli::flags::CommonFlags;
 use lib::log;
+use lib::ui::cli::flags::CommonFlags;
 use macros::{EnumNames, EnumVariants};
 use rest::endpoints;
 use rest::endpoints::endpoint::Endpoint;
@@ -99,8 +99,7 @@ async fn main() -> Result<()> {
                         });
 
                         writer.flush().unwrap();
-                    }
-                    ;
+                    };
 
                     match response {
                         Response::Clients(clients) => write(writer, &clients.items.items),
@@ -202,7 +201,11 @@ async fn main() -> Result<()> {
     //                         .collect::<Vec<String>>();
     //
     //                     let log = format!(
-    //                         "There are {count} outdated passwords for localadmin accounts;\nPasswords older than {days} days have been considered outdated.\n{passwords:#}",
+    //                         r#"
+    //                         There are {count} outdated passwords for localadmin accounts
+    //                         Passwords older than {days} days have been considered outdated.
+    //                         {passwords:#}
+    //                         "#,
     //                         count = outdated_passwords.len(),
     //                         days = rules.password_max_age.num_days(),
     //                         passwords = outdated_passwords.join("\n")

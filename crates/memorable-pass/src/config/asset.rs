@@ -28,8 +28,9 @@ pub struct Asset;
 
 #[instrument(level = "TRACE", ret)]
 fn get_words() -> HashMap<usize, Vec<String>> {
-    let asset_file =
-        Asset::get("words.json").context("Find words.json asset file.").expect("Failed to find words.json asset file.");
+    let asset_file = Asset::get("words.json")
+        .context("Find words.json asset file.")
+        .expect("Failed to find words.json asset file.");
     serde_json::from_slice::<HashMap<usize, Vec<String>>>(&asset_file.data)
         .context("Parse words.json asset into Map")
         .expect("Failed to parse words.json asset into Map")

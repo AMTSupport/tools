@@ -83,10 +83,7 @@ async fn query<H: Hudu, N: NAble>(hudu: H, nable: N) -> anyhow::Result<()> {
 
         let scores = scores.into_iter();
         if let Some((score, hudu_company)) = scores.max_by_key(|(score, _)| *score) {
-            trace!(
-                "Best match: {str} with score {score}",
-                str = hudu_company.name
-            );
+            trace!("Best match: {str} with score {score}", str = hudu_company.name);
             let _ = matching_companies.remove_entry(&hudu_company.id);
             matched.push((hudu_company, client));
         } else {

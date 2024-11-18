@@ -80,7 +80,10 @@ fn generate_builder_impl(
 
     let field_fillers = fields.iter().map(|(name, ty, _, _)| {
         let filler = quote! {
-            self.#name = Some(lib::ui::builder::dummy::try_fill::<_, #ty>(unsafe { std::mem::transmute_copy(&#builder_name::DEFINITIONS[stringify!(#name)]) }, filler).await?);
+            self.#name = Some(lib::ui::builder::dummy::try_fill::<_, #ty>(
+                unsafe { std::mem::transmute_copy(&#builder_name::DEFINITIONS[stringify!(#name)]) },
+                filler
+            ).await?);
         };
 
         filler.into_token_stream()
@@ -268,7 +271,7 @@ fn get_fields(
                             meta.path.get_ident().expect("expected ident")
                         )))
                     })
-                        .expect("failed to parse builder attribute");
+                    .expect("failed to parse builder attribute");
                 }
 
                 vec.push((ident.clone(), ty.clone(), optional, default));

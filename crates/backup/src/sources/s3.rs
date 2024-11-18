@@ -103,7 +103,9 @@ impl Prune for S3Core {
             bucket = self.base.root.display()
         );
 
-        glob::glob(&glob).with_context(|| format!("Failed to glob: {}", glob)).map(|p| p.flatten().collect())
+        glob::glob(&glob)
+            .with_context(|| format!("Failed to glob: {}", glob))
+            .map(|p| p.flatten().collect())
     }
 }
 
@@ -152,7 +154,9 @@ impl Exporter for S3Core {
         ]);
 
         let base = S3BackendBuilder::default();
-        let base = base_accessor.into_iter().try_fold(base, |mut base, (k, v)| base.set_field(&k, &v).map(|_| base))?;
+        let base = base_accessor
+            .into_iter()
+            .try_fold(base, |mut base, (k, v)| base.set_field(&k, &v).map(|_| base))?;
 
         let prompt = inquire::Text::new("What's the path of the object you want to export?")
             .with_render_config(*STYLE)
@@ -210,7 +214,7 @@ impl Exporter for S3Core {
             .lister(object.to_str().unwrap())
             .await
             .context(format!("Failed to list objects in {}", &object.to_str().unwrap()))?;
-        let list = op.list_with(&object.to_str().unwrap()).recursive(true).await?;
+        let list = op.list_with(object.to_str().unwrap()).recursive(true).await?;
         info!("Listing objects in {}", &object.to_str().unwrap());
         for item in list {
             debug!("Found object: {}", item.name());

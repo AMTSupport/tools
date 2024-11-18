@@ -88,8 +88,12 @@ fn get_country(alpha: &Option<String>) -> std::result::Result<Country, Error> {
         .filter(|alpha| (2..=3).contains(&alpha.len()))
         .map(|alpha| alpha.to_uppercase())
         .map(|alpha| match alpha.len() {
-            2 => Alpha2::try_from(&*alpha).map(Country::from).map_err(|_| Error::InvalidCountryCode(alpha)),
-            3 => Alpha3::try_from(&*alpha).map(Country::from).map_err(|_| Error::InvalidCountryCode(alpha)),
+            2 => Alpha2::try_from(&*alpha)
+                .map(Country::from)
+                .map_err(|_| Error::InvalidCountryCode(alpha)),
+            3 => Alpha3::try_from(&*alpha)
+                .map(Country::from)
+                .map_err(|_| Error::InvalidCountryCode(alpha)),
             _ => unreachable!(),
         })
         .unwrap_or_else(|| {
@@ -113,7 +117,9 @@ async fn get(country: &Country, use_ipv6: &bool) -> Result<IpAddr> {
 #[instrument(level = "TRACE", ret, err)]
 async fn lookup(addr: &IpAddr) -> Result<Country> {
     let variants: Vec<Registry> = Registry::get_variants();
-    let mut stream = futures::stream::iter(variants.iter()).map(|reg| reg.get()).buffer_unordered(variants.len());
+    let mut stream = futures::stream::iter(variants.iter())
+        .map(|reg| reg.get())
+        .buffer_unordered(variants.len());
 
     while let Some(Ok(db)) = stream.next().await {
         if let Some(alpha) = db.lookup(addr).await {

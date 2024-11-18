@@ -26,7 +26,11 @@ pub struct Processor<'a> {
 impl<'a> Processor<'a> {
     /// Create a new processor for the given words.
     pub fn new(raw: Vec<&'a str>) -> Self {
-        let words = raw.iter().enumerate().map(|(index, word)| Word::new(index, word)).collect::<Vec<Word>>();
+        let words = raw
+            .iter()
+            .enumerate()
+            .map(|(index, word)| Word::new(index, word))
+            .collect::<Vec<Word>>();
         Self { words }
     }
 

@@ -196,7 +196,9 @@ impl Tag {
 
         debug!("Compiled regex for getting existing tags [{compiled}]");
         let capture = compiled.captures_iter(str);
-        let tags = capture.map(|m| m.get(0).unwrap().as_str().parse().unwrap()).collect::<Vec<Tag>>();
+        let tags = capture
+            .map(|m| m.get(0).unwrap().as_str().parse().unwrap())
+            .collect::<Vec<Tag>>();
         if tags.is_empty() {
             debug!("No tags found in file name [{str}]");
             return (vec![Tag::None], str);
@@ -323,8 +325,9 @@ impl AutoPrune {
             .map(|(path, meta)| {
                 let mtime = meta.modified().context("Getting modified time").unwrap();
                 let age = SystemTime::now().duration_since(mtime).context("Getting age").unwrap();
-                let age =
-                    Duration::from_std(age).context("Converting std::time::Duration to chrono::Duration").unwrap();
+                let age = Duration::from_std(age)
+                    .context("Converting std::time::Duration to chrono::Duration")
+                    .unwrap();
                 (path, age)
             })
             .collect::<Vec<(PathBuf, Duration)>>();

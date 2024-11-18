@@ -15,12 +15,9 @@
  */
 
 use crate::config::runtime::Runtime;
-use anyhow::{Context, Result};
-use chrono::{DateTime, Duration, FixedOffset};
+use anyhow::Result;
 use indicatif::MultiProgress;
 use std::path::PathBuf;
-use std::time::SystemTime;
-use tracing::trace;
 
 // TODO :: Implement logic from cleaner crate to handle this!
 pub trait Prune {

@@ -14,7 +14,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::gui::application::{WrappedCountry, WRAPPED_COUNTRIES, Message};
+use crate::gui::application::{Message, WrappedCountry, WRAPPED_COUNTRIES};
 use crate::gui::page::Page;
 use iced::application::StyleSheet;
 use iced::widget::{button, column, pick_list, row, text, Container};
@@ -62,8 +62,12 @@ impl Page for GeneratePage {
                 text(&self.addr.map(|addr| addr.to_string()).unwrap_or_else(|| "None".to_string())).size(12),
             ],
             column![
-                button(text("Generate IPv4")).on_press(GenerateMessage::GenerateIpV4).padding(10),
-                button(text("Generate IPv6")).on_press(GenerateMessage::GenerateIpV6).padding(10),
+                button(text("Generate IPv4"))
+                    .on_press(GenerateMessage::GenerateIpV4)
+                    .padding(10),
+                button(text("Generate IPv6"))
+                    .on_press(GenerateMessage::GenerateIpV6)
+                    .padding(10),
             ],
         ];
 

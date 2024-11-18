@@ -41,31 +41,35 @@ impl Rule for CaseTransformation {
         _passable: &mut Self::Passable,
     ) -> Vec<Action> {
         let copy = *self;
-        vec![Action::Transformation(Priority::High, ActionCondition::Always, Box::new(move |str| match &copy {
-            CaseTransformation::None => str.to_string(),
-            CaseTransformation::Uppercase => str.to_ascii_uppercase(),
-            CaseTransformation::Capitalise => str.replacen(&str[0..1], &str[0..1].to_uppercase(), 1),
-            CaseTransformation::AllExcludingFirst => {
-                str.replacen(&str[1..str.len()], &str[1..str.len()].to_uppercase(), 1)
-            }
-            CaseTransformation::Alternating => str
-                .chars()
-                .enumerate()
-                .map(|(i, c)| if i % 2 == 0 { c.to_ascii_uppercase() } else { c })
-                .collect::<String>(),
-            CaseTransformation::Random => {
-                use rand::distributions::{Bernoulli, Distribution};
+        vec![Action::Transformation(
+            Priority::High,
+            ActionCondition::Always,
+            Box::new(move |str| match &copy {
+                CaseTransformation::None => str.to_string(),
+                CaseTransformation::Uppercase => str.to_ascii_uppercase(),
+                CaseTransformation::Capitalise => str.replacen(&str[0..1], &str[0..1].to_uppercase(), 1),
+                CaseTransformation::AllExcludingFirst => {
+                    str.replacen(&str[1..str.len()], &str[1..str.len()].to_uppercase(), 1)
+                }
+                CaseTransformation::Alternating => str
+                    .chars()
+                    .enumerate()
+                    .map(|(i, c)| if i % 2 == 0 { c.to_ascii_uppercase() } else { c })
+                    .collect::<String>(),
+                CaseTransformation::Random => {
+                    use rand::distributions::{Bernoulli, Distribution};
 
-                let mut rng = rand::thread_rng();
-                let bernoulli = Bernoulli::new(0.5).unwrap();
-                str.chars()
-                    .map(|c| match bernoulli.sample(&mut rng) {
-                        true => c.to_ascii_uppercase(),
-                        false => c,
-                    })
-                    .collect::<String>()
-            }
-        }))]
+                    let mut rng = rand::thread_rng();
+                    let bernoulli = Bernoulli::new(0.5).unwrap();
+                    str.chars()
+                        .map(|c| match bernoulli.sample(&mut rng) {
+                            true => c.to_ascii_uppercase(),
+                            false => c,
+                        })
+                        .collect::<String>()
+                }
+            }),
+        )]
     }
 }
 

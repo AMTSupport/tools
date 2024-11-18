@@ -55,11 +55,11 @@ pub mod updater;
 macro_rules! conditional_call {
     (
         impl $call_type:ty
-        where $($generic_type_ident:ident: $first_generic_type_ty:tt $(+ $generic_type_ty:tt)*),+ // The generic types required for the parameters which are then on the notcall and call trait / struct
-        | $($top_generic_ident:ident: $first_top_generic_ty:tt $(+ $top_generic_ty:tt)*),+ // The generic types for the trait / struct
+        where $($generic_type_ident:ident: $first_generic_type_ty:tt $(+ $generic_type_ty:tt)*),+ // The types for the required parameters
+        | $($top_generic_ident:ident: $first_top_generic_ty:tt $(+ $top_generic_ty:tt)*),+ // The types for the trait / struct
         {
             async fn call // Whether the function is async or not
-            $(<$($($generic_life:lifetime),+ $(,)?)? $($($generic_ident:ident: $first_generic_ty:tt $(+ $generic_ty:tt)*),+)?>)? // The generic types for the function
+            $(<$($($generic_life:lifetime),+ $(,)?)? $($($generic_ident:ident: $first_generic_ty:tt $(+ $generic_ty:tt)*),+)?>)? // The types for the function
             ($($variable:ident: $variable_type:ty),*) // The parameters of the function
                 -> $target_type:ty // The return type of the function
                 $func_body:block // The body of the function if the actual call is possible
@@ -82,11 +82,11 @@ macro_rules! conditional_call {
 
     (
         impl $call_type:ty
-        where $($generic_type_ident:ident: $first_generic_type_ty:tt $(+ $generic_type_ty:tt)*),+ // The generic types required for the parameters which are then on the notcall and call trait / struct
-        | $($top_generic_ident:ident: $first_top_generic_ty:tt $(+ $top_generic_ty:tt)*),+ // The generic types for the trait / struct
+        where $($generic_type_ident:ident: $first_generic_type_ty:tt $(+ $generic_type_ty:tt)*),+ // The types required for the parameters
+        | $($top_generic_ident:ident: $first_top_generic_ty:tt $(+ $top_generic_ty:tt)*),+ // The types for the trait / struct
         {
             fn call // Whether the function is async or not
-            $(<$($($generic_life:lifetime),+ $(,)?)? $($($generic_ident:ident: $first_generic_ty:tt $(+ $generic_ty:tt)*),+)?>)? // The generic types for the function
+            $(<$($($generic_life:lifetime),+ $(,)?)? $($($generic_ident:ident: $first_generic_ty:tt $(+ $generic_ty:tt)*),+)?>)? // The types for the function
             ($($variable:ident: $variable_type:ty),*) // The parameters of the function
                 -> $target_type:ty // The return type of the function
                 $func_body:block // The body of the function if the actual call is possible
@@ -113,11 +113,11 @@ macro_rules! conditional_call {
 
     (@internal
         impl $call_type:ty
-        where $($generic_type_ident:ident: $first_generic_type_ty:tt $(+ $generic_type_ty:tt)*),+ // The generic types required for the parameters which are then on the notcall and call trait / struct
-        | $($top_generic_ident:ident: $first_top_generic_ty:tt $(+ $top_generic_ty:tt)*),+ // The generic types for the trait / struct
+        where $($generic_type_ident:ident: $first_generic_type_ty:tt $(+ $generic_type_ty:tt)*),+ // The types required for the parameters
+        | $($top_generic_ident:ident: $first_top_generic_ty:tt $(+ $top_generic_ty:tt)*),+ // The types for the trait / struct
         {
             $($func_fn:ident )+ | call // Whether the function is async or not
-            $(<$($($generic_life:lifetime),+ $(,)?)? $($($generic_ident:ident: $first_generic_ty:tt $(+ $generic_ty:tt)*),+)?>)? // The generic types for the function
+            $(<$($($generic_life:lifetime),+ $(,)?)? $($($generic_ident:ident: $first_generic_ty:tt $(+ $generic_ty:tt)*),+)?>)? // The types for the function
             ($($variable:ident: $variable_type:ty),*) // The parameters of the function
                 -> $target_type:ty // The return type of the function
                 $func_body:block // The body of the function if the actual call is possible

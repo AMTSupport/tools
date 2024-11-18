@@ -86,7 +86,14 @@ impl Driver {
         input_next(&driver, "code", &input_2fa, By::Id("verify-submit")).await?;
 
         let reqwest = ClientBuilder::new()
-            .user_agent(driver.execute("return navigator.userAgent", Vec::new()).await?.json().as_str().unwrap())
+            .user_agent(
+                driver
+                    .execute("return navigator.userAgent", Vec::new())
+                    .await?
+                    .json()
+                    .as_str()
+                    .unwrap(),
+            )
             .gzip(true)
             .build()?;
 
@@ -140,8 +147,14 @@ impl Driver {
     }
 
     async fn post_request(&self) -> Result<RequestBuilder> {
-        let cookies =
-            self.driver.get_all_cookies().await?.into_iter().map(Cookie::to_string).collect::<Vec<String>>().join("; ");
+        let cookies = self
+            .driver
+            .get_all_cookies()
+            .await?
+            .into_iter()
+            .map(Cookie::to_string)
+            .collect::<Vec<String>>()
+            .join("; ");
 
         Ok(self
             .reqwest

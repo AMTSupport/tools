@@ -59,7 +59,10 @@ fn write_result(results: Vec<CleanupResult>) {
                 );
 
                 info!(
-                    "Automatic cleanup was unable to remove {missed_files} files from {cleaner}, which would have freed up an additional total of {missed_size}.",
+                    r#"
+                    Automatic cleanup was unable to remove {missed_files} files from {cleaner}.
+                    There is an additional {missed_size} that could not be cleaned.
+                    "#,
                     missed_files = HumanCount(missed),
                     missed_size = HumanBytes(missed_size)
                 )

@@ -117,9 +117,9 @@ impl Endpoint for NSightEndpoint {
             GetSites { clientid } => list_sites(&self.client, &self.host, &clientid).await.map(Response::Sites),
             GetTemplates => list_templates(&self.client, &self.host).await.map(Response::Templates),
             GetServers { siteid } => list_servers(&self.client, &self.host, &siteid).await.map(Response::Servers),
-            GetWorkstations { siteid } => {
-                list_workstations(&self.client, &self.host, &siteid).await.map(Response::Workstations)
-            }
+            GetWorkstations { siteid } => list_workstations(&self.client, &self.host, &siteid)
+                .await
+                .map(Response::Workstations),
             GetChecks { deviceid } => {
                 todo!()
                 // get_checks(&self.client, &self.host, &deviceid).await.map(Response::Checks)
@@ -149,8 +149,12 @@ mod macros {
     #[macro_export]
     macro_rules! rest {
         ($service:ident => $ret:ty) => (rest!(@parse $service, $ret;););
-        ($service:ident & [$($param:ident),*] & ($($opt_param:ident),*) => $ret:ty) => (rest!(@parse $service, $ret; $($param: str),* $($opt_param: Option<&str>),*););
-        ($service:ident & ($($opt_param:ident),*) & [$($param:ident),*] => $ret:ty) => (rest!($service & [$($param: $param_type),*] & ($($opt_param),*) => $ret););
+        ($service:ident & [$($param:ident),*] & ($($opt_param:ident),*) => $ret:ty) => (
+        rest!(@parse $service, $ret; $($param: str),* $($opt_param: Option<&str>),*);
+        );
+        ($service:ident & ($($opt_param:ident),*) & [$($param:ident),*] => $ret:ty) => (
+            rest!($service & [$($param: $param_type),*] & ($($opt_param),*) => $ret);
+        );
         ($service:ident & [$($param:ident),*] => $ret:ty) => (rest!($service & [$($param),*] & () => $ret););
         ($service:ident & ($($opt_param:ident),*) => $ret:ty) => (rest!($service & [] & ($($opt_param),*) => $ret););
         // (@parse $service:ident, $ret:ty; )

@@ -18,12 +18,12 @@
 #![feature(type_alias_impl_trait)]
 #![feature(associated_type_defaults)]
 
-use std::sync::Arc;
 use crate::config::asset::WORDS;
 use crate::processor::processor::Processor;
 use crate::rules::rule::Rule;
 use crate::rules::Rules;
 use rand::Rng;
+use std::sync::Arc;
 use tokio_stream::{iter, StreamExt};
 use tracing::{instrument, trace};
 

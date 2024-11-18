@@ -101,11 +101,17 @@ impl Config {
             })
             .or_else(|_| {
                 let path = directory.as_ref().map(|p| p.join(Self::FILENAME));
-                path.as_deref().is_some_and(Path::exists).then(|| path.unwrap()).ok_or(Error::Find)
+                path.as_deref()
+                    .is_some_and(Path::exists)
+                    .then(|| path.unwrap())
+                    .ok_or(Error::Find)
             })
             .or_else(|_| {
                 let path = env::current_dir().map(|p| p.join(Self::FILENAME));
-                path.as_deref().is_ok_and(Path::exists).then(|| path.unwrap()).ok_or(Error::Find)
+                path.as_deref()
+                    .is_ok_and(Path::exists)
+                    .then(|| path.unwrap())
+                    .ok_or(Error::Find)
             })
             .map_err(Into::into)
     }

@@ -55,7 +55,11 @@ async fn download_to<E: Error>(
 
     progress.set_message(format!(
         "Downloading {}...",
-        &path.file_name().context("Get file name")?.to_str().context("Convert to string")?
+        &path
+            .file_name()
+            .context("Get file name")?
+            .to_str()
+            .context("Convert to string")?
     ));
 
     while let Some(item) = stream.next().await {

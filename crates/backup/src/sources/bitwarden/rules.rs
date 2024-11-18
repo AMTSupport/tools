@@ -30,6 +30,8 @@ impl Prune for BitWardenCore {
             org = &self.org_name
         );
 
-        glob::glob(&glob).with_context(|| format!("Glob backup files for {glob}")).map(|g| g.flatten().collect())
+        glob::glob(&glob)
+            .with_context(|| format!("Glob backup files for {glob}"))
+            .map(|g| g.flatten().collect())
     }
 }
