@@ -31,15 +31,9 @@ where
     Self: Send + Sync + 'static,
 {
     pub fn new() -> Result<Self> {
-        use clap::{CommandFactory, Parser};
-        use std::process::exit;
+        use clap::Parser;
 
         let cli = Cli::parse();
-        if let Some(complete) = cli.complete {
-            complete.complete(&mut Cli::command());
-            exit(0);
-        }
-
         let errors = RwLock::new(Vec::new());
 
         Ok(Self { cli, errors })

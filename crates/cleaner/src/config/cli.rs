@@ -16,7 +16,6 @@
 
 use crate::cleaners::cleaner::Cleaner;
 use clap::Parser;
-use clap_complete::dynamic::shells::CompleteCommand;
 use lib::ui::cli::flags::CommonFlags;
 
 #[derive(Default, Debug, Parser)]
@@ -25,8 +24,8 @@ pub struct Cli {
     #[command(flatten)]
     pub flags: CommonFlags,
 
-    #[command(subcommand)]
-    pub complete: Option<CompleteCommand>,
+    // #[command(subcommand)]
+    // pub complete: Option<Shell>,
 
     #[arg(
     ignore_case = true,
@@ -35,4 +34,3 @@ pub struct Cli {
     )]
     pub cleaners: Vec<Cleaner>,
 }
-
