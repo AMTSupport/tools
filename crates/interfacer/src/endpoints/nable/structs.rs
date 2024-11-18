@@ -73,11 +73,9 @@ pub mod xml {
 }
 
 pub mod client {
-    use anyhow::Context;
-
     use crate::endpoints::nable::structs::cdata::CData;
-    use chrono::{NaiveDate, TimeZone};
-    use serde::{Deserialize, Deserializer, Serialize};
+    use chrono::NaiveDate;
+    use serde::{Deserialize, Serialize};
 
     pub type Clients = Vec<Client>;
 
@@ -211,7 +209,6 @@ pub mod device {
     use crate::endpoints::nable::structs::cdata::CData;
     use macros::CommonFields;
     use serde::{Deserialize, Serialize};
-    use serde_with::{serde_as, BoolFromInt};
 
     pub type Servers = Vec<Device>;
     pub type Workstations = Vec<Device>;

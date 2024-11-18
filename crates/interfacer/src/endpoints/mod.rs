@@ -15,7 +15,7 @@
  */
 
 pub mod endpoint;
-#[cfg(feature = "endpoint/hudu")]
+#[cfg(feature = "endpoint-hudu")]
 pub mod hudu;
-#[cfg(feature = "endpoint/n-able")]
+#[cfg(feature = "endpoint-nable")]
 pub mod nable;

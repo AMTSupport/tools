@@ -15,8 +15,7 @@
  */
 
 use anyhow::Result;
-use lib::ui::cli::CliUi;
-use lib::ui::Ui;
+use lib::ui::{cli::CliUi, Ui};
 use rebooter::ui::cli::RebooterCli;
 use sysexits::ExitCode;
 

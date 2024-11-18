@@ -25,6 +25,7 @@ use tracing::{debug, error, error_span, instrument, trace};
 pub enum Error {
     // #[error("api limit has been reached.")]
     // ApiLimitReached,
+
     #[error("unable to parse json response -> {0}")]
     Json(#[from] serde_json::Error),
 

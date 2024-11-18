@@ -14,12 +14,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#![feature(lazy_cell)]
-#![feature(result_option_inspect)]
-#![feature(ip_bits)]
 #![feature(async_closure)]
 #![feature(unboxed_closures)]
-#![feature(async_fn_in_trait)]
 
 use crate::record::Record;
 use crate::registry::Registry;

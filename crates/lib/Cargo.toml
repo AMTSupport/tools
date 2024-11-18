@@ -49,7 +49,6 @@ cfg-if.workspace = true
 paste.workspace = true
 
 const_format = { workspace = true, optional = true }
-#syn.workspace = true
 
 [target.'cfg(unix)'.dependencies]
 rustix = { workspace = true, features = ["process"] }

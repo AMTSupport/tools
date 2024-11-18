@@ -14,8 +14,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#![feature(exclusive_range_pattern)]
-
 use anyhow::Result;
 use lib::ui::cli::CliUi;
 use lib::ui::Ui;

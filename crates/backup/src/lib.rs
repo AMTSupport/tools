@@ -21,17 +21,17 @@
 #![feature(unwrap_infallible)]
 #![feature(slice_pattern)]
 #![feature(let_chains)]
-#![feature(result_option_inspect)]
 #![feature(thin_box)]
 #![feature(async_closure)]
-#![feature(file_create_new)]
 #![feature(const_trait_impl)]
-#![feature(lazy_cell)]
 #![feature(result_flattening)]
 #![feature(fn_traits)]
 #![feature(stmt_expr_attributes)]
 #![feature(exact_size_is_empty)]
 #![feature(assert_matches)]
+#![feature(core_intrinsics)]
+#![allow(internal_features)]
+#![allow(async_fn_in_trait)]
 
 pub mod config;
 pub mod sources;

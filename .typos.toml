@@ -1,5 +1,7 @@
 [default.extend-words]
 ratatui = "ratatui"
+struc = "struc"
+PN = "PN"
 
 [files]
 extend-exclude = ["CHANGELOG.md"]

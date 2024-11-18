@@ -15,6 +15,6 @@
  */
 
 fn main() {
-    #[cfg(not(any(feature = "ui-cli", feature = "ui-tui")))]
+    #[cfg(not(any(feature = "ui-cli")))]
     compile_error!("No UI selected")
 }

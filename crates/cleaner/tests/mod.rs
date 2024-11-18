@@ -1,6 +1,3 @@
-#![feature(assert_matches)]
-#![feature(fn_traits)]
-#![feature(lazy_cell)]
 /*
  * Copyright (C) 2023 James Draycott <me@racci.dev>
  *
@@ -16,5 +13,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
+#![feature(assert_matches)]
+#![feature(fn_traits)]
 
 mod cleaners;

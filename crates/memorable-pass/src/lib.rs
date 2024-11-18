@@ -14,7 +14,6 @@
  * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
-#![feature(lazy_cell)]
 #![feature(assert_matches)]
 #![feature(type_alias_impl_trait)]
 #![feature(associated_type_defaults)]

@@ -18,9 +18,9 @@ use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 
 #[derive(Serialize, Deserialize)]
-struct Organisation {
-    id: String,
-    name: String,
+pub struct Organisation {
+    pub id: String,
+    pub name: String,
 }
 
 impl Display for Organisation {

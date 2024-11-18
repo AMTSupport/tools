@@ -20,7 +20,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase", tag = "status")]
-enum LoginStatus {
+pub enum LoginStatus {
     Unauthenticated,
     Authenticated(String),
 }

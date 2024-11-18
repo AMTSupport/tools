@@ -29,12 +29,12 @@ use std::{env, fs};
 use tracing::debug;
 
 pub mod auto_prune;
-#[cfg(feature = "sources-bitwarden")]
-pub mod bitwarden;
 pub mod downloader;
 pub mod exporter;
 mod getter;
-pub(crate) mod interactive;
+
+#[cfg(feature = "sources-bitwarden")]
+pub mod bitwarden;
 #[cfg(feature = "sources-1password")]
 pub mod op;
 #[cfg(feature = "sources-s3")]

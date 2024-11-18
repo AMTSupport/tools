@@ -26,6 +26,7 @@ use lib::ui::Ui;
 use tracing::{error, info};
 use tracing_appender::non_blocking::WorkerGuard;
 
+#[derive(Debug)]
 pub struct RebooterCli {
     _guard: Option<WorkerGuard>,
 }

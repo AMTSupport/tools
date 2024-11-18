@@ -15,10 +15,10 @@
  */
 
 #![feature(async_closure)]
-#![feature(lazy_cell)]
 #![feature(cfg_match)]
-#![feature(inherent_associated_types)]
 #![feature(impl_trait_in_assoc_type)]
+#![allow(incomplete_features)]
+#![feature(inherent_associated_types)]
 
 use anyhow::Result;
 use cleaner::application::application;

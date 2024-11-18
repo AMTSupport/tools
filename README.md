@@ -26,5 +26,5 @@ Give a ⭐️ if this project helped you!
 
 ## 📝 License
 
-Copyright © 2023 [James Draycott](https://github.com/DaRacci).<br />
+Copyright © 2023-2024 [James Draycott](https://github.com/DaRacci).<br />
 This project is [GPL3](https://www.gnu.org/licenses/) licensed.

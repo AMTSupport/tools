@@ -18,7 +18,6 @@
 mod update;
 mod uptime;
 
-use chrono::{DateTime, Local, NaiveDateTime, NaiveTime};
 use clap::ValueEnum;
 use macros::{EnumNames, EnumVariants};
 

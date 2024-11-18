@@ -15,6 +15,6 @@
  */
 
 mod oneshot;
-#[cfg(feature = "ui-repl")]
-mod repl;
+// #[cfg(feature = "ui-repl")]
+// mod repl;
 pub mod ui;

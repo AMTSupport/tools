@@ -14,12 +14,12 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#[cfg(not(any(feature = "ui-gui", feature = "ui-tui", feature = "ui-cli")))]
+#[cfg(not(any(feature = "ui-cli")))]
 fn main() {
     use std::process::exit;
 
     compile_error!("No UI selected, please select one of the following features: ui-gui, ui-tui, ui-cli");
 }
 
-#[cfg(any(feature = "ui-gui", feature = "ui-tui", feature = "ui-cli"))]
+#[cfg(any(feature = "ui-cli"))]
 fn main() {}

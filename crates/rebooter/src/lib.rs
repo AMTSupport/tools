@@ -14,9 +14,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#![feature(result_option_inspect)]
-#![feature(lazy_cell)]
-
 pub mod reason;
 mod schedule;
 pub mod ui;

@@ -18,8 +18,6 @@ pub mod check;
 pub mod task;
 
 use lib::named::Named;
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 pub struct Template {
     common_name: String,

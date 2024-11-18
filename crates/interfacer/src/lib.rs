@@ -15,12 +15,10 @@
  */
 
 #![feature(async_closure)]
-#![feature(lazy_cell)]
 #![feature(once_cell_try)]
 
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Deserializer};
-use std::hash::Hash;
 use std::str::FromStr;
 use tracing::error;
 

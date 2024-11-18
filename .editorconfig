@@ -16,3 +16,9 @@ indent_size = 2
 
 [*.nix]
 indent_size = 2
+
+[{*.sh,.envrc}]
+indent_size = 2
+
+[*.md]
+indent_size = 2

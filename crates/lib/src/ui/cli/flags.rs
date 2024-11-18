@@ -15,7 +15,7 @@
  */
 
 
-use clap::{Parser, ValueEnum};
+use clap::Parser;
 
 /// A struct that contains common flags for the CLI
 ///
@@ -50,7 +50,7 @@ pub struct CommonFlags<const HIDE: bool = false> {
 /// This is only available if the `ui-cli-formatting` feature is enabled.
 /// When formatting is set to non `Human` the quiet mode / flag is implied.
 #[cfg(feature = "ui-cli-formatting")]
-#[derive(Default, Debug, Clone, Copy, ValueEnum)]
+#[derive(Default, Debug, Clone, Copy, clap::ValueEnum)]
 pub enum OutputFormat {
     /// Print the output in a human-readable format
     #[default]

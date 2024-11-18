@@ -31,7 +31,7 @@ impl Pathed<PathBuf> for TestSource {
 #[test]
 fn test_base_dir() {
     let temp_dir = temp_dir();
-    let result = TestSource::base_dir(&temp_dir.path().to_path_buf());
+    let result = TestSource::base_dir(&temp_dir.as_path().to_path_buf());
     assert!(result.is_ok());
 
     let base_dir_path = result.unwrap();
@@ -44,7 +44,7 @@ fn test_unique_dir() {
     let temp_dir = temp_dir();
     let source = TestSource;
 
-    let result = source.unique_dir(&temp_dir.path().to_path_buf());
+    let result = source.unique_dir(&temp_dir.as_path().to_path_buf());
     assert!(result.is_ok());
 
     let unique_dir_path = result.unwrap();
@@ -55,7 +55,7 @@ fn test_unique_dir() {
 #[test]
 fn test_ensure_directory_exists() {
     let temp_dir = temp_dir();
-    let test_dir = temp_dir.path().join("test_dir");
+    let test_dir = temp_dir.as_path().join("test_dir");
 
     // Ensure directory doesn't exist initially
     assert!(!test_dir.exists());

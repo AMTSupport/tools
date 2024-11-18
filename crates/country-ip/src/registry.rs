@@ -110,7 +110,7 @@ impl Registry {
             return Err(RegistryFailed(Box::new(country.clone()), None).into());
         }
 
-        let region = country.region();
+        let region = country.maybe_region();
         let registry = match region {
             Some(Region::Oceania) => Apnic,
             Some(Region::Europe) => Ripencc,
@@ -120,7 +120,7 @@ impl Registry {
                 _ => Afrinic,
             },
             Some(Region::Americas) => {
-                match country.subregion().with_context(|| format!("Failed to get subregion for country {country:?}"))? {
+                match country.maybe_subregion().with_context(|| format!("Failed to get subregion for country {country:?}"))? {
                     SubRegion::CentralAmerica => Lacnic,
                     SubRegion::NorthernAmerica => match country.alpha2() {
                         Alpha2::GL => Ripencc,
@@ -140,7 +140,7 @@ impl Registry {
                 }
             }
             Some(Region::Asia) => {
-                match country.subregion().with_context(|| format!("Failed to get subregion for country {country:?}"))? {
+                match country.maybe_subregion().with_context(|| format!("Failed to get subregion for country {country:?}"))? {
                     SubRegion::CentralAsia | SubRegion::WesternAsia => Ripencc,
                     SubRegion::EasternAsia | SubRegion::SouthEasternAsia => Apnic,
                     SubRegion::SouthernAsia => match country.alpha2() {

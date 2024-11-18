@@ -37,7 +37,7 @@ thiserror = { workspace = true }
 anyhow = { workspace = true }
 
 uptime_lib = "0.3.0"
-sysexits = "0.7.1"
+sysexits = { workspace = true }
 planif = "1.0.0"
 notify-rust = "4.10.0"
 
@@ -47,4 +47,4 @@ registry = "1.2.3"
 
 [dev-dependencies]
 fake = { version = "2.6", features = ["derive", "chrono", "maybe-non-empty-collections"] }
-rand = "0.8"
+rand = { workspace = true }

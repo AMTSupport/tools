@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024. James Draycott <me@racci.dev>
+ * Copyright (C) 2024. James Draycott me@racci.dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -10,8 +10,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program.
- * If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
 use crate::config::backend::Backend;
@@ -46,8 +46,8 @@ builder!(S3Backend = [
     secret_access_key => String
 ]);
 
-impl From<S3Backend> for HashMap<String, String> {
-    fn from(value: S3Backend) -> HashMap<String, String> {
+impl From<&S3Backend> for HashMap<String, String> {
+    fn from(value: &S3Backend) -> HashMap<String, String> {
         HashMap::from([
             ("root", value.root.to_str().unwrap()),
             ("bucket", &*value.bucket),
@@ -82,7 +82,7 @@ impl Eq for S3Core {}
 impl S3Core {
     fn op(&mut self) -> &Operator {
         self.op.get_or_insert_with(|| {
-            let map = self.base.clone().into();
+            let map = (&self.base).into();
             let backend = S3::from_map(map).build().unwrap();
             OperatorBuilder::new(backend).layer(LoggingLayer::default()).finish()
         })
@@ -112,6 +112,83 @@ impl Pathed<Runtime> for S3Core {
 }
 
 impl Exporter for S3Core {
+    async fn interactive(_config: &Runtime) -> Result<Vec<Backend>> {
+        use lib::ui::{
+            builder::Builder,
+            cli::{continue_loop, env_or_prompt},
+        };
+
+        let not_empty_or_ascii =
+            |str: &str, msg: &str| match str.chars().any(|c| !c.is_ascii_alphanumeric() && c != '-' && c != '_')
+                || str.is_empty()
+            {
+                false => Ok(Validation::Valid),
+                true => Ok(Validation::Invalid(msg.into())),
+            };
+
+        let bucket = env_or_prompt("S3_BUCKET", move |str: &_| {
+            not_empty_or_ascii(
+                str,
+                "Bucket name must be alphanumeric, and can only contain dashes and underscores.",
+            )
+        })?;
+
+        // TODO Validators
+        let region = env_or_prompt("S3_REGION", |_: &_| Ok(Validation::Valid))?;
+        let endpoint = env_or_prompt("S3_ENDPOINT", |_: &_| Ok(Validation::Valid))?;
+        let key_id = env_or_prompt("S3_ACCESS_KEY_ID", |_: &_| Ok(Validation::Valid))?;
+        let secret_key = env_or_prompt("S3_SECRET_ACCESS_KEY", |_: &_| Ok(Validation::Valid))?;
+
+        let base_accessor = HashMap::from([
+            ("bucket".to_string(), bucket),
+            ("region".to_string(), region),
+            ("endpoint".to_string(), endpoint),
+            ("access_key_id".to_string(), key_id),
+            ("secret_access_key".to_string(), secret_key), // TODO :: This is not secure at all, maybe use platform specific keychain?
+        ]);
+
+        let base = S3BackendBuilder::default();
+        let base = base_accessor.into_iter().try_fold(base, |mut base, (k, v)| base.set_field(&k, &v).map(|_| base))?;
+
+        let prompt = inquire::Text::new("What's the path of the object you want to export?")
+            .with_render_config(*STYLE)
+            .with_validator(|path: &str| match path.is_empty() || !path.ends_with('/') {
+                true => Ok(Validation::Invalid("Path must end with /".into())),
+                false => Ok(Validation::Valid),
+            });
+
+        // TODO :: Auto suggest for object paths
+        let mut exporters = vec![];
+        while continue_loop(&exporters, "object to export") {
+            match prompt.clone().prompt()? {
+                object_path if object_path.is_empty() => {
+                    info!("Assuming wanted to cancel additional object.");
+                    continue;
+                }
+                object_path => {
+                    let mut base = base.clone();
+                    base.set_root(PathBuf::from(object_path));
+                    let built_base = base.build().await?;
+
+                    let operator = match Operator::from_map::<S3>((&built_base).into()) {
+                        Ok(b) => b.layer(LoggingLayer::default()).finish(),
+                        Err(e) => {
+                            error!("Failed to interactive operator: {}", e);
+                            continue;
+                        }
+                    };
+
+                    exporters.push(Backend::S3(S3Core {
+                        op: Some(operator),
+                        base: built_base,
+                    }));
+                }
+            }
+        }
+
+        Ok(exporters)
+    }
+
     // TODO :: Validate files
     async fn export(&mut self, runtime: &Runtime, main_bar: &ProgressBar, progress_bar: &MultiProgress) -> Result<()> {
         let progress_state = progress_bar.insert_after(main_bar, spinner());
@@ -211,77 +288,4 @@ impl Exporter for S3Core {
 
         Ok(())
     }
-}
-
-#[cfg(feature = "ui-cli")]
-pub(crate) async fn interactive(_runtime: &Runtime) -> Result<Vec<Backend>> {
-    use lib::ui::cli::{continue_loop, env_or_prompt};
-
-    let not_empty_or_ascii =
-        |str: &str, msg: &str| match str.chars().any(|c| !c.is_ascii_alphanumeric() && c != '-' && c != '_')
-            || str.is_empty()
-        {
-            false => Ok(Validation::Valid),
-            true => Ok(Validation::Invalid(msg.into())),
-        };
-
-    let bucket = env_or_prompt("S3_BUCKET", move |str: &_| {
-        not_empty_or_ascii(
-            str,
-            "Bucket name must be alphanumeric, and can only contain dashes and underscores.",
-        )
-    })?;
-
-    // TODO Validators
-    let region = env_or_prompt("S3_REGION", |_: &_| Ok(Validation::Valid))?;
-    let endpoint = env_or_prompt("S3_ENDPOINT", |_: &_| Ok(Validation::Valid))?;
-    let key_id = env_or_prompt("S3_ACCESS_KEY_ID", |_: &_| Ok(Validation::Valid))?;
-    let secret_key = env_or_prompt("S3_SECRET_ACCESS_KEY", |_: &_| Ok(Validation::Valid))?;
-
-    let base_accessor = HashMap::from([
-        ("bucket".to_string(), bucket),
-        ("region".to_string(), region),
-        ("endpoint".to_string(), endpoint),
-        ("access_key_id".to_string(), key_id),
-        ("secret_access_key".to_string(), secret_key), // TODO :: This is not secure at all, maybe use platform specific keychain?
-    ]);
-
-    let base = S3BackendBuilder::default();
-    let base = base_accessor.into_iter().try_fold(base, |mut base, (k, v)| base.set_field(&k, &v).map(|_| base))?;
-
-    let prompt =
-        inquire::Text::new("What's the path of the object you want to export?").with_validator(|path: &str| {
-            match path.is_empty() || !path.ends_with('/') {
-                true => Ok(Validation::Invalid("Path must end with /".into())),
-                false => Ok(Validation::Valid),
-            }
-        });
-
-    // TODO :: Auto suggest for object paths
-    let mut exporters = vec![];
-    while continue_loop(&exporters, "object to export") {
-        match prompt.clone().prompt()? {
-            object_path if object_path.is_empty() => {
-                info!("Assuming wanted to cancel additional object.");
-                continue;
-            }
-            object_path => {
-                let base = base.clone().set_root(PathBuf::from(object_path));
-                let operator = match Operator::from_map::<S3>(base.clone().build()?.into()) {
-                    Ok(b) => b.layer(LoggingLayer::default()).finish(),
-                    Err(e) => {
-                        error!("Failed to interactive operator: {}", e);
-                        continue;
-                    }
-                };
-
-                exporters.push(Backend::S3(S3Core {
-                    op: Some(operator),
-                    base: base.build()?,
-                }));
-            }
-        }
-    }
-
-    Ok(exporters)
 }

@@ -31,6 +31,8 @@
       inputs.nci.flakeModule
     ];
 
+    debug = true;
+
     perSystem = { config, system, pkgs, lib, ... }:
       let
         ourLib = import ./lib.nix {
@@ -58,7 +60,6 @@
 
           hooks = {
             actionlint.enable = true;
-
             check-case-conflicts.enable = true;
             check-docstring-first.enable = true;
             check-toml.enable = true;
@@ -68,14 +69,9 @@
             detect-private-keys.enable = true;
             editorconfig-checker.enable = true;
             end-of-file-fixer.enable = true;
-            markdownlint.enable = true;
-            mdl.enable = true;
-            mdsh.enable = true;
             nil.enable = true;
             nixpkgs-fmt.enable = true;
             statix.enable = true;
-            tagref.enable = true;
-
             typos.enable = true;
           };
         };
@@ -101,6 +97,8 @@
           };
 
           packages = with pkgs; [
+            libz
+            openssl
             pkg-config
             rustToolchain
 
@@ -124,18 +122,13 @@
             cargo-bloat
             cargo-diet
           ] ++ config.pre-commit.settings.enabledPackages;
-
-          env = {
-            LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath (with pkgs; [
-              openssl
-              clang
-              mold
-            ]);
-          };
         };
 
         nci = {
-          toolchains.build = rustToolchain;
+          toolchains = {
+            build = rustToolchain;
+            shell = rustToolchain;
+          };
 
           projects.tools = {
             path = ./.;
@@ -149,10 +142,10 @@
                     depsBuildBuild = lib.optionals (!target.pkgsCross.stdenv.buildPlatform.canExecute target.pkgsCross.stdenv.hostPlatform && !target.pkgsCross.targetPlatform.isWindows) (with pkgs; [ qemu ])
                       ++ lib.optionals (target.pkgsCross.targetPlatform.isWindows && target.pkgsCross.stdenv.isx86_64) (with target.pkgsCross; [ windows.mingw_w64_pthreads windows.pthreads ]);
 
-                    buildInputs = lib.optionals target.pkgsCross.targetPlatform.isLinux (with target.pkgsCross; [ target.pkgsCross.openssl clang mold ])
+                    buildInputs = lib.optionals target.pkgsCross.targetPlatform.isLinux (with target.pkgsCross; [ openssl clang mold ])
                       ++ lib.optionals target.pkgsCross.targetPlatform.isWindows (with target.pkgsCross; [ windows.mingw_w64_headers ]);
 
-                    nativeBuildInputs = with pkgs; [ pkg-config ]
+                    nativeBuildInputs = with pkgs; [ pkg-config openssl ]
                       ++ lib.optionals target.pkgsCross.targetPlatform.isWindows [ pkgs.wine64 ];
 
                     passthru = {

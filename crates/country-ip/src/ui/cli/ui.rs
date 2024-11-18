@@ -15,11 +15,12 @@
  */
 
 use super::oneshot::OneshotAction;
-use lib::ui::cli::flags::CommonFlags;
 use lib::populate;
 use lib::ui::cli::error::CliError;
+use lib::ui::cli::flags::CommonFlags;
 use lib::ui::cli::oneshot::OneshotHandler;
 use lib::ui::cli::{CliResult, CliUi};
+use lib::ui::Ui;
 use tracing::{error, info, info_span};
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_indicatif::span_ext::IndicatifSpanExt;
@@ -30,6 +31,17 @@ pub struct CountryIPCli {
 }
 
 impl CliUi for CountryIPCli {}
+
+impl Ui for CountryIPCli {
+    type Args = ();
+
+    fn new(_args: Self::Args) -> anyhow::Result<Self>
+    where
+        Self: Sized,
+    {
+        Ok(Self { _guard: None })
+    }
+}
 
 impl OneshotHandler for CountryIPCli {
     type Action = OneshotAction;

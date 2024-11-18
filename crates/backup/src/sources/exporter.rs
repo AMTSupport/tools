@@ -16,10 +16,7 @@
 
 use crate::config::backend::Backend;
 use crate::config::runtime::Runtime;
-use crate::sources::bitwarden::BitWardenCore;
 use crate::sources::downloader::Downloader;
-use crate::sources::op::core::OnePasswordCore;
-use crate::sources::{bitwarden, op, s3};
 use anyhow::Result;
 use indicatif::{MultiProgress, ProgressBar};
 use lib::pathed::Pathed;
@@ -29,7 +26,7 @@ use std::fmt::Debug;
 
 pub trait Exporter: Pathed<Runtime> {
     /// Used to attempt to interactively interactive a new exporter.
-    // async fn interactive(config: &Runtime) -> Result<Vec<Backend>>;
+    async fn interactive(config: &Runtime) -> Result<Vec<Backend>>;
 
     // TODO :: Maybe return a reference to file/files which were exported?
     /// This method will export the backup data into memory,
@@ -39,33 +36,39 @@ pub trait Exporter: Pathed<Runtime> {
 
 #[derive(Debug, Clone, Serialize, Deserialize, EnumVariants, EnumNames)]
 pub enum ExporterSource {
+    #[cfg(feature = "sources-s3")]
     S3,
+    #[cfg(feature = "sources-bitwarden")]
     BitWarden,
+    #[cfg(feature = "sources-1password")]
     OnePassword,
 }
 
 impl ExporterSource {
     pub async fn create(&self, runtime: &Runtime) -> Result<Vec<Backend>> {
         match self {
-            Self::S3 => s3::interactive(runtime).await,
+            #[cfg(feature = "sources-s3")]
+            Self::S3 => super::s3::S3Core::interactive(runtime).await,
+            #[cfg(feature = "sources-bitwarden")]
             Self::BitWarden => {
                 let bars = MultiProgress::new();
                 let main_bar = bars.add(ProgressBar::new_spinner());
                 main_bar.set_message("Setting up BitWarden CLI");
-                BitWardenCore::download_cli(runtime, &main_bar, &bars).await?;
+                super::bitwarden::BitWardenCore::download_cli(runtime, &main_bar, &bars).await?;
                 main_bar.finish_and_clear();
 
                 #[cfg(feature = "ui-cli")]
-                bitwarden::interactive(runtime).await
+                super::bitwarden::BitWardenCore::interactive(runtime).await
             }
+            #[cfg(feature = "sources-1password")]
             Self::OnePassword => {
                 let bars = MultiProgress::new();
                 let main_bar = bars.add(ProgressBar::new_spinner());
                 main_bar.set_message("Setting up 1Password CLI");
-                OnePasswordCore::download_cli(runtime, &main_bar, &bars).await?;
+                super::op::core::OnePasswordCore::download_cli(runtime, &main_bar, &bars).await?;
                 main_bar.finish_and_clear();
 
-                op::core::interactive(runtime).await
+                super::op::core::OnePasswordCore::interactive(runtime).await
             }
         }
     }

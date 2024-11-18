@@ -14,9 +14,9 @@ path = "src/main.rs"
 
 [features]
 default = ["ui-cli", "sources-s3", "sources-bitwarden"]
-binary-downloader = ["bytes", "rand", "const_format"]
+binary-downloader = ["bytes", "rand", "const_format", "zip"]
 
-ui-cli = ["indicatif", "inquire", "lib/ui-cli"]
+ui-cli = ["indicatif", "inquire", "lib/ui-cli", "lib/builder"]
 
 sources-s3 = ["opendal", "futures"]
 sources-bitwarden = ["binary-downloader"]
@@ -42,10 +42,15 @@ crossterm = { workspace = true, optional = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 chrono = { workspace = true, features = ["serde", "clock"] }
-zip = { workspace = true, features = ["zstd", "bzip2", "deflate", "deflate-zlib"], optional = true } # TODO :: Downsize features
+zip = { workspace = true, features = [
+    # "zstd",
+    "bzip2",
+    "deflate",
+    "deflate-zlib",
+], optional = true } # TODO :: Downsize features
 
 # Networking
-reqwest = { workspace = true }
+reqwest = { workspace = true, features = ["stream"] }
 
 # Logging & Errors
 tracing = { workspace = true }
@@ -60,7 +65,10 @@ glob.workspace = true
 readable-regex.workspace = true
 paste.workspace = true
 
-opendal = { version = "0.45.1", features = ["services-s3", "rustls"], optional = true }
+opendal = { version = "0.45.1", features = [
+    "services-s3",
+    "rustls",
+], optional = true }
 
 # Futures & Async
 futures = { workspace = true, optional = true }
@@ -82,13 +90,20 @@ regex.workspace = true
 # Logging & Errors
 env_logger.workspace = true
 test-log = { workspace = true, features = ["trace"] }
-tracing-subscriber = { workspace = true, default-features = false, features = ["env-filter", "fmt"] }
+tracing-subscriber = { workspace = true, default-features = false, features = [
+    "env-filter",
+    "fmt",
+] }
 
 # Generating random data for tests
-fake = { workspace = true, features = ["derive", "chrono", "serde_json", "maybe-non-empty-collections"] }
+fake = { workspace = true, features = [
+    "derive",
+    "chrono",
+    "serde_json",
+    "maybe-non-empty-collections",
+] }
 rand.workspace = true
 
 # Fs & IO
-tempdir.workspace = true
+tempfile.workspace = true
 assert_fs.workspace = true
-

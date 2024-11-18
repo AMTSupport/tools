@@ -23,8 +23,9 @@ use lib::ui::cli::{CliResult, CliUi};
 use lib::ui::Ui;
 use tracing_appender::non_blocking::WorkerGuard;
 
+#[derive(Debug)]
 pub struct BackupCli {
-    runtime: Option<Runtime>,
+    pub runtime: Option<Runtime>,
     _guard: Option<WorkerGuard>,
 }
 
@@ -39,10 +40,10 @@ impl OneshotHandler for BackupCli {
         }
 
         if self.runtime.is_none() {
-            self.runtime = Some(command.prepare()?);
+            self.runtime = Some(command.initialise().await?);
         }
 
-        command.run(self.runtime.as_mut().unwrap()).await?;
+        command.run(self).await?;
 
         Ok(())
     }
@@ -50,8 +51,8 @@ impl OneshotHandler for BackupCli {
 
 impl Ui for BackupCli {
     fn new(_args: Self::Args) -> Result<Self>
-        where
-            Self: Sized,
+    where
+        Self: Sized,
     {
         Ok(Self {
             runtime: None,

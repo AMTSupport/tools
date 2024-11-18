@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 James Draycott <me@racci.dev>
+ * Copyright (C) 2023-2024. James Draycott me@racci.dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -7,11 +7,11 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
 use crate::config::backend::Backend;
@@ -57,6 +57,7 @@ pub struct Config {
     /// This is used to determine whether to save the configuration.
     /// If the configuration has not been mutated, it will not be saved.
     /// This is to prevent unnecessary writes to the configuration file.
+    #[serde(skip)]
     pub(crate) mutated: bool,
 
     pub rules: Rules,
@@ -88,7 +89,7 @@ impl Config {
     /// - $BACKUP_CONFIG
     /// - $PWD/settings.json
     #[instrument(level = "TRACE")]
-    pub fn find(directory: &Option<PathBuf>) -> Result<PathBuf> {
+    pub fn find(directory: &Option<PathBuf>) -> Result<PathBuf, Error> {
         use std::env;
 
         env::var(Self::ENV_VAR)
@@ -134,7 +135,7 @@ impl Config {
     ///
     /// This will create a file called `settings.json` in the given directory.
     /// If the file already exists, and the `mutated` flag is not set, this will not write to the file.
-    #[instrument(level = "TRACE")]
+    #[instrument(level = "TRACE", skip(self), fields(path = ?self.path.as_ref().map(|p| p.display())))]
     pub async fn save(&self) -> Result<()> {
         let path = match self.path {
             None => {

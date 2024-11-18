@@ -14,6 +14,8 @@
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
+use lib::named::Named;
+
 use self::super::UniqueName;
 use std::collections::HashMap;
 
@@ -28,6 +30,10 @@ pub struct TemplateTask {
     schedule: TemplateTaskSchedule,
 
     unique_name: fn(&Self) -> String,
+}
+
+impl Named for TemplateTask {
+    const NAME: &'static str = "task";
 }
 
 impl UniqueName for TemplateTask {

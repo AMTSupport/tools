@@ -65,7 +65,7 @@ crate::feature_trait! {
             );
             #[cfg(not(feature = "ui-repl"))]
             let command = oneshot::OneshotParser::<<Self as OneshotHandler>::Action>::parse();
-            
+
             #[cfg(feature = "updater")]
             let updater = if command.flags.update {
                 Some(crate::updater::update())
@@ -83,7 +83,7 @@ crate::feature_trait! {
             }
             #[cfg(not(feature = "ui-repl"))]
             <Self as OneshotHandler>::handle(self, command.action, &command.flags).await?;
-            
+
             #[cfg(feature = "updater")]
             // Wait for the update to finish before returning.
             if let Some(updater) = updater {
