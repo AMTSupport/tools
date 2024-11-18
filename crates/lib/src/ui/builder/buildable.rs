@@ -16,10 +16,11 @@
 
 use crate::ui::builder::Builder;
 use std::fmt::Debug;
-use std::str::FromStr;
+
+use super::{error::FillError, filler::Filler};
 
 pub trait Buildable: Debug {
-    type Builder: Builder;
+    type Builder: Builder<Buildable = Self>;
 
     fn builder() -> Self::Builder
     where
@@ -27,6 +28,13 @@ pub trait Buildable: Debug {
     {
         Default::default()
     }
-}
 
-impl<T> !Buildable for T where T: FromStr + Debug {}
+    async fn from<F: Filler>(filler: &F) -> crate::ui::builder::error::FillResult<Self>
+    where
+        Self: Sized,
+    {
+        let mut builder = Self::builder();
+        builder.fill(filler).await?;
+        builder.build().await.map_err(|err| FillError::Nested(err))
+    }
+}

@@ -23,8 +23,7 @@ pub async fn main() -> anyhow::Result<()> {
 
     let mut app = BackupCli::new(())?;
     app.run().await?;
+    app.runtime.unwrap().config.save().await?;
+
     Ok(())
-    // TODO :: Verify writable
-    // TODO :: Verify enough space
-    // TODO :: Verify dir is either empty, or has existing backup data
 }

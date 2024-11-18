@@ -23,7 +23,7 @@ use crate::sources::op::core::OnePasswordCore;
 use anyhow::{anyhow, Context, Result};
 use futures_util::TryFutureExt;
 use lib::pathed::Pathed;
-use lib::ui::cli::ui_inquire::inquire_style;
+use lib::ui::cli::ui_inquire::STYLE;
 use macros::CommonFields;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display, Formatter};
@@ -121,7 +121,7 @@ impl Interactive<OnePasswordAccount> for OnePasswordAccount {
         let selection = Select::new(
             "What type of Account do you want to setup.",
             vec!["Personal", "Service"],
-        ).with_render_config(inquire_style()).with_help_message(r#"
+        ).with_render_config(*STYLE).with_help_message(r#"
             A Service Account is a special type of account which can be logged in with a single token, however it cannot access Personal Vaults.
             A Personal Account is the standard way of authenticating with the cli which requires the 1Password desktop application to be installed,
             When using a Personal Account please ensure that the 1Password Desktop app doesn't have cli integration enabled.
@@ -182,7 +182,7 @@ impl Interactive<OnePasswordAccount> for OnePasswordAccount {
                     match v.len() {
                         0 => Err(anyhow!("No vaults found for this account.")),
                         _ => MultiSelect::new("Select the vaults you want to use.", v)
-                            .with_render_config(inquire_style())
+                            .with_render_config(*STYLE)
                             .with_validator(|selections: &[ListOption<&Reference>]| match selections.len() {
                                 0 => Ok(Validation::Invalid("You must select at least one vault.".into())),
                                 _ => Ok(Validation::Valid),

@@ -53,8 +53,14 @@ pub enum FillError {
     #[error("no value found for {field}")]
     NoValue { field: String },
 
+    #[error("Nested builder error: {0}")]
+    Nested(#[from] BuildError),
+
     #[error("unknown error: {0}")]
-    Unknown(#[from] Box<dyn std::error::Error>),
+    Unknown(#[from] anyhow::Error),
+
+    #[error("invalid type for call")]
+    InvalidDefinition,
 }
 
 #[derive(Debug, Error)]
@@ -63,5 +69,5 @@ pub enum BuildError {
     MissingField { field: String },
 
     #[error("unknown error: {0}")]
-    Unknown(#[from] Box<dyn std::error::Error>),
+    Unknown(#[from] anyhow::Error),
 }

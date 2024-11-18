@@ -14,12 +14,11 @@
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::hudu::structs::company::{Companies, Company};
-use crate::hudu::structs::password::{Password, Passwords};
-use crate::hudu::{API_ENDPOINT, API_HEADER, COMPANIES_ENDPOINT, PASSWORDS_ENDPOINT};
-use crate::Client;
+use crate::endpoints::endpoint::Endpoint;
+use crate::endpoints::hudu::structs::company::{Companies, Company};
+use crate::endpoints::hudu::structs::password::{Password, Passwords};
+use crate::endpoints::hudu::{API_ENDPOINT, API_HEADER, COMPANIES_ENDPOINT, PASSWORDS_ENDPOINT};
 use anyhow::{Context, Result};
-use async_trait::async_trait;
 use reqwest::{
     header::{self, HeaderMap},
     Response,
@@ -27,13 +26,12 @@ use reqwest::{
 use serde::de::DeserializeOwned;
 use std::any::Any;
 
-use http_cache_reqwest::{Cache, CacheMode, HttpCache};
+use http_cache_reqwest::{Cache, CacheMode, HttpCache, HttpCacheOptions};
 use reqwest_middleware::RequestBuilder;
 use std::collections::HashMap;
 use std::hash::Hash;
 use tracing::{error, trace};
 
-#[async_trait]
 pub trait Hudu {
     fn hudu(base_url: &str, api_key: &str) -> Result<Self>
     where
@@ -55,8 +53,7 @@ pub trait Hudu {
         Self: Sized;
 }
 
-#[async_trait]
-impl Hudu for Client
+impl<T: Endpoint> Hudu for T
 where
     Self: 'static + Send + Sync + Eq + Hash + Clone,
 {
@@ -66,13 +63,13 @@ where
         headers.insert(header::ACCEPT, "application/json; charset=utf-8".parse()?);
 
         let base_client =
-            reqwest::Client::builder().user_agent(crate::AGENT).default_headers(headers).gzip(true).build()?;
+            reqwest::Client::builder().default_headers(headers).gzip(true).build()?;
 
         let client = reqwest_middleware::ClientBuilder::new(base_client)
             .with(Cache(HttpCache {
                 mode: CacheMode::ForceCache,
                 manager: http_cache_reqwest::MokaManager::default(),
-                options: None,
+                options: HttpCacheOptions::default(),
             }))
             .build();
 

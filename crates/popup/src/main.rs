@@ -14,12 +14,15 @@
  * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
+#![allow(incomplete_features)]
+#![feature(inherent_associated_types)]
+
 use iced::alignment::Vertical;
 use iced::theme::Palette;
-use iced::widget::{button, column, row, text, text_input, Column, Container};
-use iced::window::{Id, Position};
-use iced::window::{Action, Mode};
-use iced::{alignment::Horizontal, executor, widget, window, Application, Color, Command, Element, Length, Settings};
+use iced::widget::{button, center, column, row, text, text_input, Column, Container};
+use iced::window::Mode;
+use iced::Task;
+use iced::{alignment::Horizontal, executor, widget, window, Color, Element, Length};
 use std::process::ExitCode;
 use std::sync::Arc;
 use tracing::trace;
@@ -38,24 +41,22 @@ enum Message {
     UpdateInput(String),
 }
 
-impl Application for Informer {
+impl Informer {
     type Executor = executor::Default;
     type Message = Message;
     type Theme = iced::Theme;
     type Flags = (String, bool);
 
-    fn new(flags: Self::Flags) -> (Self, Command<Message>) {
-        use iced_runtime::command::Action as CommandAction;
-
+    fn new(flags: Self::Flags) -> (Self, Task<Message>) {
         let application = Informer {
             message: flags.0,
             requires_confirmation: flags.1,
             ..Default::default()
         };
 
-        let cmd = Command::batch([
-            Command::single(CommandAction::Window(Action::GainFocus(Id::MAIN))),
-            Command::single(CommandAction::Window(Action::ChangeMode(Id::MAIN, Mode::Fullscreen))),
+        let cmd = Task::batch([
+            window::get_latest().and_then(|id| window::gain_focus(id)),
+            window::get_latest().and_then(|id| window::change_mode(id, Mode::Fullscreen)),
         ]);
 
         (application, cmd)
@@ -65,32 +66,29 @@ impl Application for Informer {
         String::from("Informer - AMT")
     }
 
-    fn update(&mut self, message: Message) -> Command<Message> {
+    fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::UpdateInput(input) => {
                 self.input = input;
-                Command::none()
+                Task::none()
             }
             Message::Exit(reason) => {
                 trace!("Exiting: {}", reason);
-                window::close(Id::MAIN)
+                window::get_latest().and_then(window::close)
             }
             Message::Event(msg) => {
                 trace!("Event: {}", msg);
-                Command::none()
+                Task::none()
             }
         }
     }
 
     fn view(&self) -> Element<Message> {
         let content = column![
-            text("AMT - Informer").size(18).horizontal_alignment(Horizontal::Center).vertical_alignment(Vertical::Top),
-            text("Automated Message from AMT")
-                .size(16)
-                .horizontal_alignment(Horizontal::Center)
-                .vertical_alignment(Vertical::Center),
+            text("AMT - Informer").size(18).align_x(Horizontal::Center).align_y(Vertical::Top),
+            text("Automated Message from AMT").size(16).align_x(Horizontal::Center).align_y(Vertical::Center),
             "",
-            text(self.message.trim()).size(24).horizontal_alignment(Horizontal::Center)
+            text(self.message.trim()).size(24).align_x(Horizontal::Center)
         ];
         // .align_items(Alignment::Center)
         // .height(Length::Shrink)
@@ -102,8 +100,8 @@ impl Application for Informer {
             column![
                 text("Please type \"Confirm\" if you understand the this message and wish to close this window.")
                     .size(16)
-                    .horizontal_alignment(Horizontal::Center)
-                    .vertical_alignment(Vertical::Center),
+                    .align_x(Horizontal::Center)
+                    .align_y(Vertical::Center),
                 text(""),
                 text_input("Confirm", &self.input)
                     .on_paste(|p| Message::Event(format!("Ignoring paste: {}", p)))
@@ -127,52 +125,22 @@ impl Application for Informer {
         } else {
             column![button("Close").on_press(Message::Exit("No confirmation required".into()))]
         };
-        // .width(Length::Shrink)
-        // .height(Length::Shrink)
-        // .align_items(Alignment::Center)
-        // .spacing(5)
-        // .padding(20);
-        //
 
-        // let content = column![content]
-        //     .align_items(Alignment::Center)
-        //     .width(Length::Shrink)
-        //     .height(Length::Shrink)
-        //     .spacing(5)
-        //     .padding(20);
-
-        use iced_aw::{modal, Card};
-
-        let overlay = Card::new(
-            widget::Text::new("My Modal"),
-            widget::Text::new("This is a modal!"),
-        ).foot(footer)
-            .max_width(300.0)
-            .on_close(Message::Exit("Modal closed".into()));
-
-        modal::Modal::new(content, Some(overlay))
-            .backdrop(Message::Event("Backdrop clicked".into()))
-            .on_esc(Message::Event("Esc pressed".into()))
-            .into()
-
-        // container(content)
-        //     .width(Length::FillPortion(30))
-        //     .height(Length::FillPortion(30))
-        //     .padding(20)
-        //     .center_x()
-        //     .center_y()
-        //     .into()
+        Container::new(row![content, footer]).padding(20).into()
     }
 
     fn theme(&self) -> Self::Theme {
         use iced::Theme::{Custom, Dark};
 
-        Custom(Arc::new(iced::theme::Custom::new("default".to_string(), Palette {
-            text: Color::WHITE,
-            // primary: Color::from_rgb(0.11, 0.42, 0.87),
-            background: Color::from_rgb(0.11, 0.42, 0.87),
-            ..Dark.palette()
-        })))
+        Custom(Arc::new(iced::theme::Custom::new(
+            "default".to_string(),
+            Palette {
+                text: Color::WHITE,
+                // primary: Color::from_rgb(0.11, 0.42, 0.87),
+                background: Color::from_rgb(0.11, 0.42, 0.87),
+                ..Dark.palette()
+            },
+        )))
     }
 }
 
@@ -180,31 +148,26 @@ impl Application for Informer {
 async fn main() -> anyhow::Result<ExitCode> {
     let _guard = lib::log::init("informer", &Default::default());
 
-    let settings = Settings {
-        id: None,
-        window: window::Settings {
-            level: window::Level::AlwaysOnTop,
-            decorations: false,
-            resizable: false,
-            position: Position::Centered,
-            icon: None, // TODO - Add icon
-            transparent: true,
-            // TODO - Make fullscreen
-            ..Default::default()
-        },
-        flags: (
-            r#"
+    iced::application("AMT Informer", Informer::update, Informer::view)
+        .theme(Informer::theme)
+        .centered()
+        .resizable(false)
+        .level(window::Level::AlwaysOnTop)
+        .transparent(true)
+        .decorations(false)
+        .exit_on_close_request(false)
+        .run_with(|| {
+            Informer::new((
+                r#"
             You will be rebooted at 2 AM;
             please close all work you may have.
             "#
                 .trim()
                 .to_string(),
-            true,
-        ),
-        ..Default::default()
-    };
+                true,
+            ))
+        });
 
-    Informer::run(settings)?;
     toast();
 
     Ok(ExitCode::SUCCESS)

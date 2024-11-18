@@ -16,11 +16,10 @@
 
 use crate::ui::builder::buildable::Buildable;
 use crate::ui::builder::error::{BuildResult, FillResult};
-use crate::ui::builder::filler::{FillableDefinition, Filler, TypeWrapped};
+use crate::ui::builder::filler::Filler;
 use std::fmt::Debug;
 
 pub mod buildable;
-pub mod dummy;
 pub mod error;
 pub mod filler;
 
@@ -30,32 +29,11 @@ pub mod filler;
 /// The `fill` method is used to fill the builder with data.
 /// The `build` method is used to build the final object.
 pub trait Builder: Default + Debug {
-    type Buildable: Buildable;
+    type Buildable: Buildable<Builder = Self>;
 
-    async fn fill<F: Filler>(&mut self, filler: &mut F) -> FillResult<()>;
+    async fn fill<F: Filler>(&mut self, filler: &F) -> FillResult<()>;
 
     async fn build(self) -> BuildResult<Self::Buildable>;
-}
-
-#[derive(Debug, Clone)]
-pub struct BuilderHolder<T>
-    where
-        T: Sized + Clone + Debug,
-{
-    pub value: Option<T>,
-    pub def: TypeWrapped<T>,
-}
-
-impl<T> BuilderHolder<T>
-    where
-        T: Sized + Clone + Debug,
-{
-    pub fn new(def: FillableDefinition<T>) -> Self {
-        Self {
-            value: None,
-            def: TypeWrapped::new(def),
-        }
-    }
 }
 
 #[macro_export]
@@ -136,7 +114,7 @@ macro_rules! builder {
             [$($($(#[$opt_attr])* $opt_i: $opt_t $(=> $opt_default)?),+)?]
         );
     };
-    //#endregion
+    //endregion
 
     (impl
         $(#[$attr:meta])*
@@ -151,105 +129,156 @@ macro_rules! builder {
             $($($(#[$optional_attr])* $optional_ident: Option<$optional_type>,)+)?
         }
 
-        paste::paste! { #[derive(Debug, Clone)] pub struct [< $name Builder >] {
-            $($($required_ident: $crate::ui::builder::filler::BuilderHolder<$required_type>,)+)?
-            $($($optional_ident: $crate::ui::builder::filler::BuilderHolder<$optional_type>,)+)?
-        }}
-
-        impl $crate::ui::builder::buildable::Buildable for $name {
-            type Builder = paste::paste! { [< $name Builder >] };
+        impl $name {
+            $($($crate::builder!(@get $required_ident $required_type);)+)?
+            $($($crate::builder!(@get $optional_ident Option<$optional_type>);)+)?
         }
 
-        paste::paste! { impl $crate::ui::builder::Builder for [< $name Builder >] {
-            type Buildable = $name;
+        $crate::builder!(@default_impl $name
+            [$($($required_ident: $required_type $(=> $required_default)?),+)?]
+            [$($($optional_ident: $optional_type $(=> $optional_default)?),+)?]
+        );
 
-            async fn fill<F: $crate::ui::builder::filler::Filler>(&mut self, filler: &mut F) -> $crate::ui::builder::error::FillResult<()> {
-                use $crate::ui::builder::filler::Filler as _Filler;
-                use $crate::ui::builder::filler::FillableDefinition as _FillableDefinition;
-                use $crate::ui::builder::Builder as _Builder;
-                use $crate::ui::builder::error::FillError as _FillError;
+        impl $crate::ui::builder::buildable::Buildable for $name {
+            type Builder = $crate::_paste::paste! { [< $name Builder >] };
+        }
 
-
-                $($($crate::builder!(@try_fill [self, filler] $required_ident: $required_type);)+)?
-                $($($crate::builder!(@try_fill [self, filler] $optional_ident: $optional_type);)+)?
-
-                // $($($crate::builder!(@fill self $required_ident, filler);)+)?
-                // $($($crate::builder!(@fill self $optional_ident, filler);)+)?
-
-                Ok(())
+        $crate::_paste::paste! {
+            #[derive(Debug, Clone)]
+            pub struct [< $name Builder >] {
+                $($($required_ident: $crate::ui::builder::filler::FillableDefinition<$required_type>,)+)?
+                $($($optional_ident: $crate::ui::builder::filler::FillableDefinition<$optional_type>,)+)?
             }
 
-            async fn build(self) -> Result<$name, $crate::ui::builder::error::BuildError> {
-                Ok($name {
-                    $($($required_ident: $crate::builder!(@build_req self $required_ident),)+)?
-                    $($($optional_ident: $crate::builder!(@build_opt self $optional_ident),)+)?
-                })
-            }
-        }}
+            impl [< $name Builder >] {
+                $($($crate::builder!(@get_set $required_ident $required_type);)+)?
+                $($($crate::builder!(@get_set $optional_ident $optional_type);)+)?
 
-        paste::paste! { impl Default for [< $name Builder >] {
+                fn set_field(&mut self, field: &str, value: &str) -> anyhow::Result<()> {
+                    match field {
+                        $($(stringify!($required_ident) => { $crate::builder!(@set_field_match value => [self, $required_ident: $required_type]) },)+)?
+                        $($(stringify!($optional_ident) => { $crate::builder!(@set_field_match value => [self, $optional_ident: $optional_type]) },)+)?
+                        _ => return Err(anyhow::anyhow!("Invalid field")),
+                    };
+
+                    Ok(())
+                }
+
+            }
+
+            impl $crate::ui::builder::Builder for [< $name Builder >] {
+                type Buildable = $name;
+
+                async fn fill<F: $crate::ui::builder::filler::Filler>(&mut self, filler: &F) -> $crate::ui::builder::error::FillResult<()> {
+                    use $crate::ui::builder::Builder as _Builder;
+
+                    $($($crate::builder!(@try_fill [self, filler: F] $required_ident: $required_type);)+)?
+                    $($($crate::builder!(@try_fill [self, filler: F] $optional_ident: $optional_type);)+)?
+
+                    Ok(())
+                }
+
+                async fn build(self) -> Result<$name, $crate::ui::builder::error::BuildError> {
+                    Ok($name {
+                        $($($required_ident: $crate::builder!(@build_req self $required_ident),)+)?
+                        $($($optional_ident: $crate::builder!(@build_opt self $optional_ident),)+)?
+                    })
+                }
+            }
+        }
+
+        $crate::_paste::paste! { impl Default for [< $name Builder >] {
             fn default() -> Self {
                 Self {
-                    $($($required_ident: $crate::builder!(@default $required_ident: $required_type, true $(, $required_default)?),)+)?
-                    $($($optional_ident: $crate::builder!(@default $optional_ident: $optional_type, false $(, $optional_default)?),)+)?
+                    $($($required_ident: $crate::builder!(@default $(#[$required_attr])* $required_ident: $required_type, true $(, $required_default)?),)+)?
+                    $($($optional_ident: $crate::builder!(@default $(#[$optional_attr])* $optional_ident: $optional_type, false $(, $optional_default)?),)+)?
                 }
             }
         }}
     };
 
-    //#region Internal macros
-    // The macro that fills the builder with the data from the filler.
-    // (@fill $self:ident $field:ident, $filler:ident) => {
-    //   if let Ok(value) = $crate::ui::builder::dummy::try_fill(&$self.$field.def, $filler).await {
-    //     if let Some(old) = $self.$field.value.replace(value) {
-    //         tracing::debug!("Replaced {} old value of {:?}", stringify!($field), old);
-    //     }
-    //   }
-    // };
+    // #region Internal macros
+    (@get $field:ident $type:ty) => { $crate::_paste::paste! {
+        pub fn [< get_ $field >](&self) -> &$type {
+            &self.$field
+        }
+    }};
+
+    // Create a getter and setter for the field.
+    (@get_set $field:ident $type:ty) => { $crate::_paste::paste! {
+        pub fn [< get_ $field >](&self) -> Option<&$type> {
+            self.$field.value.as_ref()
+        }
+
+        pub fn [< set_ $field >](&mut self, value: $type) {
+            if let Some(old) = self.$field.value.replace(value) {
+                tracing::debug!("Replaced {} old value of {:?}", stringify!($field), old);
+            }
+        }
+    }};
+
+    // set_field match arm
+    (@set_field_match $value:ident => [$self:ident, $field:ident: $type:ty]) => { $crate::_paste::paste! {
+        $self.[<set_ $field>] ({
+            use std::str::FromStr as _FromStr;
+
+            $crate::conditional_call!(impl $type where T: Sized + Clone | T: _FromStr + Clone {
+                fn call(value: &str) -> anyhow::Result<T> {
+                    value.parse::<T>().map_err(|_| anyhow::anyhow!("Failed to parse value"))
+                } else {
+                    Err(anyhow::anyhow!("No impl for FromStr"))
+                }
+            });
+
+            $crate::conditional_call!(call::<$type>($value))?
+        })
+    }};
 
     // Build the final object from the builder with a required field.
     (@build_req $self:ident $field:ident) => {
-        $self.$field.value.or_else(|| {
-            let value = &$self.$field.def.value();
-            value.default.map(|v| v())
-        }).ok_or_else(|| lib::ui::builder::error::BuildError::MissingField { field: stringify!($field).to_string() })?
+        $self.$field.value.or($self.$field.default).ok_or_else(|| lib::ui::builder::error::BuildError::MissingField { field: stringify!($field).to_string() })?
     };
 
     // Build the final object from the builder with an optional field.
     (@build_opt $self:ident $field:ident) => {
-        $self.$field.value.or_else(|| {
-            let value = &$self.$field.def.value();
-            value.default.map(|v| v())
-        })
+        $self.$field.value.or($self.$field.default)
     };
 
     // Create a default value for the builder struct.
-    (@default $ident:ident: $ty:ty, $required:expr $(, $default:expr)?) => {
-        $crate::ui::builder::filler::BuilderHolder::new($crate::ui::builder::filler::FillableDefinition::<$ty> {
+    (@default $(#[$attr:meta])* $ident:ident: $ty:ty, $required:expr $(, $default:expr)?) => {{
+        let default = $crate::builder!(@expr_or_none $($default)?);
+        $crate::ui::builder::filler::FillableDefinition::<$ty> {
             name: stringify!($ident),
             required: $required,
-            default: $crate::builder!(@expr_or_none $(|| $default)?),
+            value: default.clone(),
+            default,
+            description: $crate::builder!(@doc $(#[$attr])*),
 
             _pd: std::marker::PhantomData,
-        })
-    };
+        }
+    }};
 
     // If all fields have a default value create a default implementation.
-    (@default $name:ident
-        [$($required_ident:ident: $required_type:expr => $required_default:expr),+]
-        [$($optional_ident:ident: $optional_type:expr => $optional_default:expr),+]
+    (@default_impl $name:ident
+        [$($required_ident:ident: $required_type:ty => $required_default:expr),*]
+        [$($optional_ident:ident: $optional_type:ty => $optional_default:expr),*]
     ) => {
         impl Default for $name {
             fn default() -> Self {
                 Self {
-                    $($required_ident: $required_default,)+
-                    $($optional_ident: $optional_default,)+
+                    $($required_ident: $required_default,)*
+                    $($optional_ident: $optional_default,)*
                 }
             }
         }
     };
+    // Otherwise, do nothing.
+    (@default_impl $name:ident
+        [$($required_ident:ident: $required_type:ty $(=> $required_default:expr)?),*]
+        [$($optional_ident:ident: $optional_type:ty $(=> $optional_default:expr)?),*]
+    ) => {};
 
-    // Utility to convert the default expression into an option or none.
+    // Utility to compute the default expression into an option or none.
     (@expr_or_none $expr:expr) => {
         Some($expr)
     };
@@ -257,71 +286,70 @@ macro_rules! builder {
         None
     };
 
-    (@maybe_continue $self:ident $ident:ident || $expr:expr) => {
-        match $expr {
-            Ok(value) => {
-                if let Some(old) = $self.$ident.value.replace(value) {
-                    tracing::debug!("Replaced {} old value of {:?}", stringify!($ident), old);
+    // Extract the doc attribute from the list of attributes.
+    (@doc #[doc = $doc:literal] $(#[$attr:meta])*) => { Some($doc) };
+    (@doc #[$first_attr:meta] $(#[$attr:meta])*) => { $crate::builder!(@doc $(#[$attr])* ) };
+    (@doc) => { None };
+
+    (@try_fill [$self:ident, $filler:ident: $filler_generic:ident] $ident:ident: $type:ty) => {{
+        use core::fmt::Debug as _Debug;
+        use $crate::ui::builder::error::FillResult as _FillResult;
+        use $crate::ui::builder::filler::FillableDefinition as _FillableDefinition;
+        use $crate::ui::builder::filler::Filler as _Filler;
+
+        let mut filled = {{
+            use std::str::FromStr as _FromStr;
+
+            $crate::conditional_call!(impl $type where T: Sized + Clone, F: _Filler | T: _FromStr + Clone + _Debug, F: _Filler {
+                async fn call<'a>(
+                    filler: &F,
+                    def: &'a mut _FillableDefinition<T>
+                ) -> _FillResult<&'a T> {
+                    let value = filler.fill_input(def).await?;
+                    def.value.replace(value);
+                    def.value.as_ref().ok_or($crate::ui::builder::error::FillError::InvalidFiller {
+                        field: stringify!($ident).to_string(),
+                        filler: "FromStr".to_string(),
+                    })
+                } else {
+                    Err($crate::ui::builder::error::FillError::InvalidDefinition)
                 }
-            }
-            Err($crate::ui::builder::error::FillError::InvalidFiller { field, filler }) => {
-                tracing::error!("Filler {} failed to fill field {}", filler, field);
-            }
+            });
+
+            $crate::conditional_call!(call::<$type, $filler_generic>($filler, &mut $self.$ident)).await
+        }};
+
+        if let Err($crate::ui::builder::error::FillError::InvalidDefinition) = filled {
+            filled = {
+                use lib::ui::builder::buildable::Buildable as _Buildable;
+
+                $crate::conditional_call!(impl $type where T: Sized + Clone, F: _Filler | T: _Buildable + Clone + _Debug, F: _Filler {
+                    async fn call<'a>(
+                        filler: &F,
+                        def: &'a mut _FillableDefinition<T>
+                    ) -> _FillResult<&'a T> {
+                        let mut builder = <T as _Buildable>::builder();
+                        builder.fill(filler).await?;
+                        match builder.build().await {
+                            Err(err) => Err($crate::ui::builder::error::FillError::Nested(err)),
+                            Ok(value) => {
+                                def.value.replace(value);
+                                def.value.as_ref().ok_or($crate::ui::builder::error::FillError::InvalidFiller {
+                                    field: stringify!($ident).to_string(),
+                                    filler: "Buildable".to_string(),
+                                })
+                            }
+                        }
+                    } else {
+                        Err($crate::ui::builder::error::FillError::InvalidDefinition)
+                    }
+                });
+
+                $crate::conditional_call!(call::<$type, $filler_generic>($filler, &mut $self.$ident)).await
+            };
         }
-    };
-    (@try_fill [$self:ident, $filler:ident] $ident:ident: $type:ty) => {
-        let def = &$self.$ident.def.value();
-        let pd = def._pd;
 
-        trait Call {
-            async fn call<F: Filler>(filler: &mut F, def: &FillableDefinition<Self>) -> FillResult<Self>;
-        }
-
-        impl Call for dyn FromStr {
-            async fn call<F: _Filler>(filler: &mut F, def: &_FillableDefinition<Self>) -> _FillResult<Self> {
-                $filler.fill_input(def).await.map(|v| {
-                    unsafe { std::intrinsics::transmute_unchecked(v) }
-                })
-            }
-        }
-
-        impl Call for dyn Buildable {
-            async fn call<F: _Filler>(filler: &mut F, def: &_FillableDefinition<Self>) -> _FillResult<Self> {
-                let mut builder = <Self as _Builder>::Buildable::builder();
-                builder.fill(filler).await?;
-                Ok(unsafe { std::intrinsics::transmute_unchecked(builder) })
-            }
-        }
-
-        $type::call($filler, def).await
-
-        // if impls::impls!($type: FromStr) {
-        //     $filler.fill_input(def).await.map(|v| {
-        //         unsafe { std::intrinsics::transmute_unchecked(v) }
-        //     })
-        // } else if impls::impls!($type: Builder) {
-        //     use $crate::ui::builder::Builder as _;
-        //
-        //     let mut builder = <$type as Buildable>::Builder::builder();
-        //     builder.fill($filler).await?;
-        //     Ok(unsafe { std::intrinsics::transmute_unchecked(builder) })
-        // } else {
-        //     Err($crate::ui::builder::error::FillError::NoFillers { field: stringify!($ident).to_string() })
-        // }
-
-        // $crate::builder!(@maybe_continue $self $ident || impls_utils!(async fn |pd, def: &_FillableDefinition<$type>, $filler: &mut impl _Filler| FromStr => $type => {
-        //     $filler.fill_input(def).await.map(|v| {
-        //         unsafe { std::intrinsics::transmute_unchecked(v) }
-        //     })
-        // }));
-
-        // $crate::builder!(@maybe_continue $self $ident || impls_utils!(async fn |pd, def: &_FillableDefinition<$type>, $filler: &mut impl _Filler| Builder => $type => {
-        //     use $crate::ui::builder::Builder as _;
-        //
-        //     let mut builder = T::Buildable::builder();
-        //     builder.fill(filler).await?;
-        //     Ok(unsafe { std::intrinsics::transmute_unchecked(builder) })
-        // }));
-    };
-    //#endregion
+        filled?;
+    }};
+    // #endregion
 }

@@ -18,16 +18,19 @@ pub mod autoprune;
 pub mod metadata;
 pub mod rule;
 
+use std::fmt::Debug;
+use std::path::Path;
+
 use crate::config::rules::autoprune::AutoPrune;
 use crate::config::rules::metadata::Metadata;
-use crate::config::rules::rule::Rule;
 use lib::builder;
-use std::path::Path;
+use rule::Rule;
+use serde::{Deserialize, Serialize};
 use tracing::trace;
 
-builder!(#[derive(Default)] Rules = [
-    [auto_prune] => AutoPrune,
-]);
+builder!(#[derive(Default, Copy, PartialEq, Serialize, Deserialize)] Rules {
+    [auto_prune]: AutoPrune
+});
 
 impl Rules {
     pub async fn would_survive(&self, existing_files: &[&Path], destination: &Path, metadata: Metadata) -> bool {

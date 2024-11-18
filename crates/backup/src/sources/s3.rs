@@ -28,6 +28,7 @@ use lib::builder;
 use lib::fs::normalise_path;
 use lib::pathed::Pathed;
 use lib::ui::cli::progress::{download, spinner};
+use lib::ui::cli::ui_inquire::STYLE;
 use opendal::layers::LoggingLayer;
 use opendal::services::S3;
 use opendal::{Builder, Operator, OperatorBuilder};
@@ -37,14 +38,17 @@ use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
 use tracing::{debug, error, info, trace};
 
-builder!(S3Backend = [
-    root => PathBuf,
-    bucket => String,
-    region => String,
-    endpoint => String,
-    access_key_id => String,
-    secret_access_key => String
-]);
+builder!(
+    #[derive(PartialEq, Serialize, Deserialize)]
+    S3Backend {
+        root: PathBuf,
+        bucket: String,
+        region: String,
+        endpoint: String,
+        access_key_id: String,
+        secret_access_key: String
+    }
+);
 
 impl From<&S3Backend> for HashMap<String, String> {
     fn from(value: &S3Backend) -> HashMap<String, String> {
@@ -202,8 +206,15 @@ impl Exporter for S3Core {
         progress_state.set_message("Requesting objects from S3...");
 
         // TODO :: Should this be recursive?
-        let mut layer =
-            op.lister("/").await.context(format!("Failed to list objects in {}", &object.to_str().unwrap()))?;
+        let mut layer = op
+            .lister(object.to_str().unwrap())
+            .await
+            .context(format!("Failed to list objects in {}", &object.to_str().unwrap()))?;
+        let list = op.list_with(&object.to_str().unwrap()).recursive(true).await?;
+        info!("Listing objects in {}", &object.to_str().unwrap());
+        for item in list {
+            debug!("Found object: {}", item.name());
+        }
 
         progress_state.set_message("Processing objects from S3...");
         progress_state.set_length(layer.size_hint().1.unwrap_or(0) as u64);

@@ -15,9 +15,12 @@
  */
 
 use crate::config::runtime::Runtime;
-use anyhow::Result;
+use anyhow::{Context, Result};
+use chrono::{DateTime, Duration, FixedOffset};
 use indicatif::MultiProgress;
 use std::path::PathBuf;
+use std::time::SystemTime;
+use tracing::trace;
 
 // TODO :: Implement logic from cleaner crate to handle this!
 pub trait Prune {
@@ -33,8 +36,8 @@ pub trait Prune {
     /// * `rules` - The `AutoPrune` struct which contains the rules for pruning.
     /// # Returns
     /// A `Result` with the `Vec<PathBuf>` of the files which were removed.
-    fn prune(&self, _config: &Runtime, _progress_bar: &MultiProgress) -> Result<Vec<PathBuf>> {
-        // let files = self.files(config).sort_by(|a, b| {
+    fn prune(&self, config: &Runtime, _progress_bar: &MultiProgress) -> Result<Vec<PathBuf>> {
+        // let files = self.files(config)?.sort_by(|a, b| {
         //     fn chrono(path: &PathBuf) -> Result<DateTime<FixedOffset>> {
         //         let meta = path.metadata().context("Get meta for comparing times")?;
         //         let mtime = meta.modified().context("Get modified time for comparing times")?;
@@ -42,15 +45,39 @@ pub trait Prune {
         //         let now = SystemTime::now();
         //         let age = now.duration_since(mtime).context("Get duration since modified time")?;
         //         match Duration::from_std(age) {
-        //             Ok(d) => Ok(d)
-        //             Err(_) => {}
+        //             Ok(d) => Ok(d),
+        //             Err(err) => Err(err).context("Convert std to chrono"),
         //         }
-        //         context("Convert std to chrono")
         //     }
         //
         //     let a = a.metadata();
         //     let b = b.metadata();
-        //     a.metadata()
+        //
+        //     match (a, b) {
+        //         (Ok(a), Ok(b)) => {
+        //             let a = chrono(a);
+        //             let b = chrono(b);
+        //             match (a, b) {
+        //                 (Ok(a), Ok(b)) => a.cmp(&b),
+        //                 (Err(err), _) => {
+        //                     trace!("Error getting chrono for a: {}", err);
+        //                     std::cmp::Ordering::Equal
+        //                 },
+        //                 (_, Err(err)) => {
+        //                     trace!("Error getting chrono for b: {}", err);
+        //                     std::cmp::Ordering::Equal
+        //                 },
+        //             }
+        //         },
+        //         (Err(err), _) => {
+        //             trace!("Error getting metadata for a: {}", err);
+        //             std::cmp::Ordering::Equal
+        //         },
+        //         (_, Err(err)) => {
+        //             trace!("Error getting metadata for b: {}", err);
+        //             std::cmp::Ordering::Equal
+        //         },
+        //     }
         // });
         // let files = self.files(config)?;
         // let mut files = files.iter();
@@ -58,15 +85,15 @@ pub trait Prune {
         //
         // // TODO :: Add dry run option.
         // while let Some(file) = files.next() {
-        //     if !(config.config.rules.auto_prune.should_prune(file, files.len())?) {
+        //     if !(config.config.rules.get_auto_prune().unwrap().should_prune(file, files.len())?) {
         //         trace!("Pruning rules prevented pruning for: {}", file.display());
         //         continue;
         //     }
         //
         //     trace!("Pruning file: {}", file.display());
-        //     if !config.cli.flags.dry_run {
-        //         std::fs::remove_file(file)?;
-        //     }
+        //     // if !config.cli.flags.dry_run {
+        //     //     std::fs::remove_file(file)?;
+        //     // }
         //     removed_files.push(file.clone());
         // }
         //

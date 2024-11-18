@@ -14,23 +14,28 @@
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
+use crate::conditional_call;
 use crate::ui::builder::error::{FillError, FillResult};
 use crate::ui::builder::filler::{FillableDefinition, Filler};
 use crate::ui::cli::CliUi;
 use std::fmt::Debug;
 use std::str::FromStr;
 
+use super::ui_inquire::STYLE;
+
 impl<C: CliUi> Filler for C {
-    async fn fill_bool(&mut self, fillable: &FillableDefinition<bool>) -> FillResult<bool> {
-        inquire::Confirm::new(&format!("enter a value for {}", fillable.name))
-            .with_placeholder("y/n")
-            .with_error_message("invalid input, please enter y/n")
-            .with_default(fillable.default.is_some_and(|v| v()))
-            .prompt()
-            .map_err(|e| FillError::InvalidInput {
+    async fn fill_bool(&self, fillable: &FillableDefinition<bool>) -> FillResult<bool> {
+        let message = format!("enter a value for {}", fillable.name);
+        let mut prompt = inquire::Confirm::new(&message);
+        prompt.help_message = fillable.description;
+        prompt.default = fillable.default;
+
+        prompt.with_render_config(*STYLE).with_placeholder("y/n").with_error_message("invalid input, please enter y/n").prompt().map_err(|e| {
+            FillError::InvalidInput {
                 field: fillable.name.to_string(),
                 input: e.to_string(),
-            })
+            }
+        })
     }
 
     // async fn fill_choice<T>(&mut self, fillable: Fillable<T>, items: Vec<T>, default: Option<T>) -> FillResult<T> {
@@ -57,11 +62,35 @@ impl<C: CliUi> Filler for C {
     //         .into()
     // }
 
-    async fn fill_input<T>(&mut self, fillable: &FillableDefinition<T>) -> FillResult<T>
+    async fn fill_input<'a, T>(&self, fillable: &'a FillableDefinition<T>) -> FillResult<T>
     where
         T: FromStr + Clone + Debug,
     {
-        inquire::Text::new(&format!("enter a value for {}", fillable.name))
+        let message = format!("enter a value for {}", fillable.name);
+        let mut prompt = inquire::Text::new(&message);
+        prompt.help_message = fillable.description;
+        prompt.placeholder = fillable.description;
+        let default_or_none = fillable
+            .default
+            .as_ref()
+            .map(|d| {
+                conditional_call! {
+                    impl T where T: Sized | T: ToString {
+                        fn call(d: &T) -> Option<String> {
+                            Some(d.to_string())
+                        } else {
+                            None
+                        }
+                    }
+                };
+
+                conditional_call!(call::<T>(d))
+            })
+            .flatten();
+        prompt.default = default_or_none.as_deref();
+
+        prompt
+            .with_render_config(*STYLE)
             .prompt()
             .map_err(|e| FillError::InvalidInput {
                 field: fillable.name.to_string(),

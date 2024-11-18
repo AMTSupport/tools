@@ -14,10 +14,12 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+use std::sync::LazyLock;
+
 use inquire::ui::{Color, RenderConfig, StyleSheet, Styled};
 
-pub fn inquire_style() -> RenderConfig<'static> {
+pub static STYLE: LazyLock<RenderConfig<'static>> = LazyLock::new(|| {
     RenderConfig::default_colored()
         .with_selected_option(Some(StyleSheet::empty().with_fg(Color::White)))
         .with_highlighted_option_prefix(Styled::new("-> ").with_fg(Color::LightCyan))
-}
+});

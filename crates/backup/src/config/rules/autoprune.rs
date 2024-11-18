@@ -27,7 +27,6 @@ use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fmt::Debug;
 use std::path::{Path, PathBuf};
-use std::str::FromStr;
 use std::time::SystemTime;
 use tokio_stream::StreamExt;
 use tracing::{debug, error, info, instrument, trace, warn};
@@ -230,67 +229,18 @@ impl Tag {
     }
 }
 
-builder!(AutoPrune = [
+builder!(#[derive(Copy, PartialEq, Serialize, Deserialize)] AutoPrune {
     /// How many hours of backups should be kept.
-    hours => usize = 12,
+    hours: usize => 12,
     /// How many days of backups should be kept.
-    days => usize = 7,
+    days: usize => 7,
     /// How many per week backups should be kept.
-    weeks => usize = 2,
+    weeks: usize => 2,
     /// How many per month backups should be kept.
-    months => usize = 1,
+    months: usize => 1,
     /// The minimum number of backups to keep ignoring the keep_for duration.
-    keep_latest => usize = 5
-]);
-
-impl FromStr for AutoPrune {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut autoprune = AutoPrune { ..Default::default() };
-
-        let mut split = s.split_whitespace();
-        if let Some(hours) = split.next() {
-            autoprune.hours = usize::from_str(hours)?;
-        }
-
-        if let Some(days) = split.next() {
-            autoprune.days = usize::from_str(days)?;
-        }
-
-        if let Some(weeks) = split.next() {
-            autoprune.weeks = usize::from_str(weeks)?;
-        }
-
-        if let Some(months) = split.next() {
-            autoprune.months = usize::from_str(months)?;
-        }
-
-        if let Some(keep_latest) = split.next() {
-            autoprune.keep_latest = usize::from_str(keep_latest)?;
-        }
-
-        Ok(autoprune)
-    }
-}
-
-// #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-// pub struct AutoPrune {
-//     /// How many hours of backups should be kept.
-//     pub hours: usize,
-//
-//     /// How many days of backups should be kept.
-//     pub days: usize,
-//
-//     /// How many per week backups should be kept.
-//     pub weeks: usize,
-//
-//     /// How many per month backups should be kept.
-//     pub months: usize,
-//
-//     /// The minimum number of backups to keep ignoring the keep_for duration.
-//     pub keep_latest: usize,
-// }
+    keep_latest: usize => 5
+});
 
 impl AutoPrune {
     /// This will iterate over the files, removing the tags from the oldest
@@ -325,7 +275,7 @@ impl AutoPrune {
 
                 let file = &*files[file_count - 1];
                 // TODO : Handle gracefully
-                let file_mtime = file.metadata().unwrap().modified().unwrap();
+                let file_mtime = fs::metadata(file).unwrap().modified().unwrap();
                 let file_mtime = DateTime::<Utc>::from(file_mtime);
                 if file_mtime < date_limit {
                     files[file_count - 1] = tag.remove_tag(file);
@@ -407,18 +357,6 @@ impl AutoPrune {
         }
 
         map
-    }
-}
-
-impl Default for AutoPrune {
-    fn default() -> Self {
-        Self {
-            hours: 0,
-            days: 14,
-            weeks: 0,
-            months: 0,
-            keep_latest: 5,
-        }
     }
 }
 

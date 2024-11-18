@@ -19,6 +19,7 @@ use crate::ui::cli::oneshot::OneshotHandler;
 use anyhow::{anyhow, Context, Result};
 use inquire::validator::StringValidator;
 use inquire::Text;
+use ui_inquire::STYLE;
 use std::fmt::Debug;
 use tracing::{trace, warn};
 
@@ -181,6 +182,7 @@ pub fn continue_loop<I>(vec: &[I], prompt_type: &str) -> bool {
     }
 
     let should_continue = inquire::Confirm::new(&format!("Do you want to add another {}?", prompt_type))
+        .with_render_config(*STYLE)
         .with_default(true)
         .prompt()
         .with_context(|| format!("Prompting for additional {}", prompt_type));
@@ -208,6 +210,7 @@ pub fn env_or_prompt<V>(key: &str, validator: V) -> Result<String>
             }
         },
         _ => match Text::new(key) // TODO :: Pretty title
+            .with_render_config(*STYLE)
             .with_validator(validator)
             .prompt()
         {
