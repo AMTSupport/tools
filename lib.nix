@@ -58,7 +58,7 @@ rec {
       else "${target.pkgsCross.stdenv.cc.targetPrefix}cc";
 
     getRustFlagsForTarget = target: if target.pkgsCross.targetPlatform.isLinux && target.pkgsCross.targetPlatform.system == pkgs.targetPlatform.system
-      then "-C link-arg=-fuse-ld=${pkgs.mold}"
+      then "-C link-arg=-fuse-ld=${lib.getExe pkgs.mold}"
       else null;
 
     getRunnerForTarget = target:
