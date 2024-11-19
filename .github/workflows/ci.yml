@@ -17,7 +17,7 @@ jobs:
       - uses: cachix/install-nix-action@v30
       - uses: DeterminateSystems/magic-nix-cache-action@v8
 
-      - run: nix flake check -L
+      - run: nix flake check --impure -L
 
   build-artifacts:
     runs-on: ubuntu-latest
