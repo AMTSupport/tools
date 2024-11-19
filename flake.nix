@@ -22,8 +22,8 @@
     nci = { url = "github:yusdacra/nix-cargo-integration"; };
   };
 
-  outputs = inputs@{ flake-parts, crane, ... }: flake-parts.lib.mkFlake { inherit inputs; } {
     systems = [ "x86_64-linux" "aarch64-linux" ];
+  outputs = inputs@{ flake-parts, ... }: flake-parts.lib.mkFlake { inherit inputs; } {
 
     imports = [
       inputs.pre-commit-hooks-nix.flakeModule
@@ -37,14 +37,14 @@
       let
         ourLib = import ./lib.nix { inherit pkgs; };
 
-        rustToolchain = let fenixPkgs = inputs'.fenix.packages; in fenixPkgs.combine ([
-          fenixPkgs.complete.cargo
-          fenixPkgs.complete.rustc
-          fenixPkgs.complete.rust-src
-          fenixPkgs.complete.rust-analyzer
-          fenixPkgs.complete.clippy
-          fenixPkgs.complete.rustfmt
-        ] ++ (lib.mapAttrsToList (_: target: fenixPkgs.targets.${target.rust.rustcTarget}.latest.rust-std) ourLib.buildableTargets));
+        rustToolchain = with inputs'.fenix.packages; combine ([
+          complete.cargo
+          complete.rustc
+          complete.rust-src
+          complete.rust-analyzer
+          complete.clippy
+          complete.rustfmt
+        ] ++ (lib.mapAttrsToList (_: target: targets.${target.rust.rustcTarget}.latest.rust-std) ourLib.buildableTargets));
 
         rootCargoToml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
         defaultMembers = rootCargoToml.workspace.default-members or [ ];
@@ -87,11 +87,6 @@
                 cargo = rustToolchain;
                 rustfmt = rustToolchain;
               };
-            };
-
-            cargo-check = {
-              enable = true;
-              package = rustToolchain;
             };
           };
         };
@@ -163,8 +158,7 @@
                   mkDerivation = {
                     depsBuildBuild = [ target.pkgsCross.stdenv.cc ];
 
-                    buildInputs = with target.pkgsCross; [ ]
-                      ++ lib.optionals target.pkgsCross.targetPlatform.isx86_64 [ target.pkgsCross.openssl ] # FIXME OpenSSL for aarch64 fails to build with clang (https://github.com/NixOS/nixpkgs/issues/348791)
+                    buildInputs = with target.pkgsCross; lib.optionals target.pkgsCross.targetPlatform.isx86_64 [ target.pkgsCross.openssl ] # FIXME OpenSSL for aarch64 fails to build with clang (https://github.com/NixOS/nixpkgs/issues/348791)
                       ++ lib.optionals target.pkgsCross.targetPlatform.isLinux (with target.pkgsCross; [ libz clang mold ])
                       ++ lib.optionals target.pkgsCross.targetPlatform.isWindows (with target.pkgsCross; [ windows.mingw_w64_headers ])
                       ++ lib.optionals (target.pkgsCross.targetPlatform.isWindows && target.pkgsCross.stdenv.isx86_64) (with target.pkgsCross; [ windows.pthreads ]);
@@ -209,15 +203,18 @@
               # Include all release packages
               (lib.filterAttrs (name: _: lib.hasSuffix "-release" name))
               # Only include packages defined as default-members
-              (lib.filterAttrs (name: _: let
-                parts = lib.splitString "-" name;
-                crateName = builtins.elemAt parts 0;
-                directoryName = "crates/${crateName}";
-              in builtins.elem directoryName defaultMembers))
+              (lib.filterAttrs (name: _:
+                let
+                  parts = lib.splitString "-" name;
+                  crateName = builtins.elemAt parts 0;
+                  directoryName = "crates/${crateName}";
+                in
+                builtins.elem directoryName defaultMembers))
               builtins.attrValues
             ];
           };
         };
+
       };
   };
 }

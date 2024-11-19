@@ -53,11 +53,13 @@ rec {
 
   env = rec {
     # TODO Use clang for all linux builds - openssl fails to build on aarch64 (https://github.com/NixOS/nixpkgs/issues/348791)
-    getCCForTarget = target: if target.pkgsCross.targetPlatform.isLinux && target.pkgsCross.targetPlatform.system == pkgs.targetPlatform.system
+    getCCForTarget = target:
+      if target.pkgsCross.targetPlatform.isLinux && target.pkgsCross.targetPlatform.system == pkgs.targetPlatform.system
       then "${target.pkgsCross.clang.targetPrefix}clang"
       else "${target.pkgsCross.stdenv.cc.targetPrefix}cc";
 
-    getRustFlagsForTarget = target: if target.pkgsCross.targetPlatform.isLinux && target.pkgsCross.targetPlatform.system == pkgs.targetPlatform.system
+    getRustFlagsForTarget = target:
+      if target.pkgsCross.targetPlatform.isLinux && target.pkgsCross.targetPlatform.system == pkgs.targetPlatform.system
       then "-C link-arg=-fuse-ld=${lib.getExe pkgs.mold}"
       else null;
 
@@ -65,11 +67,12 @@ rec {
       if target.pkgsCross.stdenv.buildPlatform.canExecute target.pkgsCross.stdenv.hostPlatform
       then null
       else if target.pkgsCross.targetPlatform.isWindows
-      then pkgs.writeScript "wine-wrapper" ''
-        #!${pkgs.stdenv.shell}
-        export WINEPREFIX="$(mktemp -d)"
-        exec ${lib.getExe pkgs.wineWow64Packages.minimal} $@
-      ''
+      then
+        pkgs.writeScript "wine-wrapper" ''
+          #!${pkgs.stdenv.shell}
+          export WINEPREFIX="$(mktemp -d)"
+          exec ${lib.getExe pkgs.wineWow64Packages.minimal} $@
+        ''
       else pkgs.lib.getExe' pkgs.qemu "qemu-${target.pkgsCross.targetPlatform.qemuArch}";
 
     mkEnvironment = target: rec {
