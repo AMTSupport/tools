@@ -33,15 +33,11 @@
 
     debug = true;
 
-    perSystem = { config, system, pkgs, lib, ... }:
+    perSystem = { config, system, pkgs, lib, inputs', ... }:
       let
-        ourLib = import ./lib.nix {
-          inherit pkgs;
-          fenixPkgs = inputs.fenix.packages.${system};
-          craneLib = inputs.crane.mkLib pkgs;
-        };
+        ourLib = import ./lib.nix { inherit pkgs; };
 
-        rustToolchain = let fenixPkgs = inputs.fenix.packages.${system}; in fenixPkgs.combine ([
+        rustToolchain = let fenixPkgs = inputs'.fenix.packages; in fenixPkgs.combine ([
           fenixPkgs.complete.cargo
           fenixPkgs.complete.rustc
           fenixPkgs.complete.rust-src
@@ -49,6 +45,9 @@
           fenixPkgs.complete.clippy
           fenixPkgs.complete.rustfmt
         ] ++ (lib.mapAttrsToList (_: target: fenixPkgs.targets.${target.rust.rustcTarget}.latest.rust-std) ourLib.buildableTargets));
+
+        rootCargoToml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
+        defaultMembers = rootCargoToml.workspace.default-members or [ ];
       in
       {
         pre-commit.settings = {
@@ -76,7 +75,10 @@
 
             clippy = {
               enable = true;
-              package = rustToolchain;
+              packageOverrides = {
+                cargo = rustToolchain;
+                clippy = rustToolchain;
+              };
             };
 
             rustfmt = {
@@ -118,7 +120,6 @@
             libz
             openssl
             pkg-config
-            rustToolchain
 
             act
             hyperfine
@@ -144,42 +145,56 @@
 
         nci = {
           toolchains = {
-            build = rustToolchain;
-            shell = rustToolchain;
+            mkBuild = _: with inputs'.fenix.packages; combine ([
+              minimal.rustc
+              minimal.cargo
+            ] ++ (lib.mapAttrsToList (_: target: targets.${target.rust.rustcTarget}.latest.rust-std) ourLib.buildableTargets));
           };
 
           projects.tools = {
             path = ./.;
+            export = false;
 
             targets = lib.mapAttrs'
-              (_: target: lib.nameValuePair target.rust.rustcTarget {
+              (_: target: lib.nameValuePair target.rust.rustcTarget rec {
                 default = target.pkgsCross.targetPlatform.system == pkgs.targetPlatform.system;
                 profiles = [ "dev" "release" ];
-                drvConfig = {
+                depsDrvConfig = {
                   mkDerivation = {
-                    depsBuildBuild = lib.optionals (!target.pkgsCross.stdenv.buildPlatform.canExecute target.pkgsCross.stdenv.hostPlatform && !target.pkgsCross.targetPlatform.isWindows) (with pkgs; [ qemu ])
-                      ++ lib.optionals (target.pkgsCross.targetPlatform.isWindows && target.pkgsCross.stdenv.isx86_64) (with target.pkgsCross; [ windows.mingw_w64_pthreads windows.pthreads ]);
+                    depsBuildBuild = [ target.pkgsCross.stdenv.cc ];
 
-                    buildInputs = lib.optionals target.pkgsCross.targetPlatform.isLinux (with target.pkgsCross; [ openssl clang mold ])
-                      ++ lib.optionals target.pkgsCross.targetPlatform.isWindows (with target.pkgsCross; [ windows.mingw_w64_headers ]);
+                    buildInputs = with target.pkgsCross; [ ]
+                      ++ lib.optionals target.pkgsCross.targetPlatform.isx86_64 [ target.pkgsCross.openssl ] # FIXME OpenSSL for aarch64 fails to build with clang (https://github.com/NixOS/nixpkgs/issues/348791)
+                      ++ lib.optionals target.pkgsCross.targetPlatform.isLinux (with target.pkgsCross; [ libz clang mold ])
+                      ++ lib.optionals target.pkgsCross.targetPlatform.isWindows (with target.pkgsCross; [ windows.mingw_w64_headers ])
+                      ++ lib.optionals (target.pkgsCross.targetPlatform.isWindows && target.pkgsCross.stdenv.isx86_64) (with target.pkgsCross; [ windows.pthreads ]);
 
-                    nativeBuildInputs = with pkgs; [ pkg-config openssl ]
-                      ++ lib.optionals target.pkgsCross.targetPlatform.isWindows [ pkgs.wine64 ];
+                    nativeBuildInputs = with pkgs; [ pkg-config ]
+                      ++ lib.optionals (!target.pkgsCross.stdenv.buildPlatform.canExecute target.pkgsCross.stdenv.hostPlatform && !target.pkgsCross.targetPlatform.isWindows) [ pkgs.qemu ]
+                      ++ lib.optionals target.pkgsCross.targetPlatform.isWindows [ pkgs.wineWow64Packages.minimal ];
+
 
                     passthru = {
                       inherit (target.pkgsCross.targetPlatform) system;
                     };
                   };
 
-                  env = ourLib.environmentForTarget target;
+                  env = ourLib.env.mkEnvironment target;
                 };
+                drvConfig = depsDrvConfig;
               })
-              ourLib.targets;
+              ourLib.buildableTargets;
+          };
+
+          crates = {
+            lib.export = false;
+            macros.export = false;
           };
         };
 
         packages = (lib.trivial.pipe config.nci.outputs [
-          (lib.filterAttrs (name: _: name != "tools"))
+          # Exclude the empty root crates & crates that are not exported
+          (lib.filterAttrs (name: _: name != "tools" && (!(builtins.hasAttr "${name}" config.nci.crates) || config.nci.crates.${name}.export)))
           (lib.mapAttrsToList (_: crate: lib.attrsToList crate.allTargets))
           lib.flatten
           (builtins.map (attr: lib.attrsToList attr.value.packages))
@@ -190,7 +205,17 @@
           release = pkgs.symlinkJoin {
             name = "all-release";
             description = "Compile all crates for all targets";
-            paths = builtins.map (target: target.packages.release) (lib.flatten (builtins.map (crate: lib.attrValues crate.allTargets) config.nci.outputs));
+            paths = lib.trivial.pipe config.packages [
+              # Include all release packages
+              (lib.filterAttrs (name: _: lib.hasSuffix "-release" name))
+              # Only include packages defined as default-members
+              (lib.filterAttrs (name: _: let
+                parts = lib.splitString "-" name;
+                crateName = builtins.elemAt parts 0;
+                directoryName = "crates/${crateName}";
+              in builtins.elem directoryName defaultMembers))
+              builtins.attrValues
+            ];
           };
         };
       };

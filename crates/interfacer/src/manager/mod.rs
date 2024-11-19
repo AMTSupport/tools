@@ -26,7 +26,8 @@ use tracing::{info, trace};
 
 pub mod structs;
 
-const NABLE_REGEX: &str = r"^(?P<name>[A-z\s0-9&\-\.']+)(\s?\((?P<managed>managed|managed\s-\spartial|billable|services|notify)\))?(\s?\((?P<type>server|server\sonly)\))?";
+const NABLE_REGEX: &str =
+    r"^(?P<name>[A-z\s0-9&\-\.']+)(\s?\((?P<managed>managed|managed\s-\spartial|billable|services|notify)\))?(\s?\((?P<type>server|server\sonly)\))?";
 
 #[derive(Debug, Clone, Subcommand)]
 pub enum ManagerCommands {

@@ -1,8 +1,6 @@
-{ pkgs, fenixPkgs, craneLib }:
+{ pkgs }:
 let
   inherit (pkgs) lib;
-
-  src = craneLib.path ./.;
 in
 rec {
   buildableTargets = lib.trivial.pipe targets [
@@ -53,63 +51,33 @@ rec {
     };
   };
 
-  environmentForTarget = target: (lib.optionalAttrs target.pkgsCross.targetPlatform.isLinux {
-    "CC" = "${pkgs.clang}/bin/${target.pkgsCross.clang.targetPrefix}clang";
-    "CARGO_RUSTFLAGS" = "-C link-arg=-fuse-ld=${lib.getExe pkgs.mold}";
-  }) // (lib.optionalAttrs (target.pkgsCross.stdenv.buildPlatform.canExecute target.pkgsCross.stdenv.hostPlatform) {
-    "CARGO_RUNNER" =
-      if target.pkgsCross.targetPlatform.isWindows
-      then
-        pkgs.writeScript "wine-wrapper" ''
-          #!${pkgs.stdenv.shell}
-          export WINEPREFIX="$(mktemp -d)"
-          exec ${pkgs.wine.override { wineBuild = "wine64"; }}/bin/wine64 $@
-        ''
+  env = rec {
+    # TODO Use clang for all linux builds - openssl fails to build on aarch64 (https://github.com/NixOS/nixpkgs/issues/348791)
+    getCCForTarget = target: if target.pkgsCross.targetPlatform.isLinux && target.pkgsCross.targetPlatform.system == pkgs.targetPlatform.system
+      then "${target.pkgsCross.clang.targetPrefix}clang"
+      else "${target.pkgsCross.stdenv.cc.targetPrefix}cc";
+
+    getRustFlagsForTarget = target: if target.pkgsCross.targetPlatform.isLinux && target.pkgsCross.targetPlatform.system == pkgs.targetPlatform.system
+      then "-C link-arg=-fuse-ld=${pkgs.mold}"
+      else null;
+
+    getRunnerForTarget = target:
+      if target.pkgsCross.stdenv.buildPlatform.canExecute target.pkgsCross.stdenv.hostPlatform
+      then null
+      else if target.pkgsCross.targetPlatform.isWindows
+      then pkgs.writeScript "wine-wrapper" ''
+        #!${pkgs.stdenv.shell}
+        export WINEPREFIX="$(mktemp -d)"
+        exec ${lib.getExe pkgs.wineWow64Packages.minimal} $@
+      ''
       else pkgs.lib.getExe' pkgs.qemu "qemu-${target.pkgsCross.targetPlatform.qemuArch}";
-  });
 
-  hasSubCrates = cargoToml: builtins.length (cargoToml.workspace.members or [ ]) >= 1;
-
-  # TODO Support for non default members
-  getWorkspaceCrates = cargoToml: onlyDefault:
-    if (!onlyDefault)
-    then
-      lib.trivial.pipe (builtins.attrNames (builtins.readDir (src + "/crates"))) [
-        (builtins.map (crate: src + "/crates/${crate}/Cargo.toml"))
-      ]
-    else
-      lib.trivial.pipe cargoToml.workspace.default-members [
-        (builtins.map (src: src + "/${src}/Cargo.toml"))
-      ];
-
-  createPackages = cargoToml:
-    let
-      inherit (craneLib.crateNameFromCargoToml { inherit src cargoToml; }) pname version;
-    in
-    lib.trivial.pipe (lib.attrsToList targets) [
-      (builtins.filter (target: target.value.canBuild))
-      (builtins.map (target: pkgs.callPackage ./crate.nix {
-        cname = pname;
-        hasBinary = (builtins.fromTOML (builtins.readFile (src + "/Cargo.toml"))).bin or [ ] != [ ];
-
-        hostPkgs = pkgs;
-        target = target.value;
-
-        inherit src pname version craneLib fenixPkgs;
-      }))
-    ];
-
-  workspaceOutputs =
-    let
-      cargoTomlPath = craneLib.path ./Cargo.toml;
-      cargoToml = builtins.fromTOML (builtins.readFile cargoTomlPath);
-    in
-    if hasSubCrates cargoToml
-    then
-      let workspaceCrates = getWorkspaceCrates cargoToml false; in
-      lib.trivial.pipe workspaceCrates [
-        (builtins.map createPackages)
-        lib.flatten
-      ]
-    else [ createPackages cargoTomlPath ];
+    mkEnvironment = target: rec {
+      CC = getCCForTarget target;
+      TARGET_CC = CC;
+      "CARGO_TARGET_${target.rust.cargoEnvVarTarget}_LINKER" = TARGET_CC;
+      "CARGO_TARGET_${target.rust.cargoEnvVarTarget}_RUSTFLAGS" = getRustFlagsForTarget target;
+      "CARGO_TARGET_${target.rust.cargoEnvVarTarget}_RUNNER" = getRunnerForTarget target;
+    };
+  };
 }
