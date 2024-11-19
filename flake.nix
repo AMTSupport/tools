@@ -215,6 +215,7 @@
           };
         };
 
+        # TODO - Refactor once https://github.com/cachix/git-hooks.nix/pull/396 is merged
         checks.pre-commit = pkgs.lib.mkForce (
           let
             drv = config.pre-commit.settings.run;
