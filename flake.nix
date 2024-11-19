@@ -22,8 +22,8 @@
     nci = { url = "github:yusdacra/nix-cargo-integration"; };
   };
 
-    systems = [ "x86_64-linux" "aarch64-linux" ];
   outputs = inputs@{ flake-parts, ... }: flake-parts.lib.mkFlake { inherit inputs; } {
+    systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
 
     imports = [
       inputs.pre-commit-hooks-nix.flakeModule
@@ -215,6 +215,22 @@
           };
         };
 
+        checks.pre-commit = pkgs.lib.mkForce (
+          let
+            drv = config.pre-commit.settings.run;
+          in
+          pkgs.stdenv.mkDerivation {
+            name = "pre-commit-run";
+            src = config.pre-commit.settings.rootSrc;
+            buildInputs = [ pkgs.git pkgs.openssl pkgs.pkg-config ];
+            nativeBuildInputs = [ pkgs.rustPlatform.cargoSetupHook ];
+            cargoDeps = pkgs.rustPlatform.importCargoLock {
+              lockFile = ./Cargo.lock;
+              allowBuiltinFetchGit = true;
+            };
+            buildPhase = drv.buildCommand;
+          }
+        );
       };
   };
 }

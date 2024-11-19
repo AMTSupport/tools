@@ -4,7 +4,9 @@ on:
   push:
     branches: [master]
     paths: [
-      '**/src/**',
+      'crates/**/src/**',
+      'crates/**/Cargo.toml',
+      'crates/**/Cargo.lock',
       '.github/workflows/ci.yml',
       'flake.nix'
     ]
@@ -20,17 +22,33 @@ jobs:
       - run: nix flake check --impure -L
 
   build-artifacts:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        crate:
+          - backup
+          - cleaner
+          - country-ip
+          - memorable-pass
+        system:
+          - x86_64-linux
+          - aarch64-linux
+          - x86_64-windows
+          - aarch64-windows
+          - x86_64-darwin
+          - aarch64-darwin
+
+    runs-on: ${{ endsWith(matrix.system, 'darwin') && 'macos-latest' || 'ubuntu-latest' }}
+    name: Build ${{ matrix.crate }} for ${{ matrix.system }}
     steps:
       - uses: actions/checkout@v4
       - uses: cachix/install-nix-action@v30
       - uses: DeterminateSystems/magic-nix-cache-action@v8
 
-      - run: nix build .#release
+      - run: nix build .#${{ matrix.crate }}-${{ matrix.system }}-release -L
 
       - uses: actions/upload-artifact@v4.4.3
         if: ${{ !github.event.act }}
         with:
-          name: tools
+          name: ${{ matrix.crate }}-${{ matrix.system }}
           path: result/bin/
           if-no-files-found: error
