@@ -19,10 +19,11 @@ jobs:
       - uses: cachix/install-nix-action@v30
       - uses: DeterminateSystems/magic-nix-cache-action@v8
 
-      - run: nix flake check --impure -L
+      - run: nix flake check --impure --allow-import-from-derivation -L
 
   build-artifacts:
     strategy:
+      fail-fast: false
       matrix:
         crate:
           - backup
