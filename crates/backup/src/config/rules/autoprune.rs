@@ -158,7 +158,10 @@ impl Tag {
         tags.sort();
 
         let tag = tags.iter().map(|tag| tag.name()).collect::<Vec<&str>>().join("-");
-        let new_path = path.with_file_name(format!("{}-{}", tag, file_name));
+        let new_path = match tag.is_empty() {
+            true => path.with_file_name(file_name),
+            false => path.with_file_name(format!("{}-{}", tag, file_name)),
+        };
         match fs::rename(path, &new_path) {
             Ok(_) => trace!("Renamed file from {} to {}", path.display(), new_path.display()),
             Err(err) => error!(

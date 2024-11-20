@@ -83,9 +83,6 @@ const_format = { workspace = true, optional = true }
 tempfile.workspace = true
 regex.workspace = true
 
-#[dependencies.value-bag]
-#version = "1.4.0"
-
 [dev-dependencies]
 # Logging & Errors
 env_logger.workspace = true
