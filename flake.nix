@@ -156,10 +156,11 @@
                 profiles = [ "dev" "release" ];
                 depsDrvConfig = {
                   mkDerivation = {
-                    depsBuildBuild = [ target.pkgsCross.stdenv.cc ];
+                    depsBuildBuild = with target.pkgsCross; [ stdenv.cc ];
 
-                    buildInputs = with target.pkgsCross; lib.optionals target.pkgsCross.targetPlatform.isx86_64 [ target.pkgsCross.openssl ] # FIXME OpenSSL for aarch64 fails to build with clang (https://github.com/NixOS/nixpkgs/issues/348791)
-                      ++ lib.optionals target.pkgsCross.targetPlatform.isLinux (with target.pkgsCross; [ libz clang mold ])
+                    buildInputs = with target.pkgsCross; [ openssl ]
+                      ++ lib.optionals (target.pkgsCross.targetPlatform.isLinux && target.pkgsCross.stdenv.isx86_64) [ clang mold ]
+                      ++ lib.optionals target.pkgsCross.targetPlatform.isLinux (with target.pkgsCross; [ libz zlib ])
                       ++ lib.optionals target.pkgsCross.targetPlatform.isWindows (with target.pkgsCross; [ windows.mingw_w64_headers ])
                       ++ lib.optionals (target.pkgsCross.targetPlatform.isWindows && target.pkgsCross.stdenv.isx86_64) (with target.pkgsCross; [ windows.pthreads ]);
 
@@ -167,6 +168,7 @@
                       ++ lib.optionals (!target.pkgsCross.stdenv.buildPlatform.canExecute target.pkgsCross.stdenv.hostPlatform && !target.pkgsCross.targetPlatform.isWindows) [ pkgs.qemu ]
                       ++ lib.optionals target.pkgsCross.targetPlatform.isWindows [ pkgs.wineWow64Packages.minimal ];
 
+                    enableParallelBuilding = true;
 
                     passthru = {
                       inherit (target.pkgsCross.targetPlatform) system;

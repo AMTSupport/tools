@@ -54,14 +54,21 @@ rec {
   env = rec {
     # TODO Use clang for all linux builds - openssl fails to build on aarch64 (https://github.com/NixOS/nixpkgs/issues/348791)
     getCCForTarget = target:
-      if target.pkgsCross.targetPlatform.isLinux && target.pkgsCross.targetPlatform.system == pkgs.targetPlatform.system
+      if target.pkgsCross.targetPlatform.isLinux && target.pkgsCross.targetPlatform.isx86_64
       then "${target.pkgsCross.clang.targetPrefix}clang"
       else "${target.pkgsCross.stdenv.cc.targetPrefix}cc";
 
     getRustFlagsForTarget = target:
-      if target.pkgsCross.targetPlatform.isLinux && target.pkgsCross.targetPlatform.system == pkgs.targetPlatform.system
-      then "-C link-arg=-fuse-ld=${lib.getExe pkgs.mold}"
-      else null;
+      let
+        baseFlags = null;
+        platformSpecificFlags =
+          if target.pkgsCross.targetPlatform.isLinux && target.pkgsCross.targetPlatform.isx86_64
+          then "-C link-arg=-fuse-ld=${lib.getExe pkgs.mold}"
+          else null;
+      in lib.trivial.pipe [ baseFlags platformSpecificFlags ] [
+        (builtins.filter (flag: flag != null))
+        (lib.concatStringsSep " ")
+      ];
 
     getRunnerForTarget = target:
       if target.pkgsCross.stdenv.buildPlatform.canExecute target.pkgsCross.stdenv.hostPlatform
@@ -81,6 +88,6 @@ rec {
       "CARGO_TARGET_${target.rust.cargoEnvVarTarget}_LINKER" = TARGET_CC;
       "CARGO_TARGET_${target.rust.cargoEnvVarTarget}_RUSTFLAGS" = getRustFlagsForTarget target;
       "CARGO_TARGET_${target.rust.cargoEnvVarTarget}_RUNNER" = getRunnerForTarget target;
-    };
+    } // lib.optionalAttrs (builtins.hasAttr "extraEnv" target) target.extraEnv;
   };
 }
