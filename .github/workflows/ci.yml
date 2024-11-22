@@ -44,6 +44,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set Swap Space
+        if: ${{ !endsWith(matrix.system, 'darwin') }}
         uses: pierotofy/set-swap-space@master
         with:
           swap-size-gb: 12
