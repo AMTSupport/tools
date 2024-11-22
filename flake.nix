@@ -145,7 +145,6 @@
 
           projects.tools = {
             path = ./.;
-            export = false;
 
             targets = lib.mapAttrs'
               (_: target: lib.nameValuePair target.rust.rustcTarget rec {

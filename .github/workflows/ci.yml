@@ -12,15 +12,6 @@ on:
     ]
 
 jobs:
-  flake-check:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: cachix/install-nix-action@v30
-      - uses: DeterminateSystems/magic-nix-cache-action@v8
-
-      - run: nix flake check --impure --allow-import-from-derivation -L
-
   build-artifacts:
     strategy:
       fail-fast: false
@@ -52,7 +43,7 @@ jobs:
       - uses: cachix/install-nix-action@v30
       - uses: DeterminateSystems/magic-nix-cache-action@v8
 
-      - run: nix build .#${{ matrix.crate }}-${{ matrix.system }}-release -L --accept-flake-config
+      - run: nix build .#${{ matrix.crate }}-${{ matrix.system }}-dev -L --accept-flake-config
 
       - uses: actions/upload-artifact@v4.4.3
         if: ${{ !github.event.act }}
@@ -60,3 +51,13 @@ jobs:
           name: ${{ matrix.crate }}-${{ matrix.system }}
           path: result/bin/
           if-no-files-found: error
+
+  run-tests:
+    needs: [build-artifacts]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v30
+      - uses: DeterminateSystems/magic-nix-cache-action@v8
+
+      - run: nix flake check --impure --allow-import-from-derivation -L --keep-going

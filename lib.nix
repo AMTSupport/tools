@@ -90,7 +90,7 @@ rec {
             echo "Cannot run Windows executables from a different architecture"
             exit 0 # Exit with success to avoid breaking the build
           ''
-      else pkgs.lib.getExe' pkgs.qemu "qemu-${target.pkgsCross.targetPlatform.qemuArch}";
+      else lib.getExe' pkgs.qemu "qemu-${target.pkgsCross.targetPlatform.qemuArch}";
 
     mkEnvironment = target: rec {
       CC = getCCForTarget target;
