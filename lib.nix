@@ -76,11 +76,20 @@ rec {
       then null
       else if target.pkgsCross.targetPlatform.isWindows
       then
-        pkgs.writeScript "wine-wrapper" ''
-          #!${pkgs.stdenv.shell}
-          export WINEPREFIX="$(mktemp -d)"
-          exec ${lib.getExe pkgs.wineWow64Packages.minimal} $@
-        ''
+      # Wine can only run programs from the same architecture
+        if target.pkgsCross.targetPlatform.parsed.cpu.arch == pkgs.targetPlatform.parsed.cpu.arch
+        then
+          pkgs.writeScript "wine-wrapper" ''
+            #!${pkgs.stdenv.shell}
+            export WINEPREFIX="$(mktemp -d)"
+            exec ${lib.getExe pkgs.wineWow64Packages.minimal} $@
+          ''
+        else
+          pkgs.writeScript "empty-runner" ''
+            #!${pkgs.stdenv.shell}
+            echo "Cannot run Windows executables from a different architecture"
+            exit 0 # Exit with success to avoid breaking the build
+          ''
       else pkgs.lib.getExe' pkgs.qemu "qemu-${target.pkgsCross.targetPlatform.qemuArch}";
 
     mkEnvironment = target: rec {
