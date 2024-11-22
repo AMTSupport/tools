@@ -14,19 +14,16 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    flake-parts.url = "github:hercules-ci/flake-parts";
+    flake-parts = { url = "github:hercules-ci/flake-parts"; inputs.nixpkgs.follows = "nixpkgs"; };
     devenv.url = "github:cachix/devenv";
-    pre-commit-hooks-nix = { url = "github:cachix/pre-commit-hooks.nix"; inputs.nixpkgs.follows = "nixpkgs"; };
-    crane = { url = "github:ipetkov/crane"; };
     fenix = { url = "github:nix-community/fenix"; inputs.nixpkgs.follows = "nixpkgs"; };
-    nci = { url = "github:yusdacra/nix-cargo-integration"; };
+    nci = { url = "github:yusdacra/nix-cargo-integration"; inputs = { nixpkgs.follows = "nixpkgs"; parts.follows = "flake-parts"; }; };
   };
 
   outputs = inputs@{ flake-parts, ... }: flake-parts.lib.mkFlake { inherit inputs; } {
     systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
 
     imports = [
-      inputs.pre-commit-hooks-nix.flakeModule
       inputs.devenv.flakeModule
       inputs.nci.flakeModule
     ];
@@ -50,47 +47,6 @@
         defaultMembers = rootCargoToml.workspace.default-members or [ ];
       in
       {
-        pre-commit.settings = {
-          excludes = [
-            "CHANGELOG.md$"
-            "^flake.lock$"
-            "^crates/memorable-pass/assets/words.json$"
-          ];
-
-          hooks = {
-            actionlint.enable = true;
-            check-case-conflicts.enable = true;
-            check-docstring-first.enable = true;
-            check-toml.enable = true;
-            check-vcs-permalinks.enable = true;
-            check-yaml.enable = true;
-            deadnix.enable = true;
-            detect-private-keys.enable = true;
-            editorconfig-checker.enable = true;
-            end-of-file-fixer.enable = true;
-            nil.enable = true;
-            nixpkgs-fmt.enable = true;
-            statix.enable = true;
-            typos.enable = true;
-
-            clippy = {
-              enable = true;
-              packageOverrides = {
-                cargo = rustToolchain;
-                clippy = rustToolchain;
-              };
-            };
-
-            rustfmt = {
-              enable = true;
-              packageOverrides = {
-                cargo = rustToolchain;
-                rustfmt = rustToolchain;
-              };
-            };
-          };
-        };
-
         devenv.shells.default = {
           # Fixes https://github.com/cachix/devenv/issues/528
           containers = lib.mkForce { };
@@ -135,7 +91,48 @@
             cargo-audit
             cargo-bloat
             cargo-diet
-          ] ++ config.pre-commit.settings.enabledPackages;
+          ]; # ++ config.pre-commit.settings.enabledPackages;
+
+          git-hooks = {
+            excludes = [
+              "CHANGELOG.md$"
+              "^flake.lock$"
+              "^crates/memorable-pass/assets/words.json$"
+            ];
+
+            hooks = {
+              actionlint.enable = true;
+              check-case-conflicts.enable = true;
+              check-docstring-first.enable = true;
+              check-toml.enable = true;
+              check-vcs-permalinks.enable = true;
+              check-yaml.enable = true;
+              deadnix.enable = true;
+              detect-private-keys.enable = true;
+              editorconfig-checker.enable = true;
+              end-of-file-fixer.enable = true;
+              nil.enable = true;
+              nixpkgs-fmt.enable = true;
+              statix.enable = true;
+              typos.enable = true;
+
+              clippy = {
+                enable = true;
+                packageOverrides = {
+                  cargo = rustToolchain;
+                  clippy = rustToolchain;
+                };
+              };
+
+              rustfmt = {
+                enable = true;
+                packageOverrides = {
+                  cargo = rustToolchain;
+                  rustfmt = rustToolchain;
+                };
+              };
+            };
+          };
         };
 
         nci = {
@@ -154,15 +151,18 @@
               (_: target: lib.nameValuePair target.rust.rustcTarget rec {
                 default = target.pkgsCross.targetPlatform.system == pkgs.targetPlatform.system;
                 profiles = [ "dev" "release" ];
-                depsDrvConfig = {
+                depsDrvConfig = rec {
+                  env = ourLib.env.mkEnvironment target;
+
                   mkDerivation = {
                     depsBuildBuild = with target.pkgsCross; [ stdenv.cc ];
 
-                    buildInputs = with target.pkgsCross; [ openssl ]
-                      ++ lib.optionals (target.pkgsCross.targetPlatform.isLinux && target.pkgsCross.stdenv.isx86_64) [ clang mold ]
-                      ++ lib.optionals target.pkgsCross.targetPlatform.isLinux (with target.pkgsCross; [ libz zlib ])
-                      ++ lib.optionals target.pkgsCross.targetPlatform.isWindows (with target.pkgsCross; [ windows.mingw_w64_headers ])
-                      ++ lib.optionals (target.pkgsCross.targetPlatform.isWindows && target.pkgsCross.stdenv.isx86_64) (with target.pkgsCross; [ windows.pthreads ]);
+                    buildInputs = with target.pkgsCross;
+                      lib.optionals (target.pkgsCross.targetPlatform.isLinux && target.pkgsCross.targetPlatform.isx86_64) [ clang mold ]
+                      ++ lib.optionals target.pkgsCross.targetPlatform.isLinux [ libz zlib ]
+                      ++ lib.optionals target.pkgsCross.targetPlatform.isWindows [ windows.mingw_w64_headers ]
+                      ++ lib.optionals (target.pkgsCross.targetPlatform.isWindows && target.pkgsCross.stdenv.isx86_64) [ windows.pthreads ]
+                      ++ lib.optionals (!(lib.hasSuffix "clang" env.CC && !target.pkgsCross.targetPlatform.isx86_64)) [ openssl ]; # openssl fails to build on aarch64 (https://github.com/NixOS/nixpkgs/issues/348791)
 
                     nativeBuildInputs = with pkgs; [ pkg-config ]
                       ++ lib.optionals (!target.pkgsCross.stdenv.buildPlatform.canExecute target.pkgsCross.stdenv.hostPlatform && !target.pkgsCross.targetPlatform.isWindows) [ pkgs.qemu ]
@@ -174,8 +174,6 @@
                       inherit (target.pkgsCross.targetPlatform) system;
                     };
                   };
-
-                  env = ourLib.env.mkEnvironment target;
                 };
                 drvConfig = depsDrvConfig;
               })
@@ -215,7 +213,17 @@
               builtins.attrValues
             ];
           };
-        };
+        } // (lib.trivial.pipe config.nci.outputs [
+          # Exclude the empty root crates & crates that are not exported
+          (lib.filterAttrs (name: _: name != "tools" && (!(builtins.hasAttr "${name}" config.nci.crates) || config.nci.crates.${name}.export)))
+          (lib.mapAttrs' (name: crate: lib.nameValuePair "${name}-allTargets" (pkgs.symlinkJoin {
+            inherit name;
+            paths = lib.trivial.pipe crate.allTargets [
+              (lib.mapAttrsToList (_: target: target.packages.release))
+              lib.flatten
+            ];
+          })))
+        ]);
 
         # TODO - Refactor once https://github.com/cachix/git-hooks.nix/pull/396 is merged
         checks.pre-commit = pkgs.lib.mkForce (
