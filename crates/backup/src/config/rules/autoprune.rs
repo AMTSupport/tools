@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024. James Draycott <me@racci.dev>
+ * Copyright (C) 2024. James Draycott me@racci.dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -10,8 +10,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program.
- * If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
 use crate::config::rules::metadata::Metadata;
@@ -177,7 +177,7 @@ impl Tag {
     /// Gets the tags from the file name.
     ///
     /// This may be multiple tags, or a single length vec of None.
-    /// The returned value is a tuple of the tags and the stripped file name.
+    /// The returned value is a tuple of the tags, and the stripped file name.
     ///
     /// # Example
     /// ```
@@ -185,11 +185,11 @@ impl Tag {
     /// use anyhow::Result;
     /// use std::path::Path;
     ///
-    /// let (tags, file_name) = Tag::get_tags("hourly-daily-weekly-monthly-yearly-file.txt")?;
+    /// let (tags, file_name) = Tag::get_tags("hourly-daily-weekly-monthly-yearly-file.txt");
     /// assert_eq!(tags, vec![Tag::Hourly, Tag::Daily, Tag::Weekly, Tag::Monthly, Tag::Yearly]);
     /// assert_eq!(file_name, "file.txt");
     ///
-    /// let (tags, file_name) = Tag::get_tags("file.txt")?;
+    /// let (tags, file_name) = Tag::get_tags("file.txt");
     /// assert_eq!(tags, vec![Tag::None]);
     /// assert_eq!(file_name, "file.txt");
     /// ```
@@ -199,23 +199,23 @@ impl Tag {
 
         debug!("Compiled regex for getting existing tags [{compiled}]");
         let capture = compiled.captures_iter(str);
-        let tags = capture
-            .map(|m| m.get(0).unwrap().as_str().parse().unwrap())
-            .collect::<Vec<Tag>>();
+        let mut tags = Vec::new();
+        let mut tag_prefix = String::new();
+        capture.for_each(|m| {
+            let raw = m.get(0).unwrap().as_str();
+            if !tag_prefix.is_empty() {
+                tag_prefix.push('-');
+            }
+            tag_prefix.push_str(raw);
+
+            let tag = raw.parse().unwrap();
+            tags.push(tag);
+        });
+
         if tags.is_empty() {
             debug!("No tags found in file name [{str}]");
             return (vec![Tag::None], str);
         }
-
-        let tag_prefix = tags.iter().fold(String::new(), |combining, next| {
-            let mut str = combining.clone();
-            if !combining.is_empty() {
-                str.push('-');
-            }
-
-            str.push_str(next.name());
-            str
-        });
 
         let str = str.strip_prefix(&*format!("{tag_prefix}-")).unwrap();
         debug!("Returning tags [{tags:?}] and file name [{str}]");
