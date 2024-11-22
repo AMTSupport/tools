@@ -54,8 +54,8 @@ rec {
   env = rec {
     # TODO Use clang for all linux builds - openssl fails to build on aarch64 (https://github.com/NixOS/nixpkgs/issues/348791)
     getCCForTarget = target:
-      if target.pkgsCross.targetPlatform.isLinux && target.pkgsCross.targetPlatform.isx86_64
-      then "${target.pkgsCross.clang.targetPrefix}clang"
+      if target == targets.Linux-X86_64 || target.pkgsCross.stdenv.cc.isClang
+      then "${target.pkgsCross.stdenv.cc.targetPrefix}clang"
       else "${target.pkgsCross.stdenv.cc.targetPrefix}cc";
 
     getRustFlagsForTarget = target:
@@ -65,7 +65,8 @@ rec {
           if target.pkgsCross.targetPlatform.isLinux && target.pkgsCross.targetPlatform.isx86_64
           then "-C link-arg=-fuse-ld=${lib.getExe pkgs.mold}"
           else null;
-      in lib.trivial.pipe [ baseFlags platformSpecificFlags ] [
+      in
+      lib.trivial.pipe [ baseFlags platformSpecificFlags ] [
         (builtins.filter (flag: flag != null))
         (lib.concatStringsSep " ")
       ];
