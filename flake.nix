@@ -14,7 +14,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    flake-parts = { url = "github:hercules-ci/flake-parts"; inputs.nixpkgs.follows = "nixpkgs"; };
+    flake-parts = { url = "github:hercules-ci/flake-parts"; inputs.nixpkgs-lib.follows = "nixpkgs"; };
     devenv.url = "github:cachix/devenv";
     fenix = { url = "github:nix-community/fenix"; inputs.nixpkgs.follows = "nixpkgs"; };
     nci = { url = "github:yusdacra/nix-cargo-integration"; inputs = { nixpkgs.follows = "nixpkgs"; parts.follows = "flake-parts"; }; };
@@ -91,7 +91,7 @@
             cargo-audit
             cargo-bloat
             cargo-diet
-          ]; # ++ config.pre-commit.settings.enabledPackages;
+          ];
 
           git-hooks = {
             excludes = [
@@ -226,22 +226,21 @@
         ]);
 
         # TODO - Refactor once https://github.com/cachix/git-hooks.nix/pull/396 is merged
-        checks.pre-commit = pkgs.lib.mkForce (
+        checks.pre-commit =
           let
-            drv = config.pre-commit.settings.run;
+            inherit (config.devenv.shells.default) git-hooks;
           in
           pkgs.stdenv.mkDerivation {
             name = "pre-commit-run";
-            src = config.pre-commit.settings.rootSrc;
+            src = git-hooks.rootSrc;
             buildInputs = [ pkgs.git pkgs.openssl pkgs.pkg-config ];
             nativeBuildInputs = [ pkgs.rustPlatform.cargoSetupHook ];
             cargoDeps = pkgs.rustPlatform.importCargoLock {
               lockFile = ./Cargo.lock;
               allowBuiltinFetchGit = true;
             };
-            buildPhase = drv.buildCommand;
-          }
-        );
+            buildPhase = git-hooks.run.buildCommand;
+          };
       };
   };
 }
