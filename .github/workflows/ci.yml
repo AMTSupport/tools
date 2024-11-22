@@ -42,6 +42,12 @@ jobs:
     name: Build ${{ matrix.crate }} for ${{ matrix.system }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set Swap Space
+        uses: pierotofy/set-swap-space@master
+        with:
+          swap-size-gb: 12
+
       - uses: cachix/install-nix-action@v30
       - uses: DeterminateSystems/magic-nix-cache-action@v8
 
