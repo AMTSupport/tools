@@ -52,7 +52,7 @@ jobs:
       - uses: cachix/install-nix-action@v30
       - uses: DeterminateSystems/magic-nix-cache-action@v8
 
-      - run: nix build .#${{ matrix.crate }}-${{ matrix.system }}-release -L
+      - run: nix build .#${{ matrix.crate }}-${{ matrix.system }}-release -L --accept-flake-config
 
       - uses: actions/upload-artifact@v4.4.3
         if: ${{ !github.event.act }}
