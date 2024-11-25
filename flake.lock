@@ -29,18 +29,16 @@
       }
     },
     "crane": {
-      "flake": false,
       "locked": {
-        "lastModified": 1727316705,
-        "narHash": "sha256-/mumx8AQ5xFuCJqxCIOFCHTVlxHkMT21idpbgbm/TIE=",
+        "lastModified": 1732407143,
+        "narHash": "sha256-qJOGDT6PACoX+GbNH2PPx2ievlmtT1NVeTB80EkRLys=",
         "owner": "ipetkov",
         "repo": "crane",
-        "rev": "5b03654ce046b5167e7b0bccbd8244cb56c16f0e",
+        "rev": "f2b4b472983817021d9ffb60838b2b36b9376b20",
         "type": "github"
       },
       "original": {
         "owner": "ipetkov",
-        "ref": "v0.19.0",
         "repo": "crane",
         "type": "github"
       }
@@ -269,7 +267,9 @@
     },
     "nci": {
       "inputs": {
-        "crane": "crane",
+        "crane": [
+          "crane"
+        ],
         "dream2nix": "dream2nix",
         "mk-naked-shell": "mk-naked-shell",
         "nixpkgs": [
@@ -435,6 +435,7 @@
     },
     "root": {
       "inputs": {
+        "crane": "crane",
         "devenv": "devenv",
         "fenix": "fenix",
         "flake-parts": "flake-parts_2",

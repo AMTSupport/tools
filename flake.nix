@@ -17,7 +17,8 @@
     flake-parts = { url = "github:hercules-ci/flake-parts"; inputs.nixpkgs-lib.follows = "nixpkgs"; };
     devenv.url = "github:cachix/devenv";
     fenix = { url = "github:nix-community/fenix"; inputs.nixpkgs.follows = "nixpkgs"; };
-    nci = { url = "github:yusdacra/nix-cargo-integration"; inputs = { nixpkgs.follows = "nixpkgs"; parts.follows = "flake-parts"; }; };
+    crane = { url = "github:ipetkov/crane"; };
+    nci = { url = "github:yusdacra/nix-cargo-integration"; inputs = { nixpkgs.follows = "nixpkgs"; parts.follows = "flake-parts"; crane.follows = "crane"; }; };
   };
 
   outputs = inputs@{ flake-parts, ... }: flake-parts.lib.mkFlake { inherit inputs; } {
