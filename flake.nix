@@ -52,8 +52,6 @@
           # Fixes https://github.com/cachix/devenv/issues/528
           containers = lib.mkForce { };
 
-          difftastic.enable = true;
-
           languages.rust = {
             enable = true;
             channel = "nightly";
