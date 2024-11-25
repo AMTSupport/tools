@@ -1,13 +1,14 @@
 [package]
 name = "memorable-pass"
 version = "0.1.1"
-authors = ["Racci <racci@racci.dev>"]
-edition = "2021"
 readme = "README.md"
-license = "MIT"
 categories = ["command-line-utilities"]
 keywords = ["generator", "password", "memorable"]
 description = "A memorable password generator written in Rust"
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+license-file.workspace = true
 
 [[bin]]
 name = "memorable-pass"

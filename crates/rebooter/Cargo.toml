@@ -1,7 +1,10 @@
 [package]
 name = "rebooter"
 version = "0.1.0"
-edition = "2021"
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+license-file.workspace = true
 
 [lib]
 name = "rebooter"

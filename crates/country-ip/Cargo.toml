@@ -1,10 +1,13 @@
 [package]
 name = "country-ip"
 version = "0.1.0"
-edition = "2021"
 categories = ["command-line-utilities"]
 keywords = ["random", "ip", "testing", "geo", "country"]
 description = "A command line utility to generate random IP addresses from a given country."
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+license-file.workspace = true
 
 [lib]
 name = "country_ip"
