@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+
+if [ -z "$1" ] || [ -z "$2" ]; then
+    >&2 echo "Usage: $0 <version-tag> <changelog-file>"
+    exit 1
+fi
+
+VERSION_TAG="$1"
+CHANGELOG_FILE="$2"
+
+if [ ! -f "$CHANGELOG_FILE" ]; then
+    >&2 echo "Changelog file '$CHANGELOG_FILE' not found."
+    exit 1
+fi
+
+ESCAPED_VERSION_TAG=$(printf '%s\n' "$VERSION_TAG" | sed 's/[][\/.^$*]/\\&/g')
+START_PATTERN="^## \\[$ESCAPED_VERSION_TAG\\]"
+
+# Verify that the tag exists in the changelog file
+if ! grep -q "$START_PATTERN" "$CHANGELOG_FILE"; then
+    >&2 echo "Version tag '$VERSION_TAG' not found in '$CHANGELOG_FILE'."
+    exit 1
+fi
+
+# Extract the desired version section, excluding the '---' line
+awk "
+/$START_PATTERN/ {flag=1; print; next}
+/^- - -$/ && flag {exit}
+flag {print}
+" "$CHANGELOG_FILE"

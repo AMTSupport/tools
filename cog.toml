@@ -5,31 +5,25 @@ tag_prefix = "v"
 generate_mono_repository_global_tag = false
 monorepo_version_separator = "-"
 
-#post_bump_hooks = [
-#    "git push",
-#    "git push origin --tags"
-#]
 pre_package_bump_hooks = [
+    "gh auth status &> /dev/null || exit 1",
+
+    # Don't want to run all checks on every package bump, only relevant ones.
+    "nix run .#checks.x86_64-linux.pre-commit --impure -L --allow-import-from-derivation",
+    "nix run .#checks.x86_64-linux.{{package}} --impure -L --allow-import-from-derivation",
+
     "cargo set-version --package {{package}} {{version}}",
-#    "nix flake check .#{{package}}-formatting",
-#    "nix flake check .#{{package}}-lint",
-#    "nix flake check .#{{package}}-test",
+    "git add :$(git rev-prase --show-toplevel)/Cargo.lock",
+    "git add :Cargo.toml",
 ]
 post_package_bump_hooks = [
     "git push",
     "git push origin --tags",
 
-    # TODO - Publish to crates.io
-    # TODO - Build package for all platforms properly
-    "mkdir tmp",
-    "nix build .#{{package}}",
-    "cp result/bin/{{package}}* tmp",
-    "nix build .#{{package}}-x86_64-windows",
-    "cp result/bin/{{package}}* tmp",
+    # TODO - Publish to crates.io,
 
-    "gh release create -R AMTSupport/tools --verify-tag -F CHANGELOG.md {{package}}-v{{version}} tmp/{{package}}*",
-
-    "rm tmp -d -r"
+    "$(git rev-parse --show-toplevel)/scripts/extract_changelog {{package}}-v{{version}} CHANGELOG.md 1> /tmp/{{package}}-v{{version}}_changelog.md",
+    "gh release create -R AMTSupport/tools --verify-tag -F /tmp/{{package}}-v{{version}}_changelog.md {{package}}-v{{version}}",
 ]
 
 [changelog]

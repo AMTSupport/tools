@@ -1,0 +1,58 @@
+name: Build Release Artifacts
+
+on:
+  push:
+    tags:
+      - '[A-Za-z-]+-v[0-9]+.[0-9]+.[0-9]+'
+
+jobs:
+  extract-info:
+    runs-on: ubuntu-latest
+    outputs:
+      crate: ${{ steps.extract-crate.outputs.crate }}
+      version: ${{ steps.extract-crate.outputs.version }}
+    steps:
+      - name: Extract Crate and Version
+        id: extract-crate
+        run: |
+          echo "crate=$(echo ${{ github.event.ref }} | sed -E 's/([A-Za-z-]+)-v[0-9]+.[0-9]+.[0-9]+/\1/')" >> "$GITHUB_OUTPUT"
+          echo "version=$(echo ${{ github.event.ref }} | sed -E 's/[A-Za-z-]+-v([0-9]+.[0-9]+.[0-9]+)/\1/')" >> "$GITHUB_OUTPUT"
+
+  build-artifacts:
+    needs: [extract-info]
+    name: Build ${{ needs.extract-info.outputs.crate }} for ${{ matrix.system }}
+    strategy:
+      fail-fast: false
+      matrix:
+        system:
+          - x86_64-linux
+          - aarch64-linux
+          - x86_64-windows
+          - aarch64-windows
+          - x86_64-darwin
+          - aarch64-darwin
+    runs-on: ${{ endsWith(matrix.system, 'darwin') && 'macos-latest' || 'ubuntu-latest' }}
+    permissions:
+      contents: write
+    outputs:
+      binary: ${{ steps.binary-name.outputs.binary }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v30
+      - uses: DeterminateSystems/magic-nix-cache-action@v8
+
+      - name: Build Release Artifact for ${{ matrix.system }}
+        run: nix build .#${{ needs.extract-info.outputs.crate }}-${{ matrix.system }}-release -L --accept-flake-config
+
+      - name: Change the name of the artifact
+        id: binary-name
+        run: |
+          binary=$(find result/bin -type f -exec basename {} \;)
+          updated_binary=$(echo "$binary" | sed -E "s/${{ needs.extract-info.outputs.crate }}/${{ needs.extract-info.outputs.crate }}-${{ matrix.system }}/")
+          cp result/bin/"$binary" /tmp/"$updated_binary"
+          echo "binary=$updated_binary" >> "$GITHUB_ENV"
+
+      - name: Upload Release Artifact for ${{ matrix.system }}
+        uses: softprops/action-gh-release@v2
+        with:
+          files: /tmp/${{ steps.binary-name.outputs.binary }}
