@@ -3,7 +3,7 @@ name: Build Release Artifacts
 on:
   push:
     tags:
-      - '[A-Za-z-]+-v[0-9]+.[0-9]+.[0-9]+'
+      - '**-v[0-9]+.[0-9]+.[0-9]+'
 
 jobs:
   extract-info:
