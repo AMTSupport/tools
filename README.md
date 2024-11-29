@@ -8,7 +8,7 @@
 |-----------------------------------------------------|----------------------------------------------------------------|
 | [memorable-pass](./crates/memorable-pass/README.md) | A memorable password generator                                 |
 | [country-ip](./crates/country-ip/README.md)         | A tool for getting a random IP for a country or looking one up |
-| [cleaner](./crates/cleaner/README.md)               | A System cleanup tool                                          |
+| [sys-cleaner](./crates/sys-cleaner/README.md)       | A System cleaners                                              |
 
 ## Author
 

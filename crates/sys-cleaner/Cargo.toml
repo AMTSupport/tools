@@ -1,17 +1,17 @@
 [package]
-name = "cleaner"
+name = "sys-cleaner"
 version = "0.2.0"
 readme = "README.md"
 categories = ["command-line-utilities", "filesystem"]
 keywords = ["cleaner", "clean", "cleaning", "cleaning-tool", "cleaning-utility"]
-description = "A cleaning tool written in Rust"
+description = "A System cleaner written in Rust"
 authors.workspace = true
 edition.workspace = true
 homepage.workspace = true
 license-file.workspace = true
 
 [[bin]]
-name = "cleaner"
+name = "sys-cleaner"
 path = "src/main.rs"
 
 [features]

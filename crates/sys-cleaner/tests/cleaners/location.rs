@@ -14,10 +14,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+use crate::cleaners::location::*;
 use anyhow::Result;
 use assert_fs::fixture::ChildPath;
 use assert_fs::{prelude::*, NamedTempFile, TempDir};
-use cleaner::cleaners::location::*;
 
 use std::sync::LazyLock;
 use std::{env, path::PathBuf};

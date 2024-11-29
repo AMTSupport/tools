@@ -1,4 +1,4 @@
-<h1 align="center">Welcome to cleaner 👋</h1>
+<h1 align="center">Welcome to sys-cleaner 👋</h1>
 <p>
   <a href="https://github.com/AMTSupport/tools/actions/workflows/ci.yml" target="_blank">
     <img alt="Build Status" src="https://img.shields.io/github/actions/workflow/status/AMTSupport/tools/ci.yml?style=for-the-badge">
@@ -14,23 +14,23 @@
 
 ```sh
 # Nix (Recommended) (Release binaries are cached)
-nix run github:AMTSupport/tools#cleaner --accept-flake-config
+nix run github:AMTSupport/tools#sys-cleaner --accept-flake-config
 
 # Cargo
-cargo install --git https://github.com/AMTSupport/tools cleaner
+cargo install --git https://github.com/AMTSupport/tools sys-cleaner
 ```
 
 ## Usage
 
 ```sh
 # Run all cleaners
-cleaner
+sys-cleaner
 
-# Run specific cleaners (See all cleaners in `cleaner --help`)
-cleaner -- trash browsers
+# Run specific cleaners (See all cleaners in `sys-cleaner --help`)
+sys-cleaner -- trash browsers
 
 # Run in quiet mode
-cleaner --quiet
+sys-cleaner --quiet
 ```
 
 ## Author
@@ -49,5 +49,5 @@ Give a ⭐️ if this project helped you!
 
 ## 📝 License
 
-Copyright © 2023 [James Draycott](https://github.com/DaRacci).<br />
+Copyright © 2023-2024 [James Draycott](https://github.com/DaRacci).<br />
 This project is [GPLv3](https://www.gnu.org/licenses/) licensed.

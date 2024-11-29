@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024. James Draycott <me@racci.dev>
+ * Copyright (C) 2024. James Draycott me@racci.dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -10,8 +10,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program.
- * If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
 #![feature(async_closure)]
@@ -21,10 +21,10 @@
 #![feature(inherent_associated_types)]
 
 use anyhow::Result;
-use cleaner::application::application;
-use cleaner::config::runtime::Runtime;
 use lib::helper::require_elevated_privileges;
 use std::sync::LazyLock;
+use sys_cleaner::application::application;
+use sys_cleaner::config::runtime::Runtime;
 
 static RUNTIME: LazyLock<Runtime> = LazyLock::new(|| Runtime::new().unwrap());
 

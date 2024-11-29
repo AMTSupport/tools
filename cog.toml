@@ -20,8 +20,6 @@ post_package_bump_hooks = [
     "git push",
     "git push origin --tags",
 
-    # TODO - Publish to crates.io,
-
     "$(git rev-parse --show-toplevel)/scripts/extract_changelog {{package}}-v{{version}} CHANGELOG.md 1> /tmp/{{package}}-v{{version}}_changelog.md",
     "gh release create -R AMTSupport/tools --verify-tag -F /tmp/{{package}}-v{{version}}_changelog.md {{package}}-v{{version}}",
 ]
@@ -53,9 +51,9 @@ lib = { path = "crates/lib", public_api = false }
 macros = { path = "crates/macros", public_api = false }
 
 backup = { path = "crates/backup" }
-cleaner = { path = "crates/cleaner" }
 country-ip = { path = "crates/country-ip" }
 interfacer = { path = "crates/interfacer" }
 memorable-pass = { path = "crates/memorable-pass" }
-rebooter = { path = "crates/rebooter" }
 popup = { path = "crates/popup" }
+rebooter = { path = "crates/rebooter" }
+sys-cleaner = { path = "crates/sys-cleaner" }

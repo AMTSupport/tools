@@ -2,9 +2,9 @@
 members = ["crates/*"]
 default-members = [
     "crates/backup",
-    "crates/cleaner",
     "crates/country-ip",
     "crates/memorable-pass",
+    "crates/sys-cleaner",
 ]
 resolver = "2"
 

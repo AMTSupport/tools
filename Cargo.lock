@@ -892,38 +892,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1462739cb27611015575c0c11df5df7601141071f07518d56fcc1be504cbec97"
 
 [[package]]
-name = "cleaner"
-version = "0.2.0"
-dependencies = [
- "anyhow",
- "assert_fs",
- "async-trait",
- "cfg-if",
- "chrono",
- "clap",
- "clap_complete",
- "downcast-rs",
- "env_logger",
- "glob",
- "impls",
- "indicatif",
- "inquire",
- "lazy_static",
- "lib",
- "macros",
- "michie",
- "paste",
- "permissions",
- "rayon",
- "test-log",
- "thiserror",
- "tokio",
- "tokio-stream",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "clipboard-win"
 version = "5.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6064,6 +6032,38 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a7065abeca94b6a8a577f9bd45aa0867a2238b74e8eb67cf10d492bc39351394"
 dependencies = [
  "futures-core",
+]
+
+[[package]]
+name = "sys-cleaner"
+version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "assert_fs",
+ "async-trait",
+ "cfg-if",
+ "chrono",
+ "clap",
+ "clap_complete",
+ "downcast-rs",
+ "env_logger",
+ "glob",
+ "impls",
+ "indicatif",
+ "inquire",
+ "lazy_static",
+ "lib",
+ "macros",
+ "michie",
+ "paste",
+ "permissions",
+ "rayon",
+ "test-log",
+ "thiserror",
+ "tokio",
+ "tokio-stream",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
