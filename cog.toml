@@ -10,7 +10,7 @@ pre_package_bump_hooks = [
 
     # Don't want to run all checks on every package bump, only relevant ones.
     "nix develop --impure -c pre-commit run --all-files",
-    "nix run .#checks.x86_64-linux.{{package}} --impure -L --allow-import-from-derivation",
+    "nix  build .#checks.x86_64-linux.{{package}} -L --allow-import-from-derivation --no-link",
 
     "cargo set-version --package {{package}} {{version}}",
     "git add :$(git rev-prase --show-toplevel)/Cargo.lock",
