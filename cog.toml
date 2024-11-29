@@ -9,7 +9,7 @@ pre_package_bump_hooks = [
     "gh auth status &> /dev/null || exit 1",
 
     # Don't want to run all checks on every package bump, only relevant ones.
-    "nix run .#checks.x86_64-linux.pre-commit --impure -L --allow-import-from-derivation",
+    "nix develop --impure -c pre-commit run --all-files",
     "nix run .#checks.x86_64-linux.{{package}} --impure -L --allow-import-from-derivation",
 
     "cargo set-version --package {{package}} {{version}}",
