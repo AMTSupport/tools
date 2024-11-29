@@ -34,6 +34,7 @@
     perSystem = { config, system, pkgs, lib, inputs', ... }:
       let
         ourLib = import ./lib.nix { inherit pkgs; };
+        craneLib = inputs.crane.mkLib pkgs;
 
         rustToolchain = with inputs'.fenix.packages; combine ([
           complete.cargo
@@ -74,22 +75,24 @@
             act
             hyperfine
             cocogitto
-            cargo-udeps
-            cargo-audit
-            cargo-deny
-            cargo-expand
-            cargo-nextest
-            cargo-cranky
-            cargo-edit
-            cargo-machete
-            cargo-deadlinks
-            cargo-unused-features
-            cargo-hack
-            cargo-modules
-            cargo-geiger
+
+            cargo-asm
             cargo-audit
             cargo-bloat
+            cargo-cranky
+            cargo-deadlinks
+            cargo-deny
             cargo-diet
+            cargo-edit
+            cargo-expand
+            cargo-geiger
+            cargo-hack
+            cargo-machete
+            cargo-modules
+            cargo-nextest
+            cargo-semver-checks
+            cargo-udeps
+            cargo-unused-features
           ];
 
           git-hooks = {
@@ -143,7 +146,7 @@
           };
 
           projects.tools = {
-            path = ./.;
+            path = craneLib.cleanCargoSource (craneLib.path ./.);
 
             targets = lib.mapAttrs'
               (_: target: lib.nameValuePair target.rust.rustcTarget rec {
