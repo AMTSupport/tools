@@ -18,9 +18,9 @@ jobs:
       matrix:
         crate:
           - backup
-          - cleaner
           - country-ip
           - memorable-pass
+          - sys-cleaner
         system:
           - x86_64-linux
           - aarch64-linux
