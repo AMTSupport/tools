@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - '**-v[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to publish'
+        required: false
+        type: string
 
 jobs:
   extract-info:
@@ -15,8 +21,8 @@ jobs:
       - name: Extract Crate and Version
         id: extract-crate
         run: |
-          echo "crate=$(echo ${{ github.event.ref }} | sed -E 's/([A-Za-z-]+)-v[0-9]+.[0-9]+.[0-9]+/\1/')" >> "$GITHUB_OUTPUT"
-          echo "version=$(echo ${{ github.event.ref }} | sed -E 's/[A-Za-z-]+-v([0-9]+.[0-9]+.[0-9]+)/\1/')" >> "$GITHUB_OUTPUT"
+          echo "crate=$(echo ${{ github.event.ref }} | sed -E 's/refs\/tags\/(.+)-v[0-9]+\.[0-9]+\.[0-9]+/\1/')" >> "$GITHUB_OUTPUT"
+          echo "version=$(echo ${{ github.event.ref }} | sed -E 's/refs\/tags\/.+-(v[0-9]+\.[0-9]+\.[0-9]+)/\1/')" >> "$GITHUB_OUTPUT"
 
   build-artifacts:
     needs: [extract-info]
@@ -65,7 +71,7 @@ jobs:
 
   publish-crates-io:
     name: Publish to crates.io
-    needs: [extract-info]
+    needs: [extract-info, build-artifacts]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -73,12 +79,9 @@ jobs:
       - uses: DeterminateSystems/magic-nix-cache-action@v8
 
       - name: Publish to crates.io
-        uses: workflow/nix-shell-action@v3.4.0
-        with:
-          flakes-from-devshell: true
-          script: |
-            cargo publish \
-              --locked \
-              --no-veirfy \
-              --token ${{ secrets.CARGO_AUTH_TOKEN }} \
-              --package ${{ needs.extract-info.outputs.crate }}
+        run: |
+          nix develop --impure -c cargo publish \
+            --locked \
+            --no-verify \
+            --token ${{ secrets.CARGO_AUTH_TOKEN }} \
+            --package ${{ needs.extract-info.outputs.crate }}
