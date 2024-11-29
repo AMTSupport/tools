@@ -41,6 +41,12 @@ jobs:
       - uses: cachix/install-nix-action@v30
       - uses: DeterminateSystems/magic-nix-cache-action@v8
 
+      - uses: cachix/cachix-action@v15
+        with:
+          name: amt
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          # pushFilter: "(-source$|-${{ needs.extract-info.outputs.crate }}-deps-${{ needs.extract-info.outputs.version }}$|-${{ needs.extract-info.outputs.crate }}-${{ needs.extract-info.outputs.version }}$)"
+
       - name: Build Release Artifact for ${{ matrix.system }}
         run: nix build .#${{ needs.extract-info.outputs.crate }}-${{ matrix.system }}-release -L --accept-flake-config
 
@@ -56,3 +62,23 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: /tmp/${{ steps.binary-name.outputs.binary }}
+
+  publish-crates-io:
+    name: Publish to crates.io
+    needs: [extract-info]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v30
+      - uses: DeterminateSystems/magic-nix-cache-action@v8
+
+      - name: Publish to crates.io
+        uses: workflow/nix-shell-action@v3.4.0
+        with:
+          flakes-from-devshell: true
+          script: |
+            cargo publish \
+              --locked \
+              --no-veirfy \
+              --token ${{ secrets.CARGO_AUTH_TOKEN }} \
+              --package ${{ needs.extract-info.outputs.crate }}
