@@ -146,7 +146,11 @@
           };
 
           projects.tools = {
-            path = craneLib.cleanCargoSource (craneLib.path ./.);
+            path = lib.cleanSourceWith {
+              name = "source";
+              src = craneLib.path ./.;
+              filter = path: type: (craneLib.filterCargoSources path type) || (builtins.match ".*memorable-pass/assets/words.json$" path != null);
+            };
 
             targets = lib.mapAttrs'
               (_: target: lib.nameValuePair target.rust.rustcTarget rec {
