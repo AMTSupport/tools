@@ -13,8 +13,6 @@ pre_package_bump_hooks = [
     "nix  build .#checks.x86_64-linux.{{package}} -L --allow-import-from-derivation --no-link",
 
     "cargo set-version --package {{package}} {{version}}",
-    "git add :$(git rev-prase --show-toplevel)/Cargo.lock",
-    "git add :Cargo.toml",
 ]
 post_package_bump_hooks = [
     "git push",
