@@ -58,7 +58,7 @@ jobs:
           binary=$(find result/bin -type f -exec basename {} \;)
           updated_binary=$(echo "$binary" | sed -E "s/${{ needs.extract-info.outputs.crate }}/${{ needs.extract-info.outputs.crate }}-${{ matrix.system }}/")
           cp result/bin/"$binary" /tmp/"$updated_binary"
-          echo "binary=$updated_binary" >> "$GITHUB_ENV"
+          echo "binary=$updated_binary" >> "$GITHUB_OUTPUT"
 
       - name: Upload Release Artifact for ${{ matrix.system }}
         uses: softprops/action-gh-release@v2
