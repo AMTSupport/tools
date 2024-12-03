@@ -3119,7 +3119,7 @@ dependencies = [
 [[package]]
 name = "inquire"
 version = "0.6.2"
-source = "git+https://github.com/anwarhahjjeffersongeorge/inquire-filepath/?rev=a5f53ecb868a9c3c78295bacfc32cf224437abe8#a5f53ecb868a9c3c78295bacfc32cf224437abe8"
+source = "git+https://github.com/anwarhahjjeffersongeorge/inquire-filepath/?branch=filepath-select#a5f53ecb868a9c3c78295bacfc32cf224437abe8"
 dependencies = [
  "bitflags 2.6.0",
  "crossterm 0.25.0",

@@ -32,7 +32,7 @@ clap = { version = "4.5.4", features = [
 clap_complete = { version = "4.5.1", features = ["unstable-dynamic"] }
 crossterm = "0.28.1"
 indicatif = { version = "0.17.8", features = ["improved_unicode", "in_memory"] }
-inquire = { git = "https://github.com/anwarhahjjeffersongeorge/inquire-filepath/", rev = "a5f53ecb868a9c3c78295bacfc32cf224437abe8" }
+inquire = { version = "0.6.2", git = "https://github.com/anwarhahjjeffersongeorge/inquire-filepath/", branch = "filepath-select" }
 shlex = "1.3.0"
 
 # GUI
