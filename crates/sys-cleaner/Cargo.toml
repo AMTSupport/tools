@@ -20,8 +20,8 @@ default = ["ui-cli"]
 ui-cli = ["lib/ui-cli"]
 
 [dependencies]
-lib = { path = "../lib" }
-macros = { path = "../macros" }
+lib.workspace = true
+macros.workspace = true
 impls = "1.0.3"
 
 # Runtimes

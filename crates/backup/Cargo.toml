@@ -23,8 +23,8 @@ sources-bitwarden = ["binary-downloader"]
 sources-1password = ["binary-downloader", "zip"]
 
 [dependencies]
-lib = { path = "../lib" }
-macros = { path = "../macros" }
+lib.workspace = true
+macros.workspace = true
 
 # Runtimes
 tokio = { workspace = true }

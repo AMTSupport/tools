@@ -12,7 +12,7 @@ default = ["ui-gui"]
 ui-gui = ["iced", "iced_aw", "iced_runtime"]
 
 [dependencies]
-lib = { path = "../lib" }
+lib.workspace = true
 
 # Runtimes
 tokio = { workspace = true }

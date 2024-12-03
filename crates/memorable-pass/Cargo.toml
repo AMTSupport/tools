@@ -20,8 +20,8 @@ default = ["ui-cli", "lib/updater"]
 ui-cli = ["lib/ui-cli", "lib/ui-cli-formatting"]
 
 [dependencies]
-lib = { path = "../lib" }
-macros = { path = "../macros" }
+lib.workspace = true
+macros.workspace = true
 
 # Runtimes
 tokio.workspace = true

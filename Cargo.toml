@@ -11,6 +11,7 @@ resolver = "2"
 [workspace.package]
 authors = ["Racci"]
 edition = "2021"
+repository = "https://github.com/AMTSupport/tools"
 homepage = "https://github.com/AMTSupport/tools"
 license-file = "LICENSE.md"
 readme = "README.md"
@@ -18,6 +19,9 @@ readme = "README.md"
 # Listing all common dependencies here to make sure they are all
 # using the same versions, and to make it easier to update.
 [workspace.dependencies]
+lib = { version = "0.2.0", path = "crates/lib" }
+macros = { version = "0.2.0", path = "crates/macros" }
+
 # Runtimes
 tokio = { version = "1.37.0", features = ["macros", "rt-multi-thread"] }
 

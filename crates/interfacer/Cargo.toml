@@ -18,8 +18,8 @@ endpoint-hudu = []
 endpoint-nable = []
 
 [dependencies]
-lib = { path = "../lib" }
-macros = { path = "../macros" }
+lib.workspace = true
+macros.workspace = true
 
 # Runtimes
 tokio.workspace = true
