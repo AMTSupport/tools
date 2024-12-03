@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [sys-cleaner-v0.3.0](https://github.com/AMTSupport/tools/compare/c1c6555e020b2a406e5178eb22e2653d6c733a00..sys-cleaner-v0.3.0) - 2024-12-03
+#### <!-- 1 -->🐛 Bug Fixes
+- import name - ([64bd4a5](https://github.com/AMTSupport/tools/commit/64bd4a5767218cf17cc6767bd5f3304aac47f08c)) - DaRacci
+#### <!-- 9 -->⚙️ Miscellaneous Tasks
+- rename cleaner crate to sys-cleaner - ([c1c6555](https://github.com/AMTSupport/tools/commit/c1c6555e020b2a406e5178eb22e2653d6c733a00)) - DaRacci
+
+- - -
+
 ## [cleaner-v0.2.0](https://github.com/AMTSupport/tools/compare/cleaner-v0.1.2..cleaner-v0.2.0) - 2024-03-01
 #### <!-- 0 -->⛰️  Features
 - add chrome and edge profiles - ([48541c6](https://github.com/AMTSupport/tools/commit/48541c6980fc6d09368f596d68b874bd613841c6)) - DaRacci
