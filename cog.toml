@@ -32,8 +32,8 @@ authors = [
 ]
 
 [commit_types]
-feat = { changelog_title = "<!-- 0 -->⛰️  Features" }
-fix = { changelog_title = "<!-- 1 -->🐛 Bug Fixes" }
+feat = { changelog_title = "<!-- 0 -->⛰️  Features", bump_minor = true }
+fix = { changelog_title = "<!-- 1 -->🐛 Bug Fixes", bump_patch = true }
 refactor = { changelog_title = "<!-- 2 -->🚜 Refactor" }
 doc = { changelog_title = "<!-- 3 -->📚 Documentation" }
 perf = { changelog_title = "<!-- 4 -->⚡ Performance" }
