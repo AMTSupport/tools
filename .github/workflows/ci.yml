@@ -24,12 +24,16 @@ jobs:
         with:
           fetch-depth: 2
 
+      - uses: cachix/install-nix-action@v30
+      - uses: DeterminateSystems/magic-nix-cache-action@v8
+
       - name: Extract Changed Crates
         id: extract-crates
         run: |
           changes=$(git diff --name-only HEAD^ HEAD | grep -oP 'crates/[^/]+/' | sort -u)
           crates=$(echo "$changes" | sed -E 's/crates\/([^\/]+)\//\1/g' | sort -u)
           echo "changed_crates=$crates" >> "$GITHUB_OUTPUT"
+          echo "Changed Crates: $crates"
 
       # If any of the root files have changed we should rebuild all crates.
       - name: Check for Root Changes
@@ -39,19 +43,14 @@ jobs:
           changes=$(git diff --name-only HEAD^ HEAD | grep -oP 'Cargo.toml|Cargo.lock|flake.nix|ci.yml' | sort -u)
           if [ -n "$changes" ]; then
             echo "rebuild_all=true" >> "$GITHUB_OUTPUT"
+            echo "Root Changes: $changes"
+            echo "All Crates will be rebuilt."
           fi
       
       - name: Generate Matrix
         id: generate-matrix
         run: |
-          systems=(
-            "x86_64-linux"
-            "aarch64-linux"
-            "x86_64-windows"
-            "aarch64-windows"
-            "x86_64-darwin"
-            "aarch64-darwin"
-          )
+          systems=("x86_64-linux" "aarch64-linux" "x86_64-windows" "aarch64-windows" "x86_64-darwin" "aarch64-darwin")
           
           if [ -n "$rebuild_all" ]; then
             crates=$(find crates -mindepth 1 -maxdepth 1 -type d -exec basename {} \;)
@@ -59,9 +58,14 @@ jobs:
             crates=${{ steps.extract-crates.outputs.changed_crates }}
           fi
 
+          echo "Crates: $crates"
+
           # We only want to build the crates defined as default members.
-          default_members=$(cargo metadata --no-deps --format-version 1 | jq -r '.workspace_default_members[] | split("#")[0]' | xargs -n1 basename)
+          default_members=$(nix develop --impure -c cargo metadata --no-deps --format-version 1 | jq -r '.workspace_default_members[] | split("#")[0]' | xargs -n1 basename)
           crates=$(echo "$crates" | grep -Fxf <(echo "$default_members"))
+
+          echo "Default Members: $default_members"
+          echo "Crates to Build: $crates"
 
           matrix="{\"system\": ["
           for system in "${systems[@]}"; do
@@ -72,6 +76,8 @@ jobs:
             matrix+="\"$crate\","
           done
           matrix="${matrix::-1}]}"
+
+          echo "$matrix" | jq .
 
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
 
