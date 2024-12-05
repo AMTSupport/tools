@@ -27,7 +27,7 @@ jobs:
         run: |
           changes=$(git diff --name-only HEAD^ HEAD | grep -oP 'crates/[^/]+/' | sort -u)
           crates=$(echo "$changes" | sed -E 's/crates\/([^\/]+)\//\1/g' | sort -u)
-          echo "changed_crates=$crates" >> "$GITHUB_ENV"
+          echo "changed_crates=$crates" >> "$GITHUB_OUTPUT"
 
       # If any of the root files have changed we should rebuild all crates.
       - name: Check for Root Changes
@@ -36,7 +36,7 @@ jobs:
         run: |
           changes=$(git diff --name-only HEAD^ HEAD | grep -oP 'Cargo.toml|Cargo.lock|flake.nix|ci.yml' | sort -u)
           if [ -n "$changes" ]; then
-            echo "rebuild_all=true" >> "$GITHUB_ENV"
+            echo "rebuild_all=true" >> "$GITHUB_OUTPUT"
           fi
       
       - name: Generate Matrix
@@ -71,7 +71,7 @@ jobs:
           done
           matrix="${matrix::-1}]}"
 
-          echo "matrix=$matrix" >> "$GITHUB_ENV"
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
 
   build-artifacts:
     needs: [ get-changes ]
@@ -121,16 +121,16 @@ jobs:
           
           # If the system ends with windows we should skip the tests.
           if [[ "$matrix_system" == *windows ]]; then
-            echo "run_tests=false" >> "$GITHUB_ENV"
+            echo "run_tests=false" >> "$GITHUB_OUTPUT"
           fi
 
           # We only want to run native tests on the runner that matches the host system.
           host_system=$(nix eval --raw nixpkgs#system)
           if [[ "$matrix_system" == "$host_system" ]]; then
-            echo "run_tests=true" >> "$GITHUB_ENV"
+            echo "run_tests=true" >> "$GITHUB_OUTPUT"
           fi
 
-          echo "run_tests=false" >> "$GITHUB_ENV"
+          echo "run_tests=false" >> "$GITHUB_OUTPUT"
 
       - name: Run Tests
         if: ${{ steps.should-run-tests.outputs.run_tests == 'true' }}
