@@ -14,6 +14,11 @@ license-file.workspace = true
 name = "country_ip"
 path = "src/lib.rs"
 
+[[bin]]
+name = "country-ip"
+path = "src/main.rs"
+required-features = ["ui-cli"]
+
 [features]
 default = ["ui-cli"]
 
@@ -47,9 +52,10 @@ tracing-indicatif = { workspace = true, optional = true }
 thiserror.workspace = true
 anyhow.workspace = true
 
+# Misc
 rand = { version = "0.8.5", features = ["small_rng"] }
-
 cidr = "0.2.2"
+chrono.workspace = true
 
 # Futures & Async
 futures = { workspace = true, features = ["std"] }

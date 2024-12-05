@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 James Draycott <me@racci.dev>
+ * Copyright (C) 2023-2024. James Draycott me@racci.dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -7,11 +7,11 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
 use crate::record::Record;
@@ -39,12 +39,22 @@ pub static DB_INSTANCE: LazyLock<DB> = LazyLock::new(|| {
 });
 
 impl DB {
-    // TODO :: Get latest version from https://db-ip.com/db/download/ip-to-country-lite
-    const URL: &'static str = "https://download.db-ip.com/free/dbip-country-lite-2023-08.csv.gz";
+    /// Get the URL to download the current csv file from.
+    fn get_dated_url() -> String {
+        use chrono::Datelike;
 
+        let year = chrono::Utc::now().year();
+        let month = chrono::Utc::now().month();
+        format!(
+            "https://download.db-ip.com/free/dbip-country-lite-{}-{}.csv.gz",
+            year, month
+        )
+    }
+
+    // TODO - Cache the csv file for reuse.
     #[instrument(level = "TRACE", ret, err)]
     async fn new() -> Result<Self> {
-        let response = reqwest::get(Self::URL).await?;
+        let response = reqwest::get(Self::get_dated_url()).await?;
         let stream = response
             .bytes_stream()
             .map_err(|e| FutureError::new(futures::io::ErrorKind::Other, e))
