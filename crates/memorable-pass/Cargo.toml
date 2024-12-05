@@ -15,13 +15,13 @@ name = "memorable-pass"
 path = "src/main.rs"
 
 [features]
-default = ["ui-cli", "lib/updater"]
+default = ["ui-cli", "amt-lib/updater"]
 
-ui-cli = ["lib/ui-cli", "lib/ui-cli-formatting"]
+ui-cli = ["amt-lib/ui-cli", "amt-lib/ui-cli-formatting"]
 
 [dependencies]
-lib.workspace = true
-macros.workspace = true
+amt-lib.workspace = true
+amt-macros.workspace = true
 
 # Runtimes
 tokio.workspace = true

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024. James Draycott <me@racci.dev>
+ * Copyright (C) 2024. James Draycott me@racci.dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -10,8 +10,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program.
- * If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
 pub mod autoprune;
@@ -23,7 +23,7 @@ use std::path::Path;
 
 use crate::config::rules::autoprune::AutoPrune;
 use crate::config::rules::metadata::Metadata;
-use lib::builder;
+use obj_builder::builder;
 use rule::Rule;
 use serde::{Deserialize, Serialize};
 use tracing::trace;

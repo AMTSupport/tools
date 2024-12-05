@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 James Draycott <me@racci.dev>
+ * Copyright (C) 2023-2024. James Draycott me@racci.dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -7,19 +7,19 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
 use crate::config::backend::Backend;
 use crate::config::runtime::Runtime;
 use crate::sources::downloader::Downloader;
+use amt_lib::pathed::Pathed;
 use anyhow::Result;
 use indicatif::{MultiProgress, ProgressBar};
-use lib::pathed::Pathed;
 use macros::{EnumNames, EnumVariants};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;

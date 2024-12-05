@@ -16,11 +16,11 @@
 
 use crate::config::runtime::Runtime;
 use crate::ui::cli::action::Action;
+use amt_lib::ui::cli::flags::CommonFlags;
+use amt_lib::ui::cli::oneshot::OneshotHandler;
+use amt_lib::ui::cli::{CliResult, CliUi};
+use amt_lib::ui::Ui;
 use anyhow::Result;
-use lib::ui::cli::flags::CommonFlags;
-use lib::ui::cli::oneshot::OneshotHandler;
-use lib::ui::cli::{CliResult, CliUi};
-use lib::ui::Ui;
 use tracing_appender::non_blocking::WorkerGuard;
 
 #[derive(Debug)]
@@ -32,11 +32,11 @@ pub struct BackupCli {
 impl CliUi for BackupCli {}
 
 impl OneshotHandler for BackupCli {
-    type Action = Action;
+    type OneshotAction = Action;
 
-    async fn handle(&mut self, command: Self::Action, flags: &CommonFlags) -> CliResult<()> {
+    async fn handle(&mut self, command: Self::OneshotAction, flags: &CommonFlags) -> CliResult<()> {
         if self._guard.is_none() {
-            self._guard = Some(lib::log::init(env!["CARGO_PKG_NAME"], flags));
+            self._guard = Some(amt_lib::log::init(env!["CARGO_PKG_NAME"], flags));
         }
 
         if self.runtime.is_none() {

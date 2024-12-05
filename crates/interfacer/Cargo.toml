@@ -18,8 +18,8 @@ endpoint-hudu = []
 endpoint-nable = []
 
 [dependencies]
-lib.workspace = true
-macros.workspace = true
+amt-lib.workspace = true
+amt-macros.workspace = true
 
 # Runtimes
 tokio.workspace = true

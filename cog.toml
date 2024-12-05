@@ -7,17 +7,14 @@ monorepo_version_separator = "-"
 
 pre_package_bump_hooks = [
     "gh auth status &> /dev/null || exit 1",
-
     # Don't want to run all checks on every package bump, only relevant ones.
     "nix develop --impure -c pre-commit run --all-files",
     "nix  build .#checks.x86_64-linux.{{package}} -L --allow-import-from-derivation --no-link",
-
     "cargo set-version --package {{package}} {{version}}",
 ]
 post_package_bump_hooks = [
     "git push",
     "git push origin --tags",
-
     "$(git rev-parse --show-toplevel)/scripts/extract_changelog {{package}}-v{{version}} CHANGELOG.md 1> /tmp/{{package}}-v{{version}}_changelog.md",
     "gh release create -R AMTSupport/tools --verify-tag -F /tmp/{{package}}-v{{version}}_changelog.md {{package}}-v{{version}}",
 ]
@@ -45,8 +42,9 @@ build = { changelog_title = "<!-- 8 -->🏗️ Build Tasks" }
 chore = { changelog_title = "<!-- 9 -->⚙️ Miscellaneous Tasks" }
 
 [packages]
-lib = { path = "crates/lib", public_api = false }
-macros = { path = "crates/macros", public_api = false }
+amt-lib = { path = "crates/amt-lib" }
+amt-macros = { path = "crates/amt-macros" }
+obj-builder = { path = "crates/obj-builder" }
 
 backup = { path = "crates/backup" }
 country-ip = { path = "crates/country-ip" }

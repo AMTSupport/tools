@@ -16,13 +16,13 @@
 
 use crate::schedule::ScheduledReboot;
 use crate::ui::actions::Action;
+use amt_lib::populate;
+use amt_lib::ui::cli::flags::CommonFlags;
+use amt_lib::ui::cli::oneshot::OneshotHandler;
+use amt_lib::ui::cli::{CliResult, CliUi};
+use amt_lib::ui::Ui;
 use anyhow::Result;
 use chrono::{Local, NaiveDateTime, NaiveTime};
-use lib::populate;
-use lib::ui::cli::flags::CommonFlags;
-use lib::ui::cli::oneshot::OneshotHandler;
-use lib::ui::cli::{CliResult, CliUi};
-use lib::ui::Ui;
 use tracing::{error, info};
 use tracing_appender::non_blocking::WorkerGuard;
 
@@ -43,7 +43,7 @@ impl Ui for RebooterCli {
 impl CliUi for RebooterCli {}
 
 impl OneshotHandler for RebooterCli {
-    type Action = Action;
+    type OneshotAction = Action;
 
     async fn handle(&mut self, command: Self::Action, flags: &CommonFlags) -> CliResult<()> {
         populate!(self, flags);

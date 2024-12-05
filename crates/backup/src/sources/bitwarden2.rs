@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024. James Draycott <me@racci.dev>
+ * Copyright (C) 2024. James Draycott me@racci.dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -10,8 +10,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program.
- * If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
 use crate::config::backend::Backend;
@@ -24,8 +24,8 @@ use anyhow::{anyhow, Context, Result};
 use const_format::formatcp;
 use indicatif::{MultiProgress, ProgressBar};
 use inquire::PasswordDisplayMode;
-use lib::fs::normalise_path;
-use lib::pathed::Pathed;
+use amt_lib::fs::normalise_path;
+use amt_lib::pathed::Pathed;
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::fmt::{Display, Formatter};
@@ -36,7 +36,8 @@ use tracing::{error, info, trace};
 #[cfg(feature = "ui-cli")]
 pub(crate) async fn interactive(config: &Runtime) -> Result<Vec<Backend>> {
     use inquire::{Password, Text};
-    use lib::ui::cli::ui_inquire::inquire_style;
+    use amt
+    -lib::ui::cli::ui_inquire::inquire_style;
 
     let username = Text::new("BitWarden Username")
         .with_render_config(inquire_style())

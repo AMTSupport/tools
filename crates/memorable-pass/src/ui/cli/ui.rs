@@ -17,10 +17,10 @@
 use crate::config;
 use crate::rules::Rules;
 use crate::ui::cli::action::Action;
-use lib::ui::cli::flags::{CommonFlags, OutputFormat};
-use lib::ui::cli::oneshot::OneshotHandler;
-use lib::ui::cli::{CliResult, CliUi};
-use lib::ui::Ui;
+use amt_lib::ui::cli::flags::{CommonFlags, OutputFormat};
+use amt_lib::ui::cli::oneshot::OneshotHandler;
+use amt_lib::ui::cli::{CliResult, CliUi};
+use amt_lib::ui::Ui;
 use serde_json::json;
 use tokio::runtime::Handle;
 use tracing::{info, instrument};
@@ -35,12 +35,12 @@ pub struct MemorablePassCli {
 impl CliUi for MemorablePassCli {}
 
 impl OneshotHandler for MemorablePassCli {
-    type Action = Action;
+    type OneshotAction = Action;
 
     #[instrument(level = "TRACE", skip(self))]
-    async fn handle(&mut self, command: Self::Action, flags: &CommonFlags) -> CliResult<()> {
+    async fn handle(&mut self, command: Self::OneshotAction, flags: &CommonFlags) -> CliResult<()> {
         if self._guard.is_none() {
-            self._guard = Some(lib::log::init(env!("CARGO_PKG_NAME"), flags));
+            self._guard = Some(amt_lib::log::init(env!("CARGO_PKG_NAME"), flags));
         }
 
         match command {

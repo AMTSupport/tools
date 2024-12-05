@@ -38,7 +38,7 @@ impl CleanerInternal for DownloadsCleaner {
     #[cfg(windows)]
     fn locations(&self) -> Vec<Location> {
         use super::{PROGRAM_DATA, WINDIR};
-        use lib::fs::SYSTEM_DRIVE;
+        use amt_lib::fs::SYSTEM_DRIVE;
 
         vec![
             // Windows Update / Prefetch files

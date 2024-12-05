@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024. James Draycott <me@racci.dev>
+ * Copyright (C) 2024. James Draycott me@racci.dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -10,8 +10,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with this program.
- * If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
 pub mod cli;
@@ -23,11 +23,11 @@ use crate::config::backend::Backend;
 use crate::config::runtime::Runtime;
 use crate::sources::downloader::Downloader;
 use crate::sources::exporter::Exporter;
+use amt_lib::fs::normalise_path;
+use amt_lib::pathed::Pathed;
 use anyhow::{anyhow, Context, Result};
 use const_format::formatcp;
 use indicatif::{MultiProgress, ProgressBar};
-use lib::fs::normalise_path;
-use lib::pathed::Pathed;
 use std::env;
 use std::fmt::{Display, Formatter};
 use std::process::Command;
@@ -123,9 +123,9 @@ impl Exporter for BitWardenCore {
     }
 
     async fn interactive(config: &Runtime) -> Result<Vec<Backend>> {
+        use amt_lib::ui::cli::ui_inquire::STYLE;
         use cli::LoginStatus;
         use inquire::{Password, PasswordDisplayMode, Text};
-        use lib::ui::cli::ui_inquire::STYLE;
         use org::Organisation;
         use tracing::{error, info, trace};
 

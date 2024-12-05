@@ -15,12 +15,12 @@
  */
 
 use super::oneshot::OneshotAction;
-use lib::populate;
-use lib::ui::cli::error::CliError;
-use lib::ui::cli::flags::CommonFlags;
-use lib::ui::cli::oneshot::OneshotHandler;
-use lib::ui::cli::{CliResult, CliUi};
-use lib::ui::Ui;
+use amt_lib::populate;
+use amt_lib::ui::cli::error::CliError;
+use amt_lib::ui::cli::flags::CommonFlags;
+use amt_lib::ui::cli::oneshot::OneshotHandler;
+use amt_lib::ui::cli::{CliResult, CliUi};
+use amt_lib::ui::Ui;
 use tracing::{error, info, info_span};
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_indicatif::span_ext::IndicatifSpanExt;
@@ -44,13 +44,13 @@ impl Ui for CountryIPCli {
 }
 
 impl OneshotHandler for CountryIPCli {
-    type Action = OneshotAction;
+    type OneshotAction = OneshotAction;
 
-    async fn handle(&mut self, command: Self::Action, flags: &CommonFlags) -> CliResult<()> {
+    async fn handle(&mut self, command: Self::OneshotAction, flags: &CommonFlags) -> CliResult<()> {
         populate!(self, flags);
 
         let span = info_span!("feedback");
-        span.pb_set_style(&lib::ui::cli::progress::style_spinner());
+        span.pb_set_style(&amt_lib::ui::cli::progress::style_spinner());
         span.pb_start();
 
         match command {

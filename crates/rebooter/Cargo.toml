@@ -13,15 +13,16 @@ path = "src/lib.rs"
 [[bin]]
 name = "rebooter"
 path = "src/main.rs"
+required-features = ["ui-cli"]
 
 [features]
 default = ["ui-cli"]
 
-ui-cli = ["lib/ui-cli"]
+ui-cli = ["amt-lib/ui-cli"]
 
 [dependencies]
-lib.workspace = true
-macros.workspace = true
+amt-lib.workspace = true
+amt-macros.workspace = true
 
 # Runtimes
 tokio = { workspace = true }

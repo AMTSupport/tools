@@ -15,8 +15,8 @@
  */
 
 use crate::cleaners::cleaner::Cleaner;
+use amt_lib::ui::cli::flags::CommonFlags;
 use clap::Parser;
-use lib::ui::cli::flags::CommonFlags;
 
 #[derive(Default, Debug, Parser)]
 #[command(name = env!["CARGO_PKG_NAME"], version, author, about)]

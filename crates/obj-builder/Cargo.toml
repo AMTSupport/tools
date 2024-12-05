@@ -1,0 +1,22 @@
+[package]
+name = "obj-builder"
+version = "0.1.0"
+homepage = "https://github.com/AMTSupport/tools/blob/master/crates/obj-builder"
+authors.workspace = true
+edition.workspace = true
+license-file.workspace = true
+readme.workspace = true
+
+[features]
+default = ["cli", "repl"]
+
+cli = ["amt-lib/ui-cli", "inquire"]
+repl = ["amt-lib/ui-repl", "inquire"]
+
+[dependencies]
+thiserror.workspace = true
+anyhow.workspace = true
+paste.workspace = true
+
+amt-lib = { workspace = true, optional = true }
+inquire = { workspace = true, optional = true }

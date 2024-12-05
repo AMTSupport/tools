@@ -38,7 +38,7 @@ impl CleanerInternal for TrashCleaner {
 
     #[cfg(windows)]
     fn locations(&self) -> Vec<Location> {
-        use lib::fs::DRIVES;
+        use amt_lib::fs::DRIVES;
 
         DRIVES
             .iter()

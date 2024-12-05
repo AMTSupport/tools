@@ -17,17 +17,14 @@
 #![feature(async_closure)]
 #![feature(lazy_cell)]
 
+use amt_lib::log;
+use amt_lib::ui::cli::flags::CommonFlags;
 use anyhow::Result;
 use clap::{Parser, Subcommand, ValueEnum};
 use csv::{Writer, WriterBuilder};
-use endpoints::nable::endpoints::NSightEndpoint;
-use lib::log;
-use lib::ui::cli::flags::CommonFlags;
+use interfacer::endpoints::endpoint::Endpoint;
+use interfacer::endpoints::nable::endpoints::{NSightEndpoint, Response};
 use macros::{EnumNames, EnumVariants};
-use rest::endpoints;
-use rest::endpoints::endpoint::Endpoint;
-use rest::endpoints::nable::endpoints::Response;
-use rest::endpoints::nable::structs::xml::Items;
 use serde::{Serialize, Serializer};
 use std::fmt::Debug;
 use std::fs::File;

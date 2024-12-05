@@ -20,8 +20,8 @@
 #![allow(incomplete_features)]
 #![feature(inherent_associated_types)]
 
+use amt_lib::helper::require_elevated_privileges;
 use anyhow::Result;
-use lib::helper::require_elevated_privileges;
 use std::sync::LazyLock;
 use sys_cleaner::application::application;
 use sys_cleaner::config::runtime::Runtime;
@@ -30,7 +30,7 @@ static RUNTIME: LazyLock<Runtime> = LazyLock::new(|| Runtime::new().unwrap());
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<()> {
-    let _guard = lib::log::init(env!("CARGO_PKG_NAME"), &RUNTIME.cli.flags);
+    let _guard = amt_lib::log::init(env!("CARGO_PKG_NAME"), &RUNTIME.cli.flags);
     let _ = require_elevated_privileges().is_some_and(|code| code.exit());
     application(&RUNTIME).await?;
 

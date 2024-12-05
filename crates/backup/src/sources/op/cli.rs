@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 James Draycott <me@racci.dev>
+ * Copyright (C) 2023-2024. James Draycott me@racci.dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -7,11 +7,11 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
 pub mod identifier {
@@ -227,7 +227,7 @@ pub mod whoami {
     pub enum WhoAmI {
         User {
             #[serde(flatten)]
-            short: super::account::Short,
+            short: super::account::AccountShort,
         },
         ServiceAccount {
             #[serde(rename = "URL")]
@@ -266,7 +266,7 @@ pub mod account {
     /// This comes from the list of account gotten with `op list accounts`
     #[cfg_attr(test, derive(Dummy))]
     #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-    pub struct Short {
+    pub struct AccountShort {
         #[cfg_attr(test, dummy(faker = "DomainSuffix()"))]
         pub url: String,
 
@@ -308,18 +308,18 @@ pub mod account {
             attrs: Attrs,
 
             #[serde(default, skip)]
-            short: Option<Short>,
+            short: Option<AccountShort>,
         },
         Business {
             #[serde(flatten)]
             attrs: Attrs,
 
             #[serde(default, skip)]
-            short: Option<Short>,
+            short: Option<AccountShort>,
         },
     }
 
-    impl CliGetter<OnePasswordCore, Vec<Short>, [&'static str; 2]> for Short {
+    impl CliGetter<OnePasswordCore, Vec<AccountShort>, [&'static str; 2]> for AccountShort {
         const ARGS: [&'static str; 2] = ["account", "list"];
     }
 
@@ -352,7 +352,7 @@ pub mod account {
 
         #[test]
         fn test_short() {
-            let reference: Short = Faker.fake();
+            let reference: AccountShort = Faker.fake();
 
             let json = json!({
                 "url": reference.url,
@@ -362,7 +362,7 @@ pub mod account {
             })
             .to_string();
 
-            let short = serde_json::from_str::<Short>(&json).unwrap();
+            let short = serde_json::from_str::<AccountShort>(&json).unwrap();
             assert_eq!(short.url, reference.url);
             assert_eq!(short.email, reference.email);
             assert_eq!(short.user_uuid, reference.user_uuid);
@@ -918,7 +918,7 @@ pub mod item {
             bars: (&ProgressBar, &MultiProgress),
         ) -> Result<Vec<Item>> {
             trace!("Requesting Items from {vault}");
-            let bar = bars.1.insert_after(bars.0, lib::ui::cli::progress::spinner_with_count());
+            let bar = bars.1.insert_after(bars.0, amt_lib::ui::cli::progress::spinner_with_count());
 
             bar.set_message(format!("Requesting items from `{vault}` vault...",));
 

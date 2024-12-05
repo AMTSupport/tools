@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 James Draycott <me@racci.dev>
+ * Copyright (C) 2023-2024. James Draycott me@racci.dev
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -7,32 +7,28 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
 use crate::config::runtime::Runtime;
 use crate::sources::downloader::Downloader;
 use crate::sources::getter::{CliGetter, CommandFiller};
-use crate::sources::interactive::Interactive;
 use crate::sources::op::cli;
 use crate::sources::op::core::OnePasswordCore;
+use amt_lib::pathed::Pathed;
 use anyhow::{anyhow, Context, Result};
-use futures_util::TryFutureExt;
-use lib::pathed::Pathed;
-use lib::ui::cli::ui_inquire::STYLE;
 use macros::CommonFields;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display, Formatter};
 use std::process::Command;
 use thiserror::Error;
-use tracing::{trace, warn};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Attrs {
+pub struct AccountAttrs {
     pub user: cli::user::User,
     pub account: cli::account::Account,
     pub vaults: Vec<cli::vault::Reference>,
@@ -40,8 +36,8 @@ pub struct Attrs {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, CommonFields)]
 pub enum OnePasswordAccount {
-    Personal { attrs: Attrs },
-    Service { attrs: Attrs, token: String },
+    Personal { attrs: AccountAttrs },
+    Service { attrs: AccountAttrs, token: String },
 }
 
 impl Pathed<Runtime> for OnePasswordAccount {
@@ -112,97 +108,6 @@ impl CommandFiller for OnePasswordAccount {
         };
 
         (args, envs)
-    }
-}
-
-impl Interactive<OnePasswordAccount> for OnePasswordAccount {
-    async fn interactive(config: &Runtime) -> Result<OnePasswordAccount> {
-        use inquire::{list_option::ListOption, validator::Validation, MultiSelect, Select, Text};
-        let selection = Select::new(
-            "What type of Account do you want to setup.",
-            vec!["Personal", "Service"],
-        ).with_render_config(*STYLE).with_help_message(r#"
-            A Service Account is a special type of account which can be logged in with a single token, however it cannot access Personal Vaults.
-            A Personal Account is the standard way of authenticating with the cli which requires the 1Password desktop application to be installed,
-            When using a Personal Account please ensure that the 1Password Desktop app doesn't have cli integration enabled.
-        "#.trim()).prompt().with_context(|| "Prompt for account type")?;
-
-        match selection {
-            "Personal" => Err(anyhow!("Personal accounts are not yet supported.")),
-            "Service" => {
-                trace!("Prompting for service account token");
-                // TODO :: Wrong url
-                let token = Text::new("Enter your 1Password service token")
-                    .with_help_message(
-                        "You can get a service token at https://my.1password.com/integrations/infrastructure-secrets",
-                    )
-                    .with_validator(|t: &str| match t.len() {
-                        0 => Ok(Validation::Invalid("Token cannot be empty".into())),
-                        _ if !t.starts_with("ops_") => {
-                            Ok(Validation::Invalid("Valid Service Token must start with 'ops_'".into()))
-                        }
-                        _ => Ok(Validation::Valid),
-                    })
-                    .with_placeholder("ops_...")
-                    .prompt()
-                    .map(|t| {
-                        let t = t.trim();
-                        t.to_owned()
-                    })
-                    .with_context(|| "Get service token input from user")?;
-
-                use cli::{
-                    account::{Account, Short},
-                    user::User,
-                    vault::Reference,
-                };
-
-                let envs: [(&str, &str); 1] = [("OP_SERVICE_ACCOUNT_TOKEN", &token)];
-                let user = User::_get(config, &envs, &[]);
-                let short = Short::_get(config, &envs, &[]);
-                let account = Account::_get(config, &envs, &[]).and_then(|a| async move {
-                    let attrs = a.attrs();
-                    let short = match short
-                        .await
-                        .inspect_err(|e| warn!("Failed to get short account: {}", e))
-                        .ok()
-                        .and_then(|s| s.into_iter().find(|s| s.account_uuid == attrs.identifier.id()))
-                    {
-                        None => return Ok(a),
-                        s => s,
-                    };
-
-                    Ok(match a {
-                        Account::Business { attrs, .. } => Account::Business { attrs, short },
-                        Account::Individual { attrs, .. } => Account::Individual { attrs, short },
-                    })
-                });
-
-                let vaults = Reference::_get(config, &envs, &[]).and_then(|v| async {
-                    match v.len() {
-                        0 => Err(anyhow!("No vaults found for this account.")),
-                        _ => MultiSelect::new("Select the vaults you want to use.", v)
-                            .with_render_config(*STYLE)
-                            .with_validator(|selections: &[ListOption<&Reference>]| match selections.len() {
-                                0 => Ok(Validation::Invalid("You must select at least one vault.".into())),
-                                _ => Ok(Validation::Valid),
-                            })
-                            .prompt()
-                            .context("Get vaults from user selection"),
-                    }
-                });
-
-                Ok(OnePasswordAccount::Service {
-                    attrs: Attrs {
-                        user: user.await?,
-                        account: account.await?,
-                        vaults: vaults.await?,
-                    },
-                    token,
-                })
-            }
-            _ => unreachable!("Invalid account type shouldn't be possible."),
-        }
     }
 }
 

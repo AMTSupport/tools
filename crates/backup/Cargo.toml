@@ -16,15 +16,16 @@ path = "src/main.rs"
 default = ["ui-cli", "sources-s3", "sources-bitwarden"]
 binary-downloader = ["bytes", "rand", "const_format", "zip"]
 
-ui-cli = ["indicatif", "inquire", "lib/ui-cli", "lib/builder"]
+ui-cli = ["indicatif", "inquire", "amt-lib/ui-cli", "obj-builder"]
 
 sources-s3 = ["opendal", "futures"]
 sources-bitwarden = ["binary-downloader"]
 sources-1password = ["binary-downloader", "zip"]
 
 [dependencies]
-lib.workspace = true
-macros.workspace = true
+amt-lib.workspace = true
+amt-macros.workspace = true
+obj-builder = { workspace = true, optional = true }
 
 # Runtimes
 tokio = { workspace = true }
@@ -33,10 +34,6 @@ tokio = { workspace = true }
 clap = { workspace = true }
 indicatif = { workspace = true, features = ["rayon"], optional = true }
 inquire = { workspace = true, features = ["path"], optional = true }
-
-# TUI
-ratatui = { workspace = true, features = ["all-widgets"], optional = true }
-crossterm = { workspace = true, optional = true }
 
 # Data / Serialization
 serde = { workspace = true }
@@ -63,7 +60,6 @@ fs-err.workspace = true
 filetime.workspace = true
 glob.workspace = true
 readable-regex.workspace = true
-paste.workspace = true
 
 opendal = { version = "0.45.1", features = [
     "services-s3",

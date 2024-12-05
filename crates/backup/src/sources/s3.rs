@@ -19,19 +19,19 @@ use crate::config::runtime::Runtime;
 use crate::sources::auto_prune::Prune;
 use crate::sources::download_to;
 use crate::sources::exporter::Exporter;
+use amt_lib::fs::normalise_path;
+use amt_lib::pathed::Pathed;
+use amt_lib::ui::cli::progress::{download, spinner};
+use amt_lib::ui::cli::ui_inquire::STYLE;
 use anyhow::{Context, Result};
 use futures::{Stream, TryStreamExt};
 use futures_util::StreamExt;
 use indicatif::{MultiProgress, ProgressBar};
 use inquire::validator::Validation;
-use lib::builder;
-use lib::fs::normalise_path;
-use lib::pathed::Pathed;
-use lib::ui::cli::progress::{download, spinner};
-use lib::ui::cli::ui_inquire::STYLE;
+use obj_builder::{builder, Builder};
 use opendal::layers::LoggingLayer;
 use opendal::services::S3;
-use opendal::{Builder, Operator, OperatorBuilder};
+use opendal::Operator;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -86,9 +86,10 @@ impl Eq for S3Core {}
 impl S3Core {
     fn op(&mut self) -> &Operator {
         self.op.get_or_insert_with(|| {
-            let map = (&self.base).into();
-            let backend = S3::from_map(map).build().unwrap();
-            OperatorBuilder::new(backend).layer(LoggingLayer::default()).finish()
+            Operator::from_map::<S3>((&self.base).into())
+                .unwrap()
+                .layer(LoggingLayer::default())
+                .finish()
         })
     }
 }
@@ -119,10 +120,7 @@ impl Pathed<Runtime> for S3Core {
 
 impl Exporter for S3Core {
     async fn interactive(_config: &Runtime) -> Result<Vec<Backend>> {
-        use lib::ui::{
-            builder::Builder,
-            cli::{continue_loop, env_or_prompt},
-        };
+        use amt_lib::ui::cli::{continue_loop, env_or_prompt};
 
         let not_empty_or_ascii =
             |str: &str, msg: &str| match str.chars().any(|c| !c.is_ascii_alphanumeric() && c != '-' && c != '_')
@@ -279,7 +277,7 @@ impl Exporter for S3Core {
 
             trace!("Checking if {} exists", &path.to_str().unwrap());
             let host_path = normalise_path(runtime.directory.join(&path));
-            if host_path.exists() && meta.content_length() == host_path.metadata().unwrap().len() {
+            if host_path.exists() && meta.content_length() == host_path.metadata()?.len() {
                 debug!("Skipping export of {} as it already exists", &path.to_str().unwrap());
                 progress_state.inc(1);
                 continue;
