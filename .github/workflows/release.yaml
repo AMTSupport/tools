@@ -47,7 +47,6 @@ jobs:
         with:
           name: amt
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-          # pushFilter: "(-source$|-${{ needs.extract-info.outputs.crate }}-deps-${{ needs.extract-info.outputs.version }}$|-${{ needs.extract-info.outputs.crate }}-${{ needs.extract-info.outputs.version }}$)"
 
       - name: Build Release Artifact for ${{ matrix.system }}
         run: nix build .#${{ needs.extract-info.outputs.crate }}-${{ matrix.system }}-release -L --accept-flake-config
