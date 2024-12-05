@@ -184,11 +184,6 @@
               })
               ourLib.buildableTargets;
           };
-
-          crates = {
-            lib.export = false;
-            macros.export = false;
-          };
         };
 
         packages = (lib.trivial.pipe config.nci.outputs [
