@@ -20,6 +20,8 @@ jobs:
       rebuild_all: ${{ steps.check-root-changes.outputs.rebuild_all }}
       matrix: ${{ steps.generate-matrix.outputs.matrix }}
     steps:
+      - uses: actions/checkout@v4
+
       - name: Extract Changed Crates
         id: extract-crates
         run: |
