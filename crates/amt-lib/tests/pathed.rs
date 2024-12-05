@@ -67,4 +67,7 @@ fn test_ensure_directory_exists() {
     // Check that the directory now exists
     assert!(test_dir.exists());
     assert!(test_dir.is_dir());
+
+    // Clean up
+    std::fs::remove_dir(&test_dir).unwrap();
 }

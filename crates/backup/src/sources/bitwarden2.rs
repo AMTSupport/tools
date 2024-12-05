@@ -20,12 +20,12 @@ use crate::sources::auto_prune::Prune;
 use crate::sources::downloader::Downloader;
 use crate::sources::exporter::Exporter;
 use crate::sources::getter::CliGetter;
+use amt_lib::fs::normalise_path;
+use amt_lib::pathed::Pathed;
 use anyhow::{anyhow, Context, Result};
 use const_format::formatcp;
 use indicatif::{MultiProgress, ProgressBar};
 use inquire::PasswordDisplayMode;
-use amt_lib::fs::normalise_path;
-use amt_lib::pathed::Pathed;
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::fmt::{Display, Formatter};
@@ -35,9 +35,8 @@ use tracing::{error, info, trace};
 
 #[cfg(feature = "ui-cli")]
 pub(crate) async fn interactive(config: &Runtime) -> Result<Vec<Backend>> {
+    use amt_lib::ui::cli::ui_inquire::inquire_style;
     use inquire::{Password, Text};
-    use amt
-    -lib::ui::cli::ui_inquire::inquire_style;
 
     let username = Text::new("BitWarden Username")
         .with_render_config(inquire_style())
