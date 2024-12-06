@@ -3,16 +3,19 @@ name: Continuous Integration
 on:
   push:
     branches: [ master ]
-    paths: [
-      'flake.nix',
-      'Cargo.toml',
-      'Cargo.lock',
-      'crates/**/src/**',
-      'crates/**/Cargo.toml',
-      '.github/workflows/ci.yml',
-    ]
 
 jobs:
+  flake-health-check:
+    runs-on: ubuntu-latest
+    name: Flake Health Check
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/flake-checker-action@main
+        with:
+          ignore-missing-flake-lock: false
+          fail-mode: true
+
   get-changes:
     runs-on: ubuntu-latest
     outputs:
