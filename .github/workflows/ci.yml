@@ -42,8 +42,7 @@ jobs:
           changes=$(git diff --name-only ${{ github.event.before }} ${{ github.event.ref }} | grep -oP '^(Cargo.toml|Cargo.lock|flake.nix|.github/workflows/ci.yml)$' | sort -u)
           if [ -n "$changes" ]; then
             echo "rebuild_all=true" >> "$GITHUB_OUTPUT"
-            echo "Root Changes: $changes"
-            echo "All Crates will be rebuilt."
+            echo "All Crates will be rebuilt due to changes in root build files."
           fi
       
       - name: Generate Matrix
@@ -58,6 +57,11 @@ jobs:
           fi
 
           echo "Crates: $crates"
+          if [ -z "$crates" ]; then
+            echo "No crates have changed."
+            echo "matrix={}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
           # We only want to build the crates defined as default members.
           default_members=$(cargo metadata --no-deps --format-version 1 | jq -r '.workspace_default_members[] | split("#")[0]' | xargs -n1 basename)
@@ -82,10 +86,10 @@ jobs:
 
   build-artifacts:
     needs: [ get-changes ]
+    if: ${{ needs.get-changes.outputs.matrix != '{}' }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.get-changes.outputs.matrix) }}
-
     runs-on: ${{ endsWith(matrix.system, 'darwin') && 'macos-latest' || 'ubuntu-latest' }}
     name: Build ${{ matrix.crate }} for ${{ matrix.system }}
     steps:
