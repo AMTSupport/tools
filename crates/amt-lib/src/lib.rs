@@ -34,8 +34,8 @@
 #![feature(negative_bounds)]
 #![feature(lazy_type_alias)]
 #![allow(async_fn_in_trait)]
-#![allow(internal_features)]
 #![allow(incomplete_features)]
+#![allow(internal_features)]
 
 pub mod fs;
 pub mod helper;
