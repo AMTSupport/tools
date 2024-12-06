@@ -15,7 +15,9 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-parts = { url = "github:hercules-ci/flake-parts"; inputs.nixpkgs-lib.follows = "nixpkgs"; };
-    devenv.url = "github:cachix/devenv";
+    # TODO - Use upstream once https://github.com/cachix/git-hooks.nix/pull/396 is merged
+    git-hooks = { url = "github:mrcjkb/git-hooks.nix/clippy"; inputs.nixpkgs.follows = "nixpkgs"; };
+    devenv = { url = "github:cachix/devenv"; inputs.git-hooks.follows = "git-hooks"; };
     fenix = { url = "github:nix-community/fenix"; inputs.nixpkgs.follows = "nixpkgs"; };
     crane = { url = "github:ipetkov/crane"; };
     nci = { url = "github:yusdacra/nix-cargo-integration"; inputs = { nixpkgs.follows = "nixpkgs"; parts.follows = "flake-parts"; crane.follows = "crane"; }; };
@@ -124,6 +126,10 @@
                   cargo = rustToolchain;
                   clippy = rustToolchain;
                 };
+                extraPackages = [
+                  pkgs.openssl
+                  pkgs.pkg-config
+                ];
               };
 
               rustfmt = {
@@ -133,6 +139,11 @@
                   rustfmt = rustToolchain;
                 };
               };
+            };
+
+            settings.rust.check.cargoDeps = pkgs.rustPlatform.importCargoLock {
+              lockFile = ./Cargo.lock;
+              allowBuiltinFetchGit = true;
             };
           };
         };
@@ -225,22 +236,7 @@
           })))
         ]);
 
-        # TODO - Refactor once https://github.com/cachix/git-hooks.nix/pull/396 is merged
-        checks.pre-commit =
-          let
-            inherit (config.devenv.shells.default) git-hooks;
-          in
-          pkgs.stdenv.mkDerivation {
-            name = "pre-commit-run";
-            src = git-hooks.rootSrc;
-            buildInputs = [ pkgs.git pkgs.openssl pkgs.pkg-config ];
-            nativeBuildInputs = [ pkgs.rustPlatform.cargoSetupHook ];
-            cargoDeps = pkgs.rustPlatform.importCargoLock {
-              lockFile = ./Cargo.lock;
-              allowBuiltinFetchGit = true;
-            };
-            buildPhase = git-hooks.run.buildCommand;
-          };
+        checks.pre-commit = config.devenv.shells.default.git-hooks.run;
       };
   };
 }
