@@ -66,7 +66,7 @@ jobs:
 
           cargo_metadata=$(cargo metadata --no-deps --format-version 1)
           default_members=$(echo "$cargo_metadata" | jq -r '.workspace_default_members[] | split("#")[0]' | xargs -n1 basename)
-          echo "available_binaries=$(echo "$cargo_metadata" | jq -r '.packages[] | select(.targets[].kind[] | contains("bin")) | .name')" >> "$GITHUB_OUTPUT"
+          echo "available_binaries=$(echo "$cargo_metadata" | jq -r '.packages | map(select(.targets[].kind[] | contains("bin")) | .name) | join(",")')" >> "$GITHUB_OUTPUT"
           
           # We only want to build the crates defined as default members.
           crates=$(echo "$crates" | grep -Fxf <(echo "$default_members"))
