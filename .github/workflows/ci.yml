@@ -24,8 +24,7 @@ jobs:
         with:
           fetch-depth: 2
 
-      - uses: cachix/install-nix-action@v30
-      - uses: DeterminateSystems/magic-nix-cache-action@v8
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
 
       - name: Extract Changed Crates
         id: extract-crates
@@ -61,7 +60,7 @@ jobs:
           echo "Crates: $crates"
 
           # We only want to build the crates defined as default members.
-          default_members=$(nix develop --impure -c cargo metadata --no-deps --format-version 1 | jq -r '.workspace_default_members[] | split("#")[0]' | xargs -n1 basename)
+          default_members=$(cargo metadata --no-deps --format-version 1 | jq -r '.workspace_default_members[] | split("#")[0]' | xargs -n1 basename)
           crates=$(echo "$crates" | grep -Fxf <(echo "$default_members"))
 
           echo "Default Members: $default_members"
