@@ -18,6 +18,7 @@ jobs:
     outputs:
       changed_crates: ${{ steps.extract-crates.outputs.changed_crates }}
       rebuild_all: ${{ steps.check-root-changes.outputs.rebuild_all }}
+      binaries: ${{ steps.generate-matrix.outputs.available_binaries }}
       matrix: ${{ steps.generate-matrix.outputs.matrix }}
     steps:
       - uses: actions/checkout@v4
@@ -63,8 +64,11 @@ jobs:
             exit 0
           fi
 
+          cargo_metadata=$(cargo metadata --no-deps --format-version 1)
+          default_members=$(echo "$cargo_metadata" | jq -r '.workspace_default_members[] | split("#")[0]' | xargs -n1 basename)
+          echo "available_binaries=$(echo "$cargo_metadata" | jq -r '.packages[] | select(.targets[].kind[] | contains("bin")) | .name')" >> "$GITHUB_OUTPUT"
+          
           # We only want to build the crates defined as default members.
-          default_members=$(cargo metadata --no-deps --format-version 1 | jq -r '.workspace_default_members[] | split("#")[0]' | xargs -n1 basename)
           crates=$(echo "$crates" | grep -Fxf <(echo "$default_members"))
 
           echo "Default Members: $default_members"
@@ -107,7 +111,7 @@ jobs:
       - run: nix build .#${{ matrix.crate }}-${{ matrix.system }}-dev -L --accept-flake-config
 
       - uses: actions/upload-artifact@v4.4.3
-        if: ${{ !github.event.act }}
+        if: ${{ contains(needs.get-changes.outputs.binaries, matrix.crate) && !github.event.act }}
         with:
           name: ${{ matrix.crate }}-${{ matrix.system }}
           path: result/bin/
