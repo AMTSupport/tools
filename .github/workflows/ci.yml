@@ -100,7 +100,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set Swap Space
-        if: ${{ !endsWith(matrix.system, 'darwin') && !github.event.act }}
+        if: ${{ !endsWith(matrix.system, 'darwin') && !env.ACT }}
         uses: pierotofy/set-swap-space@master
         with:
           swap-size-gb: 12
@@ -111,7 +111,7 @@ jobs:
       - run: nix build .#${{ matrix.crate }}-${{ matrix.system }}-dev -L --accept-flake-config
 
       - uses: actions/upload-artifact@v4.4.3
-        if: ${{ contains(needs.get-changes.outputs.binaries, matrix.crate) && !github.event.act }}
+        if: ${{ contains(needs.get-changes.outputs.binaries, matrix.crate) && !env.ACT }}
         with:
           name: ${{ matrix.crate }}-${{ matrix.system }}
           path: result/bin/
