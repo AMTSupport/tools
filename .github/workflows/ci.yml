@@ -50,8 +50,8 @@ jobs:
         id: generate-matrix
         run: |
           systems=("x86_64-linux" "aarch64-linux" "x86_64-windows" "aarch64-windows" "x86_64-darwin" "aarch64-darwin")
-          
-          if [ -n "$rebuild_all" ]; then
+
+          if [ "${{ steps.check-root-changes.outputs.rebuild_all }}" == true ]; then
             crates=$(find crates -mindepth 1 -maxdepth 1 -type d -exec basename {} \;)
           else
             crates=${{ steps.extract-crates.outputs.changed_crates }}
