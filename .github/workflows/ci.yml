@@ -144,7 +144,7 @@ jobs:
             echo "Checking for build-success-$crate_system"
             if [[ ${build_success_files[*]} =~ build-success-$crate_system ]]; then
               echo "Found build-success-$crate_system"
-              split=("${crate_system//-/ }")
+              readarray -d '-' -t split <<< "$crate_system"
               split_len=${#split[@]}
               crate=$(IFS=$'-' ; echo "${split[*]:0:$split_len-2}")
               system=$(IFS=$'-' ; echo "${split[*]:$split_len-2:2}")
