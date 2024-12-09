@@ -52,8 +52,6 @@ jobs:
       - name: Generate Matrix
         id: generate-matrix
         run: |
-          systems=("x86_64-linux" "aarch64-linux" "x86_64-windows" "aarch64-windows" "x86_64-darwin" "aarch64-darwin")
-
           if [ "${{ steps.check-root-changes.outputs.rebuild_all }}" == true ]; then
             crates=$(find crates -mindepth 1 -maxdepth 1 -type d -exec basename {} \;)
           else
@@ -77,18 +75,13 @@ jobs:
           echo "Default Members: $default_members"
           echo "Crates to Build: $crates"
 
-          matrix="{\"system\": ["
-          for system in "${systems[@]}"; do
-            matrix+="\"$system\","
-          done
-          matrix="${matrix::-1}],\"crate\": ["
+          matrix='{"system": ["x86_64-linux","aarch64-linux","x86_64-windows","aarch64-windows","x86_64-darwin","aarch64-darwin"],"crate": ['
           for crate in $crates; do
             matrix+="\"$crate\","
           done
           matrix="${matrix::-1}]}"
 
           echo "$matrix" | jq .
-
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
 
   build-artifacts:
@@ -114,17 +107,75 @@ jobs:
       - run: nix build .#${{ matrix.crate }}-${{ matrix.system }}-dev -L --accept-flake-config
 
       - uses: actions/upload-artifact@v4.4.3
-        if: ${{ contains(needs.get-changes.outputs.binaries, matrix.crate) && !env.ACT }}
+        if: ${{ contains(needs.get-changes.outputs.binaries, matrix.crate) }}
         with:
           name: ${{ matrix.crate }}-${{ matrix.system }}
           path: result/bin/
           if-no-files-found: error
 
-  run-tests:
+      - run: touch "build-success-${{ matrix.crate }}-${{ matrix.system }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build-success-${{ matrix.crate }}-${{ matrix.system }}
+          path: build-success-${{ matrix.crate }}-${{ matrix.system }}
+
+  determine-tests:
     needs: [ get-changes, build-artifacts ]
+    if: ${{ needs.get-changes.outputs.matrix != '{}' && always() }}
+    runs-on: ubuntu-latest
+    outputs:
+      test-matrix: ${{ steps.get-test-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: build-success-*
+
+      - name: Get Test Matrix
+        id: get-test-matrix
+        shell: bash
+        run: |
+          crate_systems=$(echo '${{ needs.get-changes.outputs.matrix }}' | jq -r '.crate[] as $crate | .system[] as $system | "\($crate)-\($system)"')
+
+          build_success_files=$(find . -maxdepth 2 -type f -name "build-success-*" -exec basename {} \;)
+          echo "Build Success Files: $build_success_files"
+
+          declare -a found_artifacts=()
+          for crate_system in $crate_systems; do
+            echo "Checking for build-success-$crate_system"
+            if [[ ${build_success_files[*]} =~ build-success-$crate_system ]]; then
+              echo "Found build-success-$crate_system"
+              found_artifacts+=("$crate_system")
+            fi
+          done
+
+          if [ ${#found_artifacts[@]} = 0 ]; then
+            echo "No artifacts found."
+            echo "matrix={}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          matrix='{"system": ["x86_64-linux","aarch64-linux","x86_64-windows","aarch64-windows","x86_64-darwin","aarch64-darwin"], "crate": ['
+          for crate_system in "${found_artifacts[@]}"; do
+            crate="${crate_system%-*}"
+            matrix+="\"$crate\","
+          done
+          matrix="${matrix::-1}]}"
+          
+          echo "$matrix" | jq .
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+      
+      # We always want to cleanup the matrix artifacts.
+      - uses: geekyeggo/delete-artifact@v5
+        if: ${{ always() }}
+        with:
+          name: build-success-*
+
+  run-tests:
+    needs: [ determine-tests ]
+    if: ${{ needs.determine-tests.outputs.test-matrix != '{}' }}
     strategy:
       fail-fast: false
-      matrix: ${{ fromJson(needs.get-changes.outputs.matrix) }}
+      matrix: ${{ fromJson(needs.determine-tests.outputs.test-matrix) }}
     runs-on: ${{ endsWith(matrix.system, 'darwin') && 'macos-latest' || 'ubuntu-latest' }}
     name: Run Tests for ${{ matrix.crate }} on ${{ matrix.system }}
     steps:
@@ -142,7 +193,7 @@ jobs:
             echo "run_tests=false" >> "$GITHUB_OUTPUT"
           fi
 
-          # We only want to run native tests on the runner that matches the host system.
+          # We only want to run native tests on the runner that matches the host system, no cross-architecture testing.
           host_system=$(nix eval --raw nixpkgs#system)
           if [[ "$matrix_system" == "$host_system" ]]; then
             echo "run_tests=true" >> "$GITHUB_OUTPUT"
