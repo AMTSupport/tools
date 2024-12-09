@@ -205,8 +205,8 @@ jobs:
           
       - name: Run Tests
         if: ${{ steps.should-run-tests.outputs.run_tests == 'true' }}
-        run: nix develop --impure -c cargo nextest run --package ${{ matrix.crate }} --all-features
+        run: nix develop --impure -c cargo nextest run --package ${{ matrix.crate.name }} --all-features
 
       - name: Run Doc Tests
         if: ${{ steps.should-run-tests.outputs.run_tests == 'true' }}
-        run: nix develop --impure -c cargo test --doc --package ${{ matrix.crate }}
+        run: nix develop --impure -c cargo test --doc --package ${{ matrix.crate.name }}
