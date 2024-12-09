@@ -139,12 +139,16 @@ jobs:
           build_success_files=$(find . -maxdepth 2 -type f -name "build-success-*" -exec basename {} \;)
           echo "Build Success Files: $build_success_files"
 
-          declare -a found_artifacts=()
+          declare -A found_artifacts=()
           for crate_system in $crate_systems; do
             echo "Checking for build-success-$crate_system"
             if [[ ${build_success_files[*]} =~ build-success-$crate_system ]]; then
               echo "Found build-success-$crate_system"
-              found_artifacts+=("$crate_system")
+              split=("${crate_system//-/ }")
+              split_len=${#split[@]}
+              crate=$(IFS=$'-' ; echo "${split[*]:0:$split_len-2}")
+              system=$(IFS=$'-' ; echo "${split[*]:$split_len-2:2}")
+              found_artifacts["$crate"]+="$system,"
             fi
           done
 
@@ -155,9 +159,10 @@ jobs:
           fi
 
           matrix='{"system": ["x86_64-linux","aarch64-linux","x86_64-windows","aarch64-windows","x86_64-darwin","aarch64-darwin"], "crate": ['
-          for crate_system in "${found_artifacts[@]}"; do
-            crate="${crate_system%-*}"
-            matrix+="\"$crate\","
+          for crate in "${!found_artifacts[@]}"; do
+            systems=${found_artifacts["$crate"]}
+            systems=${systems::-1}
+            matrix+="{\"name\": \"$crate\", \"systems\": [\"${systems//,/\",\"}\"]},"
           done
           matrix="${matrix::-1}]}"
           
@@ -177,7 +182,7 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJson(needs.determine-tests.outputs.test-matrix) }}
     runs-on: ${{ endsWith(matrix.system, 'darwin') && 'macos-latest' || 'ubuntu-latest' }}
-    name: Run Tests for ${{ matrix.crate }} on ${{ matrix.system }}
+    name: Run Tests for ${{ matrix.crate.name }} on ${{ matrix.system }}
     steps:
       - uses: actions/checkout@v4
       - uses: cachix/install-nix-action@v30
@@ -186,21 +191,18 @@ jobs:
       - name: Should we run tests?
         id: should-run-tests
         run: |
-          matrix_system="${{ matrix.system }}"
-          
-          # If the system ends with windows we should skip the tests.
-          if [[ "$matrix_system" == *windows ]]; then
-            echo "run_tests=false" >> "$GITHUB_OUTPUT"
-          fi
-
-          # We only want to run native tests on the runner that matches the host system, no cross-architecture testing.
-          host_system=$(nix eval --raw nixpkgs#system)
-          if [[ "$matrix_system" == "$host_system" ]]; then
-            echo "run_tests=true" >> "$GITHUB_OUTPUT"
-          fi
-
           echo "run_tests=false" >> "$GITHUB_OUTPUT"
+          host_system=$(nix eval --raw nixpkgs#system)
+          successful_builds=(${{ matrix.crate.systems }})
 
+          # If crate.systems does not contain the host system, the build was not successful and we should exit.
+          if [[ ${successful_builds[*]} =~ $host_system ]]; then
+            echo "Build was not successful for $host_system."
+            exit 0
+          fi
+
+          echo "run_tests=true" >> "$GITHUB_OUTPUT"
+          
       - name: Run Tests
         if: ${{ steps.should-run-tests.outputs.run_tests == 'true' }}
         run: nix develop --impure -c cargo nextest run --package ${{ matrix.crate }} --all-features
