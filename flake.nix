@@ -15,8 +15,8 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-parts = { url = "github:hercules-ci/flake-parts"; inputs.nixpkgs-lib.follows = "nixpkgs"; };
-    # TODO - Use upstream once https://github.com/cachix/git-hooks.nix/pull/396 is merged
-    git-hooks = { url = "github:mrcjkb/git-hooks.nix/clippy"; inputs.nixpkgs.follows = "nixpkgs"; };
+    # TODO - Remove once devenv updates its lockfile.
+    git-hooks = { url = "github:cachix/git-hooks.nix"; inputs.nixpkgs.follows = "nixpkgs"; };
     devenv = { url = "github:cachix/devenv"; inputs.git-hooks.follows = "git-hooks"; };
     fenix = { url = "github:nix-community/fenix"; inputs.nixpkgs.follows = "nixpkgs"; };
     crane = { url = "github:ipetkov/crane"; };
