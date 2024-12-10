@@ -78,22 +78,15 @@
             hyperfine
             cocogitto
 
-            cargo-asm
             cargo-audit
-            cargo-bloat
-            cargo-cranky
             cargo-deadlinks
             cargo-deny
-            cargo-diet
+            cargo-shear
             cargo-edit
             cargo-expand
-            cargo-geiger
-            cargo-hack
-            cargo-machete
             cargo-modules
             cargo-nextest
             cargo-semver-checks
-            cargo-udeps
             cargo-unused-features
           ];
 
