@@ -16,11 +16,11 @@
 
 use crate::config::runtime::Runtime;
 use crate::sources::downloader::Downloader;
-use crate::sources::getter::{CliGetter, CommandFiller};
+use crate::sources::getter::CommandFiller;
 use crate::sources::op::cli;
 use crate::sources::op::core::OnePasswordCore;
 use amt_lib::pathed::Pathed;
-use anyhow::{anyhow, Context, Result};
+use anyhow::Result;
 use macros::CommonFields;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display, Formatter};
