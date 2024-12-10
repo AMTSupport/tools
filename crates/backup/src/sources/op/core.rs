@@ -63,17 +63,30 @@ impl Pathed<Runtime> for OnePasswordCore {
 }
 
 impl Downloader for OnePasswordCore {
-    const BINARY: &'static str = if cfg!(windows) { "op.exe" } else { "op" };
+    /// The name of the 1Password CLI binary.
+    const BINARY: &'static str = formatcp!("op{ext}", ext = env::consts::EXE_SUFFIX);
+
+    /// The URL to download the 1Password CLI binary from.
+    ///
+    /// These URLs are generated based on the downloads from https://app-updates.agilebits.com/product_history/CLI2.
     const URL: &'static str = formatcp!(
         "https://cache.agilebits.com/dist/1P/op2/pkg/{version}/op_{os}_{arch}_{version}.zip",
         version = "v2.18.0",
-        os = env::consts::OS,
+        os = if cfg!(target_os = "macos") {
+            "darwin"
+        } else {
+            env::consts::OS
+        },
         arch = if cfg!(target_arch = "x86") {
             "386"
         } else if cfg!(target_arch = "x86_64") {
             "amd64"
+        } else if cfg!(target_arch = "arm") {
+            "arm"
+        } else if cfg!(target_arch = "aarch64") {
+            "arm64"
         } else {
-            panic!("Unsupported arch")
+            panic!("Unsupported architecture")
         }
     );
 
