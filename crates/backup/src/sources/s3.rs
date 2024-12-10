@@ -86,7 +86,7 @@ impl Eq for S3Core {}
 impl S3Core {
     fn op(&mut self) -> &Operator {
         self.op.get_or_insert_with(|| {
-            Operator::from_map::<S3>((&self.base).into())
+            Operator::from_iter::<S3>(<HashMap<String, String>>::from(&self.base))
                 .unwrap()
                 .layer(LoggingLayer::default())
                 .finish()
@@ -176,7 +176,7 @@ impl Exporter for S3Core {
                     base.set_root(PathBuf::from(object_path));
                     let built_base = base.build().await?;
 
-                    let operator = match Operator::from_map::<S3>((&built_base).into()) {
+                    let operator = match Operator::from_iter::<S3>(<HashMap<String, String>>::from(&built_base)) {
                         Ok(b) => b.layer(LoggingLayer::default()).finish(),
                         Err(e) => {
                             error!("Failed to interactive operator: {}", e);
@@ -285,7 +285,13 @@ impl Exporter for S3Core {
 
             progress_state.set_message(format!("Downloading {:#}...", &filename));
             let reader = op.reader_with(item.path()).await?;
-            download_to(meta.content_length(), reader.boxed(), &path, &download_bar).await?;
+            download_to(
+                meta.content_length(),
+                reader.into_bytes_stream(0..).await?.boxed(),
+                &path,
+                &download_bar,
+            )
+            .await?;
 
             debug!("Setting access time for {}", &path.to_str().unwrap());
             progress_state.set_message(format!("Setting access time for {:#}...", &filename));

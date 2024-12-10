@@ -18,7 +18,7 @@ binary-downloader = ["bytes", "rand", "const_format", "zip"]
 
 ui-cli = ["indicatif", "inquire", "amt-lib/ui-cli", "obj-builder"]
 
-sources-s3 = ["opendal", "futures"]
+sources-s3 = ["opendal", "futures", "dep:paste"]
 sources-bitwarden = ["binary-downloader"]
 sources-1password = ["binary-downloader", "zip"]
 
@@ -28,16 +28,16 @@ amt-macros.workspace = true
 obj-builder = { workspace = true, optional = true }
 
 # Runtimes
-tokio = { workspace = true }
+tokio.workspace = true
 
 # Cli & UI
-clap = { workspace = true }
+clap.workspace = true
 indicatif = { workspace = true, features = ["rayon"], optional = true }
 inquire = { workspace = true, features = ["path"], optional = true }
 
 # Data / Serialization
-serde = { workspace = true }
-serde_json = { workspace = true }
+serde.workspace = true
+serde_json.workspace = true
 chrono = { workspace = true, features = ["serde", "clock"] }
 zip = { workspace = true, features = [
     # "zstd",
@@ -45,32 +45,31 @@ zip = { workspace = true, features = [
     "deflate",
     "deflate-zlib",
 ], optional = true } # TODO :: Downsize features
+paste = { workspace = true, optional = true }
 
 # Networking
-reqwest = { workspace = true, features = ["stream"] }
+reqwest = { workspace = true, features = ["stream", "rustls-tls"] }
 
 # Logging & Errors
-tracing = { workspace = true }
-tracing-subscriber = { workspace = true }
-tracing-appender = { workspace = true }
-thiserror = { workspace = true }
-anyhow = { workspace = true }
+tracing.workspace = true
+tracing-subscriber.workspace = true
+tracing-appender.workspace = true
+thiserror.workspace = true
+anyhow.workspace = true
 
 fs-err.workspace = true
 filetime.workspace = true
 glob.workspace = true
-readable-regex.workspace = true
 
-opendal = { version = "0.45.1", features = [
-    "services-s3",
-    "rustls",
+opendal = { workspace = true, features = [
+    "services-s3"
 ], optional = true }
 
 # Futures & Async
 futures = { workspace = true, optional = true }
-futures-util = { workspace = true }
-tokio-stream = { workspace = true }
-rayon = { workspace = true }
+futures-util.workspace = true
+tokio-stream.workspace = true
+rayon.workspace = true
 
 # For downloading cli binaries
 bytes = { workspace = true, optional = true }

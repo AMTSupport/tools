@@ -33,7 +33,7 @@ pub trait Prune {
     /// * `rules` - The `AutoPrune` struct which contains the rules for pruning.
     /// # Returns
     /// A `Result` with the `Vec<PathBuf>` of the files which were removed.
-    fn prune(&self, config: &Runtime, _progress_bar: &MultiProgress) -> Result<Vec<PathBuf>> {
+    fn prune(&self, _config: &Runtime, _progress_bar: &MultiProgress) -> Result<Vec<PathBuf>> {
         // let files = self.files(config)?.sort_by(|a, b| {
         //     fn chrono(path: &PathBuf) -> Result<DateTime<FixedOffset>> {
         //         let meta = path.metadata().context("Get meta for comparing times")?;

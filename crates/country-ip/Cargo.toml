@@ -51,9 +51,10 @@ thiserror.workspace = true
 anyhow.workspace = true
 
 # Misc
-rand = { version = "0.8.5", features = ["small_rng"] }
-cidr = "0.2.2"
 chrono.workspace = true
+rand = { workspace = true, features = ["small_rng"] }
+cidr.workspace = true
+keshvar = { workspace = true, features = ["search-iso-short-name"] }
 
 # Futures & Async
 futures = { workspace = true, features = ["std"] }
@@ -61,9 +62,6 @@ async-trait.workspace = true
 async-compression.workspace = true
 tokio-util = { workspace = true, features = ["compat"] }
 rayon.workspace = true
-
-# Countries
-keshvar = { version = "0.5.0", features = ["search-iso-short-name"] }
 
 # Testing
 [dev-dependencies]

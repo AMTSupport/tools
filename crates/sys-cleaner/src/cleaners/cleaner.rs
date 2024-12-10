@@ -212,7 +212,7 @@ pub enum MissedFile {
     #[error("Unable to remove file {0} due to missing permissions")]
     Permission(PathBuf, u64),
 
-    #[error("Unable to remove file {0} due to an invalid filename, filename length {}", .0.clone().into_os_string().len())]
+    #[error("Unable to remove file {0} due to an invalid filename, filename length {size}", size = .0.clone().into_os_string().len())]
     Invalid(PathBuf, u64),
 
     #[error("Unable to remove file {0} due to an unknown error")]

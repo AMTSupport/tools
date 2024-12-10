@@ -23,14 +23,12 @@ ui-cli = ["amt-lib/ui-cli"]
 [dependencies]
 amt-lib.workspace = true
 amt-macros.workspace = true
-impls = "1.0.3"
 
 # Runtimes
 tokio.workspace = true
 
 # Cli & UI
 clap.workspace = true
-clap_complete.workspace = true
 indicatif.workspace = true
 inquire.workspace = true
 
@@ -43,18 +41,12 @@ cfg-if.workspace = true
 paste.workspace = true
 chrono.workspace = true
 glob.workspace = true
-michie = "3.0.2"
-lazy_static = "1.4.0"
-downcast-rs = "1.2.0"
 
 # Logging & Errors
 tracing.workspace = true
 tracing-subscriber.workspace = true
 thiserror.workspace = true
 anyhow.workspace = true
-
-[target.'cfg(unix)'.dependencies]
-permissions = "0.5.1"
 
 [dev-dependencies]
 env_logger.workspace = true

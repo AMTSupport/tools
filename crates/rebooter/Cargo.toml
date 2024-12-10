@@ -25,30 +25,29 @@ amt-lib.workspace = true
 amt-macros.workspace = true
 
 # Runtimes
-tokio = { workspace = true }
+tokio.workspace = true
 
 # Cli & UI
-clap = { workspace = true }
+clap.workspace = true
 
 # Data & Serialization
-chrono = { workspace = true, default-features = false }
+chrono.workspace = true
 
 # Logging & Errors
-tracing = { workspace = true }
-tracing-subscriber = { workspace = true }
-tracing-appender = { workspace = true }
-thiserror = { workspace = true }
-anyhow = { workspace = true }
+tracing.workspace = true
+tracing-subscriber.workspace = true
+tracing-appender.workspace = true
+thiserror.workspace = true
+anyhow.workspace = true
 
-uptime_lib = "0.3.0"
-sysexits = { workspace = true }
-planif = "1.0.0"
-notify-rust = "4.10.0"
+uptime_lib.workspace = true
+sysexits.workspace = true
+notify-rust.workspace = true
 
 [target.'cfg(windows)'.dependencies]
-planif = "1.0.0"
-registry = "1.2.3"
+planif.workspace = true
+registry.workspace = true
 
 [dev-dependencies]
-fake = { version = "2.6", features = ["derive", "chrono", "maybe-non-empty-collections"] }
-rand = { workspace = true }
+rand.workspace = true
+fake = { workspace = true, features = ["derive", "chrono", "maybe-non-empty-collections"] }

@@ -50,20 +50,8 @@ anyhow = { workspace = true }
 csv.workspace = true
 serde_with.workspace = true
 
-#async-trait = "0.1.68"
-#async-lazy = "0.1.0"
-#cached = "0.43.0"
-#michie = { version = "3.0.2" }
-#skim = "0.10.4"
-#regex = "1.8.1"
-#fuzzy-matcher = "0.3.7"
-
 # Testing
 [dev-dependencies]
 env_logger.workspace = true
 test-log.workspace = true
 tracing-subscriber = { workspace = true, default-features = false, features = ["env-filter", "fmt"] }
-
-
-#[patch.crates-io]
-#csv = { git = "https://github.com/gootorov/rust-csv.git", branch = "serde-flatten" }
