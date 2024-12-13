@@ -154,6 +154,7 @@ pub mod user {
         Dummy,
     };
     use macros::CommonFields;
+    use serde_json_fmt::JsonFormat;
 
     #[cfg_attr(test, derive(Dummy))]
     #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -211,7 +212,7 @@ pub mod user {
         .trim();
 
         let user = serde_json::from_str::<User>(json).unwrap();
-        let serialised = serde_json::to_string_pretty(&user).unwrap();
+        let serialised = JsonFormat::pretty().indent_width(Some(4)).format_to_string(&user).unwrap();
 
         assert_eq!(json, serialised, "Serialisation should be the same");
     }

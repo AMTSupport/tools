@@ -38,6 +38,7 @@ inquire = { workspace = true, features = ["path"], optional = true }
 # Data / Serialization
 serde.workspace = true
 serde_json.workspace = true
+serde-json-fmt.workspace = true
 chrono = { workspace = true, features = ["serde", "clock"] }
 zip = { workspace = true, features = [
     # "zstd",
