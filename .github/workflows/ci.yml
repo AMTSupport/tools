@@ -35,8 +35,10 @@ jobs:
         run: |
           changes=$(git diff --name-only ${{ github.event.before }} ${{ github.event.ref }} | grep -oP 'crates/[^/]+/' | sort -u)
           crates=$(echo "$changes" | sed -E 's/crates\/([^\/]+)\//\1/g' | sort -u)
-          echo "changed_crates=$crates" >> "$GITHUB_OUTPUT"
-          echo "Changed Crates: $crates"
+          readarray -t crates <<< "$crates"
+          changed_crates=$(IFS=, ; echo "${crates[*]}")
+          echo "changed_crates=$changed_crates" >> "$GITHUB_OUTPUT"
+          echo "Changed Crates: $changed_crates"
 
       # If any of the root files have changed we should rebuild all crates.
       - name: Check for Root Changes
@@ -55,28 +57,28 @@ jobs:
           if [ "${{ steps.check-root-changes.outputs.rebuild_all }}" == true ]; then
             crates=$(find crates -mindepth 1 -maxdepth 1 -type d -exec basename {} \;)
           else
-            crates=${{ steps.extract-crates.outputs.changed_crates }}
+            readarray -d ',' -t crates <<< '${{ steps.extract-crates.outputs.changed_crates }}'
           fi
 
-          echo "Crates: $crates"
-          if [ -z "$crates" ]; then
+          echo "Crates: ${crates[*]}"
+          if [ ${#crates[@]} -eq 0 ]; then
             echo "No crates have changed."
             echo "matrix={}" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
           cargo_metadata=$(cargo metadata --no-deps --format-version 1)
-          default_members=$(echo "$cargo_metadata" | jq -r '.workspace_default_members[] | split("#")[0]' | xargs -n1 basename)
+          readarray -t default_members < <(echo "$cargo_metadata" | jq -r '.workspace_default_members[] | split("#")[0]' | xargs -n1 basename)
           echo "available_binaries=$(echo "$cargo_metadata" | jq -r '.packages | map(select(.targets[].kind[] | contains("bin")) | .name) | join(",")')" >> "$GITHUB_OUTPUT"
           
           # We only want to build the crates defined as default members.
-          crates=$(echo "$crates" | grep -Fxf <(echo "$default_members"))
+          readarray -t crates < <(comm -12 <(printf "%s\n" "${crates[@]}" | sort) <(printf "%s\n" "${default_members[@]}" | sort))
 
-          echo "Default Members: $default_members"
-          echo "Crates to Build: $crates"
+          echo "Default Members: ${default_members[*]}"
+          echo "Crates to Build: ${crates[*]}"
 
           matrix='{"system": ["x86_64-linux","aarch64-linux","x86_64-windows","aarch64-windows","x86_64-darwin","aarch64-darwin"],"crate": ['
-          for crate in $crates; do
+          for crate in "${crates[@]}"; do
             matrix+="\"$crate\","
           done
           matrix="${matrix::-1}]}"
