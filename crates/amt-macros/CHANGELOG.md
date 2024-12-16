@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [amt-macros-v0.2.1](https://github.com/AMTSupport/tools/compare/6614e341eaca735cc0a58319f3166be5324df5f8..amt-macros-v0.2.1) - 2024-12-16
+#### <!-- 2 -->🚜 Refactor
+- rename of modules to allow for publishing to crates.io - ([6614e34](https://github.com/AMTSupport/tools/commit/6614e341eaca735cc0a58319f3166be5324df5f8)) - DaRacci
+#### <!-- 9 -->⚙️ Miscellaneous Tasks
+- **(deps)** Update Cargo dependencies - ([7a1bf0c](https://github.com/AMTSupport/tools/commit/7a1bf0c69b95be6c1e6618a3e6615a9dc1cfb232)) - DaRacci
+
+- - -
+
 ## [macros-v0.2.0](https://github.com/AMTSupport/tools/compare/backup-v0.1.0..macros-v0.2.0) - 2024-03-01
 #### <!-- 0 -->⛰️  Features
 - add chrome and edge profiles - ([48541c6](https://github.com/AMTSupport/tools/commit/48541c6980fc6d09368f596d68b874bd613841c6)) - DaRacci
