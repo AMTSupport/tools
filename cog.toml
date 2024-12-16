@@ -11,7 +11,8 @@ pre_package_bump_hooks = [
     "gh auth status &> /dev/null || exit 1",
     # Don't want to run all checks on every package bump, only relevant ones.
     "nix develop --impure -c pre-commit run --all-files",
-    "nix  build .#checks.x86_64-linux.{{package}} -L --allow-import-from-derivation --no-link",
+    "nix build .#checks.x86_64-linux.{{package}}-clippy -L --allow-import-from-derivation --no-link",
+    "nix build .#checks.x86_64-linux.{{package}}-tests -L --allow-import-from-derivation --no-link",
     "cargo set-version --package {{package}} {{version}}",
 ]
 post_package_bump_hooks = [
