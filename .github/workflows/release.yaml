@@ -43,6 +43,14 @@ jobs:
       - uses: cachix/install-nix-action@v30
       - uses: DeterminateSystems/magic-nix-cache-action@v8
 
+      - name: Is there a binary?
+        id: binary-exists
+        run: |
+          metadata=$(nix develop --impure --command cargo metadata --no-deps --format-version 1)
+          has_binary=$(echo "$metadata" | jq -r '.packages | map(select(.targets[].kind[] | contains("bin")) | .name) | any(. == "${{ needs.extract-info.outputs.crate }}")')
+          echo "result=$([[ $has_binary == "true" ]] && echo "success" || echo "failure")" >> "$GITHUB_OUTPUT"
+
+        # Setup after develop invocation to avoid caching anything other than the build artifacts.
       - uses: cachix/cachix-action@v15
         with:
           name: amt
@@ -52,6 +60,7 @@ jobs:
         run: nix build .#${{ needs.extract-info.outputs.crate }}-${{ matrix.system }}-release -L --accept-flake-config
 
       - name: Change the name of the artifact
+        if: steps.binary-exists.outputs.result == 'success'
         id: binary-name
         run: |
           binary=$(find result/bin -type f -exec basename {} \;)
@@ -60,6 +69,7 @@ jobs:
           echo "binary=$updated_binary" >> "$GITHUB_OUTPUT"
 
       - name: Upload Release Artifact for ${{ matrix.system }}
+        if: steps.binary-exists.outputs.result == 'success'
         uses: softprops/action-gh-release@v2
         with:
           files: /tmp/${{ steps.binary-name.outputs.binary }}
