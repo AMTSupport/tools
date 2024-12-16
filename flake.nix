@@ -62,11 +62,7 @@
             # so that rust-rover is happy. :)
             components = [ ];
 
-            toolchain = {
-              cargo = rustToolchain;
-              rustfmt = rustToolchain;
-              clippy = rustToolchain;
-            };
+            toolchain = rustToolchain;
           };
 
           packages = with pkgs; [
@@ -146,6 +142,7 @@
             mkBuild = _: with inputs'.fenix.packages; combine ([
               minimal.rustc
               minimal.cargo
+              complete.clippy
             ] ++ (lib.mapAttrsToList (_: target: targets.${target.rust.rustcTarget}.latest.rust-std) ourLib.buildableTargets));
           };
 
