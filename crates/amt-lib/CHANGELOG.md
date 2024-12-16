@@ -2,6 +2,16 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [amt-lib-v0.2.1](https://github.com/AMTSupport/tools/compare/6614e341eaca735cc0a58319f3166be5324df5f8..amt-lib-v0.2.1) - 2024-12-16
+#### <!-- 1 -->🐛 Bug Fixes
+- **(test)** failing test on re-run - ([44d7f66](https://github.com/AMTSupport/tools/commit/44d7f666d2fdaf4ab6825f745be09edd460fe4dc)) - DaRacci
+#### <!-- 2 -->🚜 Refactor
+- rename of modules to allow for publishing to crates.io - ([6614e34](https://github.com/AMTSupport/tools/commit/6614e341eaca735cc0a58319f3166be5324df5f8)) - DaRacci
+#### <!-- 9 -->⚙️ Miscellaneous Tasks
+- test workflow - ([6f5efd0](https://github.com/AMTSupport/tools/commit/6f5efd0b2d045e043c34a3e62060e0c0f7db249b)) - DaRacci
+
+- - -
+
 ## [lib-v0.2.0](https://github.com/AMTSupport/tools/compare/lib-v0.1.1..lib-v0.2.0) - 2024-03-01
 #### <!-- 0 -->⛰️  Features
 - add chrome and edge profiles - ([9e0d633](https://github.com/AMTSupport/tools/commit/9e0d633fd146560c2a893cf1e274982e715fbd31)) - DaRacci

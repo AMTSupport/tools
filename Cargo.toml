@@ -24,7 +24,7 @@ readme = "README.md"
 # Listing all common dependencies here to make sure they are all
 # using the same versions, and to make it easier to update.
 [workspace.dependencies]
-amt-lib = { version = "0.2.0", path = "crates/amt-lib" }
+amt-lib = { version = "0.2.1", path = "crates/amt-lib" }
 amt-macros = { version = "0.2.0", path = "crates/amt-macros" }
 obj-builder = { version = "0.1.0", path = "crates/obj-builder" }
 
