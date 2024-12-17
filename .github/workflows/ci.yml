@@ -78,10 +78,15 @@ jobs:
           echo "Crates to Build: ${crates[*]}"
 
           matrix='{"system": ["x86_64-linux","aarch64-linux","x86_64-windows","aarch64-windows","x86_64-darwin","aarch64-darwin"],"crate": ['
+          addedAtLeastOne=false
           for crate in "${crates[@]}"; do
             matrix+="\"$crate\","
+            addedAtLeastOne=true
           done
-          matrix="${matrix::-1}]}"
+          if [ "$addedAtLeastOne" = true ]; then
+            matrix="${matrix::-1}"
+          fi
+          matrix="${matrix}]}"
 
           echo "$matrix" | jq .
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
@@ -123,7 +128,7 @@ jobs:
 
   determine-tests:
     needs: [ get-changes, build-artifacts ]
-    if: ${{ needs.get-changes.outputs.matrix != '{}' && always() }}
+    if: ${{ always() && needs.get-changes.outputs.matrix != '{}' }}
     runs-on: ubuntu-latest
     outputs:
       test-matrix: ${{ steps.get-test-matrix.outputs.matrix }}
@@ -161,12 +166,17 @@ jobs:
           fi
 
           matrix='{"system": ["x86_64-linux","aarch64-linux","x86_64-windows","aarch64-windows","x86_64-darwin","aarch64-darwin"], "crate": ['
+          addedAtLeastOne=false
           for crate in "${!found_artifacts[@]}"; do
             systems=${found_artifacts["$crate"]}
             systems=${systems::-1}
             matrix+="{\"name\": \"$crate\", \"systems\": [\"${systems//,/\",\"}\"]},"
+            addedAtLeastOne=true
           done
-          matrix="${matrix::-1}]}"
+          if [ "$addedAtLeastOne" = true ]; then
+            matrix="${matrix::-1}"
+          fi
+          matrix="${matrix}]}"
           
           echo "$matrix" | jq .
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
