@@ -128,7 +128,7 @@ jobs:
 
   determine-tests:
     needs: [ get-changes, build-artifacts ]
-    if: ${{ always() && needs.get-changes.outputs.matrix != '{}' }}
+    if: ${{ always() && needs.get-changes.outputs.matrix != '{}' && toJson(fromJson(needs.get-changes.outputs.matrix).crate) != '[]' }}
     runs-on: ubuntu-latest
     outputs:
       test-matrix: ${{ steps.get-test-matrix.outputs.matrix }}
