@@ -1,4 +1,4 @@
-name: Continuous Integration
+name: Debugging Workflow
 
 on:
   workflow_dispatch:
@@ -25,9 +25,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.event.inputs.ref }}
 
       - name: Set Swap Space
-        if: ${{ !endsWith(github.event.inputs.runner, 'darwin') }}
+        if: ${{ !startsWith(github.event.inputs.runner, 'macos') }}
         uses: pierotofy/set-swap-space@master
         with:
           swap-size-gb: 12
