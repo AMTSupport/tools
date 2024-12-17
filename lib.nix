@@ -74,6 +74,8 @@ rec {
     getRunnerForTarget = target:
       if target.pkgsCross.stdenv.buildPlatform.canExecute target.pkgsCross.stdenv.hostPlatform
       then null
+      else if pkgs.targetPlatform.system == "aarch64-darwin" && target.pkgsCross.targetPlatform.system == "x86_64-darwin"
+      then null # Rosetta can run x86_64 executables on Apple Silicon
       else if target.pkgsCross.targetPlatform.isWindows
       then
       # Wine can only run programs from the same architecture
