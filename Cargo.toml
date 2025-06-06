@@ -65,7 +65,7 @@ sysexits = "0.8.2"
 chrono = "0.4.39"
 rand = "0.8.5"
 rust-embed = "8.3.0"
-zip = { version = "2.2.0", default-features = false, features = [] }
+zip = { version = "2.4.2", default-features = false, features = [] }
 bytes = "1.6.0"
 regex = "1.10.4"
 glob = "0.3.1"
