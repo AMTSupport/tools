@@ -88,7 +88,7 @@ dependencies = [
  "self_update",
  "shlex",
  "sysexits",
- "thiserror 2.0.6",
+ "thiserror 2.0.18",
  "tracing",
  "tracing-appender",
  "tracing-indicatif",
@@ -488,7 +488,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "test-log",
- "thiserror 2.0.6",
+ "thiserror 2.0.18",
  "tokio",
  "tokio-stream",
  "tracing",
@@ -1144,7 +1144,7 @@ dependencies = [
  "rayon",
  "reqwest",
  "test-log",
- "thiserror 2.0.6",
+ "thiserror 2.0.18",
  "tokio",
  "tokio-util",
  "tracing",
@@ -2976,7 +2976,7 @@ dependencies = [
  "serde_with",
  "test-log",
  "thirtyfour",
- "thiserror 2.0.6",
+ "thiserror 2.0.18",
  "tokio",
  "tracing",
  "tracing-subscriber",
@@ -3656,7 +3656,7 @@ dependencies = [
  "anyhow",
  "inquire",
  "paste",
- "thiserror 2.0.6",
+ "thiserror 2.0.18",
 ]
 
 [[package]]
@@ -4440,7 +4440,7 @@ dependencies = [
  "rustc-hash 2.1.0",
  "rustls",
  "socket2",
- "thiserror 2.0.6",
+ "thiserror 2.0.18",
  "tokio",
  "tracing",
 ]
@@ -4459,7 +4459,7 @@ dependencies = [
  "rustls",
  "rustls-pki-types",
  "slab",
- "thiserror 2.0.6",
+ "thiserror 2.0.18",
  "tinyvec",
  "tracing",
  "web-time",
@@ -4590,7 +4590,7 @@ dependencies = [
  "rand",
  "registry",
  "sysexits",
- "thiserror 2.0.6",
+ "thiserror 2.0.18",
  "tokio",
  "tracing",
  "tracing-appender",
@@ -5577,7 +5577,7 @@ dependencies = [
  "paste",
  "rayon",
  "test-log",
- "thiserror 2.0.6",
+ "thiserror 2.0.18",
  "tokio",
  "tokio-stream",
  "tracing",
@@ -5737,11 +5737,11 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "2.0.6"
+version = "2.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8fec2a1820ebd077e2b90c4df007bebf344cd394098a13c563957d0afc83ea47"
+checksum = "4288b5bcbc7920c07a1149a35cf9590a2aa808e0bc1eafaade0b80947865fbc4"
 dependencies = [
- "thiserror-impl 2.0.6",
+ "thiserror-impl 2.0.18",
 ]
 
 [[package]]
@@ -5757,9 +5757,9 @@ dependencies = [
 
 [[package]]
 name = "thiserror-impl"
-version = "2.0.6"
+version = "2.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d65750cab40f4ff1929fb1ba509e9914eb756131cef4210da8d5d700d26f6312"
+checksum = "ebc4ee7f67670e9b64d05fa4253e753e016c6c95ff35b89b7941d6b856dec1d5"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -7534,7 +7534,7 @@ dependencies = [
  "flate2",
  "indexmap 2.7.0",
  "memchr",
- "thiserror 2.0.6",
+ "thiserror 2.0.18",
  "zopfli",
 ]
 
