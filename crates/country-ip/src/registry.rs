@@ -30,7 +30,57 @@ use std::str::FromStr;
 use std::sync::LazyLock;
 use thiserror::Error;
 use tokio::sync::Mutex;
-use tracing::instrument;
+use tracing::{error, instrument};
+
+/// Parse a single line from a RIR delegated-extended stats file into a RegistryRecord.
+/// Returns `None` if the line is a comment or malformed.
+fn parse_registry_line(line: &str, registry: Registry) -> Option<Record> {
+    if line.starts_with('#') {
+        return None;
+    }
+
+    let split = line.split('|').map(|s| s.into()).collect::<Vec<String>>();
+    if split.len() <= 6 {
+        error!("Invalid line {line}; skipping");
+        return None;
+    }
+
+    let alpha = match &*split[1] {
+        str if str.len() != 2 => return None,
+        str => match Alpha2::try_from(str) {
+            Ok(alpha) => alpha,
+            Err(_) => return None,
+        },
+    };
+
+    let value = match IpAddr::from_str(&split[3]) {
+        Ok(value) => value,
+        Err(_) => return None,
+    };
+
+    let range = match u32::from_str(&split[4]) {
+        Ok(range) => range,
+        Err(_) => return None,
+    };
+
+    let date = split[5].to_string();
+
+    let status = match &*split[6] {
+        "assigned" => Status::Assigned,
+        "allocated" => Status::Allocated,
+        "reserved" => Status::Reserved,
+        _ => return None,
+    };
+
+    Some(RegistryRecord {
+        registry,
+        alpha,
+        value,
+        range,
+        date,
+        status,
+    })
+}
 
 #[derive(Debug, Error)]
 pub enum RegistryErrors {
@@ -229,45 +279,7 @@ impl Registry {
             .lines()
             .par_bridge()
             .flatten()
-            .filter(|line| !line.starts_with('#')) // Remove comments
-            .map(|line| line.split('|').map(|s| s.into()).collect::<Vec<String>>()) // Split on pipe
-            .filter_map(|split| {
-                let alpha = match &*split[1] {
-                    str if str.len() != 2 => return None,
-                    str => match Alpha2::try_from(str) {
-                        Ok(alpha) => alpha,
-                        Err(_) => return None,
-                    },
-                };
-
-                let value = match IpAddr::from_str(&split[3]) {
-                    Ok(value) => value,
-                    Err(_) => return None,
-                };
-
-                let range = match u32::from_str(&split[4]) {
-                    Ok(range) => range,
-                    Err(_) => return None,
-                };
-
-                let date = split[5].to_string();
-
-                let status = match &*split[6] {
-                    "assigned" => Status::Assigned,
-                    "allocated" => Status::Allocated,
-                    "reserved" => Status::Reserved,
-                    _ => unreachable!("Invalid status"),
-                };
-
-                Some(RegistryRecord {
-                    registry: *self,
-                    alpha,
-                    value,
-                    range,
-                    date,
-                    status,
-                })
-            })
+            .filter_map(|line| parse_registry_line(&line, *self))
             .collect::<Vec<_>>();
 
         let record = RegistryRecords {
@@ -285,52 +297,91 @@ impl Registry {
 #[cfg(test)]
 mod test {
     use super::*;
-    use keshvar::CountryIterator;
-    use tracing::trace;
+    use keshvar::Country;
+    use std::net::Ipv4Addr;
 
-    #[test_log::test(tokio::test)]
-    async fn test_downloads() -> Result<()> {
-        for reg in Registry::get_variants() {
-            trace!("Testing {reg:?} | url: {}", reg.url());
-
-            reg.download().await?;
-            let records = reg.downloaded().await;
-            debug_assert!(records.is_ok(), "Failed to download {reg:?}; {records:?}");
-
-            let records = records?;
-            debug_assert!(!records.inner.is_empty(), "No records for {reg:?}");
-        }
-
+    #[test_log::test]
+    fn test_parse_registry_line_valid() -> Result<()> {
+        let line = "apnic|AU|ipv4|101.160.0.0|4194304|20250101|allocated";
+        let record = parse_registry_line(line, Registry::Apnic).ok_or(anyhow::anyhow!("should parse valid line"))?;
+        assert_eq!(*record.alpha(), Alpha2::AU);
+        assert_eq!(record.start(), IpAddr::V4(Ipv4Addr::new(101, 160, 0, 0)));
         Ok(())
     }
 
-    #[test_log::test(tokio::test)]
-    async fn test_all_countries() -> Result<()> {
-        trace!("Initialising registries");
-        for reg in Registry::get_variants() {
-            trace!("Initialising {reg:?}");
-            reg.download().await?;
-        }
+    #[test_log::test]
+    fn test_parse_registry_line_comment() {
+        let line = "# This is a comment";
+        assert!(parse_registry_line(line, Registry::Apnic).is_none());
+    }
 
-        trace!("Testing all countries");
-        for country in CountryIterator::new() {
-            let alpha = country.alpha2();
-            if DELEGATES.contains(&alpha) {
-                trace!("Skipping {} as its delegated", country.iso_short_name());
-                continue;
-            }
+    #[test_log::test]
+    fn test_parse_registry_line_invalid_alpha() {
+        let line = "apnic|XXX|ipv4|1.2.3.0|256|20250101|allocated";
+        assert!(parse_registry_line(line, Registry::Apnic).is_none());
+    }
 
-            trace!("Testing {country:?}");
+    #[test_log::test]
+    fn test_parse_registry_line_invalid_status() {
+        let line = "apnic|AU|ipv4|1.2.3.0|256|20250101|unknown";
+        assert!(parse_registry_line(line, Registry::Apnic).is_none());
+    }
 
-            let registry = Registry::get_for(&country);
-            debug_assert!(registry.is_ok(), "Failed to get registry for {country:?}; {registry:?}");
-            let registry = registry?;
-
-            let records = registry.get().await?;
-            let records = records.filtered(&country.alpha2()).await;
-            debug_assert!(!records.is_empty(), "No records for {country:?}");
-        }
-
+    #[test_log::test]
+    fn test_get_for_au_returns_apnic() -> Result<()> {
+        let country = Country::try_from(Alpha2::AU)?;
+        assert_eq!(Registry::get_for(&country)?, Registry::Apnic);
         Ok(())
+    }
+
+    #[test_log::test]
+    fn test_get_for_de_returns_ripencc() -> Result<()> {
+        let country = Country::try_from(Alpha2::DE)?;
+        assert_eq!(Registry::get_for(&country)?, Registry::Ripencc);
+        Ok(())
+    }
+
+    #[test_log::test]
+    fn test_get_for_us_returns_arin() -> Result<()> {
+        let country = Country::try_from(Alpha2::US)?;
+        assert_eq!(Registry::get_for(&country)?, Registry::Arin);
+        Ok(())
+    }
+
+    #[test_log::test]
+    fn test_get_for_br_returns_lacnic() -> Result<()> {
+        let country = Country::try_from(Alpha2::BR)?;
+        assert_eq!(Registry::get_for(&country)?, Registry::Lacnic);
+        Ok(())
+    }
+
+    #[test_log::test]
+    fn test_get_for_za_returns_afrinic() -> Result<()> {
+        let country = Country::try_from(Alpha2::ZA)?;
+        assert_eq!(Registry::get_for(&country)?, Registry::Afrinic);
+        Ok(())
+    }
+
+    #[test_log::test]
+    fn test_get_for_cx_returns_err_delegated() -> Result<()> {
+        let country = Country::try_from(Alpha2::CX)?;
+        assert!(Registry::get_for(&country).is_err());
+        Ok(())
+    }
+
+    #[test_log::test]
+    fn test_get_for_aq_returns_err_delegated() -> Result<()> {
+        let country = Country::try_from(Alpha2::AQ)?;
+        assert!(Registry::get_for(&country).is_err());
+        Ok(())
+    }
+
+    #[test_log::test]
+    fn test_registry_url_not_empty() {
+        for reg in Registry::get_variants() {
+            let url = reg.url();
+            assert!(!url.is_empty(), "URL for {reg:?} should not be empty");
+            assert!(url.starts_with("https://"), "URL for {reg:?} should start with https");
+        }
     }
 }

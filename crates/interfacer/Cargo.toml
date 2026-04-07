@@ -35,7 +35,13 @@ quick-xml.workspace = true
 chrono = { workspace = true, features = ["serde"] }
 
 # Networking
-reqwest = { workspace = true, features = ["json", "gzip", "cookies", "deflate"] }
+reqwest = { workspace = true, features = [
+    "json",
+    "gzip",
+    "cookies",
+    "deflate",
+    "rustls-tls",
+] }
 reqwest-middleware.workspace = true
 http-cache-reqwest.workspace = true
 thirtyfour.workspace = true
@@ -54,4 +60,7 @@ serde_with.workspace = true
 [dev-dependencies]
 env_logger.workspace = true
 test-log.workspace = true
-tracing-subscriber = { workspace = true, default-features = false, features = ["env-filter", "fmt"] }
+tracing-subscriber = { workspace = true, default-features = false, features = [
+    "env-filter",
+    "fmt",
+] }

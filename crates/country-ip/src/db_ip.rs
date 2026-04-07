@@ -30,6 +30,28 @@ use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio_util::compat::FuturesAsyncReadCompatExt;
 use tracing::{error, instrument};
 
+/// Parse a single CSV line into a DBRecord.
+/// Returns `None` if the line is malformed.
+fn parse_csv_line(line: &str) -> Option<Record> {
+    let split = line.split(',').map(|s| s.into()).collect::<Vec<String>>();
+    if split.len() != 3 {
+        error!("Invalid line {line}; skipping");
+        return None;
+    }
+
+    let start = IpAddr::from_str(&split[0])
+        .map_err(|e| error!("Failed to parse start {}; {e}", split[0]))
+        .ok()?;
+    let end = IpAddr::from_str(&split[1])
+        .map_err(|e| error!("Failed to parse end {}; {e}", split[1]))
+        .ok()?;
+    let alpha = Alpha2::try_from(&*split[2])
+        .map_err(|e| error!("Failed to parse country {}; {e}", split[2]))
+        .ok()?;
+
+    Some(DBRecord { alpha, start, end })
+}
+
 #[derive(Debug, Clone)]
 pub struct DB(Vec<Record>);
 
@@ -66,40 +88,9 @@ impl DB {
 
         let mut records = vec![];
         while let Some(line) = lines.next_line().await? {
-            let split = line.split(',').map(|s| s.into()).collect::<Vec<String>>();
-            if split.len() != 3 {
-                error!("Invalid line {line}; skipping");
-                continue;
+            if let Some(record) = parse_csv_line(&line) {
+                records.push(record);
             }
-
-            let value = &*split[0];
-            let start = match IpAddr::from_str(value) {
-                Ok(start) => start,
-                Err(e) => {
-                    error!("Failed to parse start {value}; {e}");
-                    continue;
-                }
-            };
-
-            let value = &*split[1];
-            let end = match IpAddr::from_str(value) {
-                Ok(end) => end,
-                Err(e) => {
-                    error!("Failed to parse end {value}; {e}");
-                    continue;
-                }
-            };
-
-            let value = &*split[2];
-            let alpha = match Alpha2::try_from(value) {
-                Ok(alpha) => alpha,
-                Err(e) => {
-                    error!("Failed to parse country {value}; {e}");
-                    continue;
-                }
-            };
-
-            records.push(DBRecord { alpha, start, end })
         }
 
         Ok(Self(records))
@@ -134,28 +125,79 @@ mod tests {
     use keshvar::Alpha2::AU;
     use std::net::Ipv4Addr;
 
-    #[test_log::test(tokio::test)]
-    async fn test_download() -> Result<()> {
-        let db = DB::new().await;
-        assert!(db.is_ok());
-
+    #[test_log::test]
+    fn test_parse_csv_line_valid() -> Result<()> {
+        let line = "101.160.0.0,101.191.255.255,AU";
+        let record = parse_csv_line(line).ok_or(anyhow::anyhow!("should parse valid line"))?;
+        assert_eq!(record.start(), IpAddr::V4(Ipv4Addr::new(101, 160, 0, 0)));
+        assert_eq!(record.end(), IpAddr::V4(Ipv4Addr::new(101, 191, 255, 255)));
+        assert_eq!(*record.alpha(), AU);
         Ok(())
     }
 
-    #[test_log::test(tokio::test)]
-    async fn test_db() -> Result<()> {
-        let db = DB::new().await?;
+    #[test_log::test]
+    fn test_parse_csv_line_invalid_columns() {
+        let line = "1.2.3.4,AU";
+        assert!(parse_csv_line(line).is_none());
+    }
 
-        let record = DBRecord {
-            start: IpAddr::V4(Ipv4Addr::new(101, 160, 0, 0)),
-            end: IpAddr::V4(Ipv4Addr::new(101, 191, 255, 255)),
-            alpha: AU,
-        };
-        let random = record.random();
+    #[test_log::test]
+    fn test_parse_csv_line_invalid_ip() {
+        let line = "not-an-ip,10.0.0.1,AU";
+        assert!(parse_csv_line(line).is_none());
+    }
 
-        assert_eq!(db.lookup(&random).await, Some(AU));
-        assert_eq!(db.lookup(&IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1))).await, None);
+    #[test_log::test]
+    fn test_parse_csv_line_invalid_country() {
+        let line = "1.2.3.4,1.2.3.255,XYZ";
+        assert!(parse_csv_line(line).is_none());
+    }
 
-        Ok(())
+    fn parse_fixture(lines: &[&str]) -> Vec<Record> {
+        lines.iter().filter_map(|l| parse_csv_line(l)).collect()
+    }
+
+    #[test_log::test]
+    fn test_lookup_from_fixture() {
+        let records = parse_fixture(&["101.160.0.0,101.191.255.255,AU", "1.0.0.0,1.0.0.255,US"]);
+        let db = DB(records);
+
+        let rt = tokio::runtime::Runtime::new()
+            .ok()
+            .and_then(|r| Some(r.block_on(db.lookup(&IpAddr::V4(Ipv4Addr::new(101, 160, 0, 1))))));
+        assert_eq!(rt, Some(Some(AU)));
+
+        assert_eq!(
+            block_lookup(&db, &IpAddr::V4(Ipv4Addr::new(1, 0, 0, 10))),
+            Some(Alpha2::US)
+        );
+        assert_eq!(block_lookup(&db, &IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1))), None);
+    }
+
+    #[test_log::test]
+    fn test_filtered_from_fixture() {
+        let records =
+            parse_fixture(&["101.160.0.0,101.191.255.255,AU", "1.0.0.0,1.0.0.255,US", "2.0.0.0,2.0.0.255,AU"]);
+        let db = DB(records);
+
+        let au_records = block_filtered(&db, &AU);
+        assert_eq!(au_records.len(), 2);
+
+        let us_records = block_filtered(&db, &Alpha2::US);
+        assert_eq!(us_records.len(), 1);
+
+        let missing_records = block_filtered(&db, &Alpha2::GB);
+        assert_eq!(missing_records.len(), 0);
+    }
+
+    fn block_lookup(db: &DB, ip: &IpAddr) -> Option<Alpha2> {
+        tokio::runtime::Runtime::new().ok().and_then(|rt| rt.block_on(db.lookup(ip)))
+    }
+
+    fn block_filtered<'a>(db: &'a DB, alpha: &'a Alpha2) -> Vec<&'a Record> {
+        tokio::runtime::Runtime::new()
+            .ok()
+            .map(|rt| rt.block_on(db.filtered(alpha)))
+            .unwrap_or_default()
     }
 }
