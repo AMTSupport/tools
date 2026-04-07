@@ -76,7 +76,7 @@ impl DB {
     // TODO - Cache the csv file for reuse.
     #[instrument(level = "TRACE", ret, err)]
     async fn new() -> Result<Self> {
-        let response = reqwest::get(Self::get_dated_url()).await?;
+        let response = reqwest::get(Self::get_dated_url()).await?.error_for_status()?;
         let stream = response
             .bytes_stream()
             .map_err(|e| FutureError::new(futures::io::ErrorKind::Other, e))
