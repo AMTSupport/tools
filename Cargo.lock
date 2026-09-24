@@ -88,7 +88,7 @@ dependencies = [
  "self_update",
  "shlex",
  "sysexits",
- "thiserror 2.0.6",
+ "thiserror 2.0.21",
  "tracing",
  "tracing-appender",
  "tracing-indicatif",
@@ -488,7 +488,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "test-log",
- "thiserror 2.0.6",
+ "thiserror 2.0.21",
  "tokio",
  "tokio-stream",
  "tracing",
@@ -1144,7 +1144,7 @@ dependencies = [
  "rayon",
  "reqwest",
  "test-log",
- "thiserror 2.0.6",
+ "thiserror 2.0.21",
  "tokio",
  "tokio-util",
  "tracing",
@@ -2976,7 +2976,7 @@ dependencies = [
  "serde_with",
  "test-log",
  "thirtyfour",
- "thiserror 2.0.6",
+ "thiserror 2.0.21",
  "tokio",
  "tracing",
  "tracing-subscriber",
@@ -3656,7 +3656,7 @@ dependencies = [
  "anyhow",
  "inquire",
  "paste",
- "thiserror 2.0.6",
+ "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -4440,7 +4440,7 @@ dependencies = [
  "rustc-hash 2.1.0",
  "rustls",
  "socket2",
- "thiserror 2.0.6",
+ "thiserror 2.0.21",
  "tokio",
  "tracing",
 ]
@@ -4459,7 +4459,7 @@ dependencies = [
  "rustls",
  "rustls-pki-types",
  "slab",
- "thiserror 2.0.6",
+ "thiserror 2.0.21",
  "tinyvec",
  "tracing",
  "web-time",
@@ -4590,7 +4590,7 @@ dependencies = [
  "rand",
  "registry",
  "sysexits",
- "thiserror 2.0.6",
+ "thiserror 2.0.21",
  "tokio",
  "tracing",
  "tracing-appender",
@@ -5539,6 +5539,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "syn"
+version = "3.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8593e8e72159ed2257d083c7a454a85cbf854f37a0966d8d483aff8c8a3ebcee"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "unicode-ident",
+]
+
+[[package]]
 name = "sync_wrapper"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5577,7 +5588,7 @@ dependencies = [
  "paste",
  "rayon",
  "test-log",
- "thiserror 2.0.6",
+ "thiserror 2.0.21",
  "tokio",
  "tokio-stream",
  "tracing",
@@ -5737,11 +5748,11 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "2.0.6"
+version = "2.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8fec2a1820ebd077e2b90c4df007bebf344cd394098a13c563957d0afc83ea47"
+checksum = "09e52cb86a36cede5cb101bf8908837b3e4c6e5e59fe7fd85c23fb56200d189e"
 dependencies = [
- "thiserror-impl 2.0.6",
+ "thiserror-impl 2.0.21",
 ]
 
 [[package]]
@@ -5757,13 +5768,13 @@ dependencies = [
 
 [[package]]
 name = "thiserror-impl"
-version = "2.0.6"
+version = "2.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d65750cab40f4ff1929fb1ba509e9914eb756131cef4210da8d5d700d26f6312"
+checksum = "fe5197923287db20a58125f0bc85c062f7f2c892de97b18c356f9efb14b28524"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.90",
+ "syn 3.0.6",
 ]
 
 [[package]]
@@ -7534,7 +7545,7 @@ dependencies = [
  "flate2",
  "indexmap 2.7.0",
  "memchr",
- "thiserror 2.0.6",
+ "thiserror 2.0.21",
  "zopfli",
 ]
 
