@@ -11,37 +11,37 @@ rec {
     Linux-X86_64 = rec {
       pkgsCross = pkgs.pkgsCross.gnu64;
       canBuild = true;
-      inherit (pkgsCross.targetPlatform) rust;
+      inherit (pkgsCross.stdenv.targetPlatform) rust;
     };
 
     Apple-X86_64 = rec {
       pkgsCross = pkgs.pkgsCross.x86_64-darwin;
-      canBuild = pkgs.targetPlatform.isDarwin;
-      inherit (pkgsCross.targetPlatform) rust;
+      canBuild = pkgs.stdenv.targetPlatform.isDarwin;
+      inherit (pkgsCross.stdenv.targetPlatform) rust;
     };
 
     Windows-X86_64 = rec {
       pkgsCross = pkgs.pkgsCross.mingwW64;
       canBuild = true;
-      inherit (pkgsCross.targetPlatform) rust;
+      inherit (pkgsCross.stdenv.targetPlatform) rust;
     };
 
     Linux-Aarch64 = rec {
       pkgsCross = pkgs.pkgsCross.aarch64-multiplatform;
       canBuild = true;
-      inherit (pkgsCross.targetPlatform) rust;
+      inherit (pkgsCross.stdenv.targetPlatform) rust;
     };
 
     Apple-Aarch64 = rec {
       pkgsCross = pkgs.pkgsCross.aarch64-darwin;
-      canBuild = pkgs.targetPlatform.isDarwin;
-      inherit (pkgsCross.targetPlatform) rust;
+      canBuild = pkgs.stdenv.targetPlatform.isDarwin;
+      inherit (pkgsCross.stdenv.targetPlatform) rust;
     };
 
     Windows-Aarch64 = rec {
       pkgsCross = pkgs.pkgsCross.ucrtAarch64;
       canBuild = true;
-      rust = pkgsCross.targetPlatform.rust // rec {
+      rust = pkgsCross.stdenv.targetPlatform.rust // rec {
         rustcTarget = "aarch64-pc-windows-gnullvm";
         rustcTargetSpec = rustcTarget;
 
@@ -62,7 +62,7 @@ rec {
       let
         baseFlags = null;
         platformSpecificFlags =
-          if target.pkgsCross.targetPlatform.isLinux && target.pkgsCross.targetPlatform.isx86_64
+          if target.pkgsCross.stdenv.targetPlatform.isLinux && target.pkgsCross.stdenv.targetPlatform.isx86_64
           then "-C link-arg=-fuse-ld=${lib.getExe pkgs.mold}"
           else null;
       in
@@ -74,12 +74,12 @@ rec {
     getRunnerForTarget = target:
       if target.pkgsCross.stdenv.buildPlatform.canExecute target.pkgsCross.stdenv.hostPlatform
       then null
-      else if pkgs.targetPlatform.system == "aarch64-darwin" && target.pkgsCross.targetPlatform.system == "x86_64-darwin"
+      else if pkgs.stdenv.targetPlatform.system == "aarch64-darwin" && target.pkgsCross.stdenv.targetPlatform.system == "x86_64-darwin"
       then null # Rosetta can run x86_64 executables on Apple Silicon
-      else if target.pkgsCross.targetPlatform.isWindows
+      else if target.pkgsCross.stdenv.targetPlatform.isWindows
       then
       # Wine can only run programs from the same architecture
-        if target.pkgsCross.targetPlatform.parsed.cpu.arch == pkgs.targetPlatform.parsed.cpu.arch
+        if target.pkgsCross.stdenv.targetPlatform.parsed.cpu.arch == pkgs.stdenv.targetPlatform.parsed.cpu.arch
         then
           pkgs.writeScript "wine-wrapper" ''
             #!${pkgs.stdenv.shell}
@@ -92,7 +92,7 @@ rec {
             echo "Cannot run Windows executables from a different architecture"
             exit 0 # Exit with success to avoid breaking the build
           ''
-      else lib.getExe' pkgs.qemu "qemu-${target.pkgsCross.targetPlatform.qemuArch}";
+      else lib.getExe' pkgs.qemu "qemu-${target.pkgsCross.stdenv.targetPlatform.qemuArch}";
 
     mkEnvironment = target: rec {
       CC = getCCForTarget target;

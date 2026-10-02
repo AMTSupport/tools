@@ -15,9 +15,7 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-parts = { url = "github:hercules-ci/flake-parts"; inputs.nixpkgs-lib.follows = "nixpkgs"; };
-    # TODO - Remove once devenv updates its lockfile.
-    git-hooks = { url = "github:cachix/git-hooks.nix"; inputs.nixpkgs.follows = "nixpkgs"; };
-    devenv = { url = "github:cachix/devenv"; inputs.git-hooks.follows = "git-hooks"; };
+    devenv = { url = "github:cachix/devenv"; };
     fenix = { url = "github:nix-community/fenix"; inputs.nixpkgs.follows = "nixpkgs"; };
     crane = { url = "github:ipetkov/crane"; };
     nci = { url = "github:yusdacra/nix-cargo-integration"; inputs = { nixpkgs.follows = "nixpkgs"; parts.follows = "flake-parts"; crane.follows = "crane"; }; };
@@ -33,7 +31,7 @@
 
     debug = true;
 
-    perSystem = { config, system, pkgs, lib, inputs', ... }:
+    perSystem = { config, pkgs, lib, inputs', ... }:
       let
         ourLib = import ./lib.nix { inherit pkgs; };
         craneLib = inputs.crane.mkLib pkgs;
@@ -47,7 +45,7 @@
           complete.rustfmt
         ] ++ (lib.mapAttrsToList (_: target: targets.${target.rust.rustcTarget}.latest.rust-std) ourLib.buildableTargets));
 
-        rootCargoToml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
+        rootCargoToml = fromTOML (builtins.readFile ./Cargo.toml);
         defaultMembers = rootCargoToml.workspace.default-members or [ ];
       in
       {
@@ -57,11 +55,8 @@
 
           languages.rust = {
             enable = true;
-            channel = "nightly";
-            # Don't use any components here because we need a combined toolchain
-            # so that rust-rover is happy. :)
+            # Don't use any components here because we need a combined toolchain so that rust-rover is happy. :)
             components = [ ];
-
             toolchain = rustToolchain;
           };
 
@@ -155,7 +150,7 @@
 
             targets = lib.mapAttrs'
               (_: target: lib.nameValuePair target.rust.rustcTarget rec {
-                default = target.pkgsCross.targetPlatform.system == pkgs.targetPlatform.system;
+                default = target.pkgsCross.stdenv.targetPlatform.system == pkgs.stdenv.targetPlatform.system;
                 profiles = [ "dev" "release" ];
                 depsDrvConfig = rec {
                   env = ourLib.env.mkEnvironment target;
@@ -164,20 +159,20 @@
                     depsBuildBuild = with target.pkgsCross; [ stdenv.cc ];
 
                     buildInputs = with target.pkgsCross;
-                      lib.optionals (target.pkgsCross.targetPlatform.isLinux && target.pkgsCross.targetPlatform.isx86_64) [ clang mold ]
-                      ++ lib.optionals target.pkgsCross.targetPlatform.isLinux [ libz zlib ]
-                      ++ lib.optionals target.pkgsCross.targetPlatform.isWindows [ windows.mingw_w64_headers ]
-                      ++ lib.optionals (target.pkgsCross.targetPlatform.isWindows && target.pkgsCross.stdenv.isx86_64) [ windows.pthreads ]
-                      ++ lib.optionals (!(lib.hasSuffix "clang" env.CC && !target.pkgsCross.targetPlatform.isx86_64)) [ openssl ]; # openssl fails to build on aarch64 (https://github.com/NixOS/nixpkgs/issues/348791)
+                      lib.optionals (target.pkgsCross.stdenv.targetPlatform.isLinux && target.pkgsCross.targetPlatform.isx86_64) [ clang mold ]
+                      ++ lib.optionals target.pkgsCross.stdenv.targetPlatform.isLinux [ libz zlib ]
+                      ++ lib.optionals target.pkgsCross.stdenv.targetPlatform.isWindows [ windows.mingw_w64_headers ]
+                      ++ lib.optionals (target.pkgsCross.stdenv.targetPlatform.isWindows && target.pkgsCross.stdenv.isx86_64) [ windows.pthreads ]
+                      ++ lib.optionals (!(lib.hasSuffix "clang" env.CC && !target.pkgsCross.stdenv.targetPlatform.isx86_64)) [ openssl ]; # openssl fails to build on aarch64 (https://github.com/NixOS/nixpkgs/issues/348791)
 
                     nativeBuildInputs = with pkgs; [ pkg-config ]
                       ++ lib.optionals (!target.pkgsCross.stdenv.buildPlatform.canExecute target.pkgsCross.stdenv.hostPlatform && !target.pkgsCross.targetPlatform.isWindows) [ pkgs.qemu ]
-                      ++ lib.optionals target.pkgsCross.targetPlatform.isWindows [ pkgs.wineWow64Packages.minimal ];
+                      ++ lib.optionals target.pkgsCross.stdenv.targetPlatform.isWindows [ pkgs.wineWow64Packages.minimal ];
 
                     enableParallelBuilding = true;
 
                     passthru = {
-                      inherit (target.pkgsCross.targetPlatform) system;
+                      inherit (target.pkgsCross.stdenv.targetPlatform) system;
                     };
                   };
                 };
