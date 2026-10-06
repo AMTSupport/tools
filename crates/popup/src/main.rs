@@ -19,10 +19,10 @@
 
 use iced::alignment::Vertical;
 use iced::theme::Palette;
-use iced::widget::{button, center, column, row, text, text_input, Column, Container};
+use iced::widget::{button, column, row, text, text_input, Container};
 use iced::window::Mode;
 use iced::Task;
-use iced::{alignment::Horizontal, executor, widget, window, Color, Element, Length};
+use iced::{alignment::Horizontal, executor, window, Color, Element, Length};
 use std::process::ExitCode;
 use std::sync::Arc;
 use tracing::trace;

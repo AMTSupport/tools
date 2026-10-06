@@ -14,9 +14,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#![feature(async_closure)]
-#![feature(once_cell_try)]
-
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Deserializer};
 use std::str::FromStr;

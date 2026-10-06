@@ -14,17 +14,9 @@
  * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 #![allow(incomplete_features)]
-#![feature(associated_type_defaults)]
-#![feature(const_trait_impl)]
-#![feature(downcast_unchecked)]
-#![feature(extend_one)]
-#![feature(impl_trait_in_assoc_type)]
 #![feature(inherent_associated_types)]
+#![feature(const_trait_impl)]
 #![feature(io_error_more)]
-#![feature(thin_box)]
-#![feature(trait_alias)]
-#![feature(type_alias_impl_trait)]
-
 pub mod application;
 pub mod cleaners;
 pub mod config;

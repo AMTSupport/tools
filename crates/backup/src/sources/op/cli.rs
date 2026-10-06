@@ -154,7 +154,6 @@ pub mod user {
         Dummy,
     };
     use macros::CommonFields;
-    use serde_json_fmt::JsonFormat;
 
     #[cfg_attr(test, derive(Dummy))]
     #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

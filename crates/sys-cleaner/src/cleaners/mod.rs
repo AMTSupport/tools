@@ -18,7 +18,7 @@ use anyhow::Result;
 use std::env;
 use std::path::PathBuf;
 use thiserror::Error;
-use tracing::{error, instrument, trace};
+use tracing::{instrument, trace};
 
 // pub mod builder;
 pub mod cleaner;

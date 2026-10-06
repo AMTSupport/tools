@@ -159,7 +159,7 @@
                     depsBuildBuild = with target.pkgsCross; [ stdenv.cc ];
 
                     buildInputs = with target.pkgsCross;
-                      lib.optionals (target.pkgsCross.stdenv.targetPlatform.isLinux && target.pkgsCross.targetPlatform.isx86_64) [ clang mold ]
+                      lib.optionals (target.pkgsCross.stdenv.targetPlatform.isLinux && target.pkgsCross.stdenv.targetPlatform.isx86_64) [ clang mold ]
                       ++ lib.optionals target.pkgsCross.stdenv.targetPlatform.isLinux [ libz zlib ]
                       ++ lib.optionals target.pkgsCross.stdenv.targetPlatform.isWindows [ windows.mingw_w64_headers ]
                       ++ lib.optionals (target.pkgsCross.stdenv.targetPlatform.isWindows && target.pkgsCross.stdenv.isx86_64) [ windows.pthreads ]
@@ -187,7 +187,7 @@
           (lib.filterAttrs (name: _: name != "tools" && (!(builtins.hasAttr "${name}" config.nci.crates) || config.nci.crates.${name}.export)))
           (lib.mapAttrsToList (_: crate: lib.attrsToList crate.allTargets))
           lib.flatten
-          (builtins.map (attr: lib.attrsToList attr.value.packages))
+          (map (attr: lib.attrsToList attr.value.packages))
           lib.flatten
           (lib.map (attr: lib.nameValuePair "${attr.value.name}-${attr.value.out.passthru.system}-${attr.name}" attr.value))
           lib.listToAttrs

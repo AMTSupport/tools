@@ -105,8 +105,6 @@ impl Rule for SeparatorAddition {
 mod tests {
     use super::*;
     use crate::processor::processor::Processor;
-    use regex::Regex;
-    use std::assert_matches::assert_matches;
 
     #[test_log::test(test)]
     fn separator_none() {
@@ -146,8 +144,10 @@ mod tests {
         let result = processor.finish();
         let group = "[!@$%\\.&*\\-+=?:]";
         println!("{}", result);
-        assert_matches!(
-            Regex::new(&format!("^hello{group}world{group}$")).unwrap().is_match(&result),
+        std::assert_matches!(
+            regex::Regex::new(&format!("^hello{group}world{group}$"))
+                .unwrap()
+                .is_match(&result),
             true
         );
     }

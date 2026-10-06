@@ -14,12 +14,6 @@
  * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
-#![feature(proc_macro_diagnostic)]
-#![feature(downcast_unchecked)]
-#![feature(cfg_eval)]
-#![feature(cfg_match)]
-#![feature(assert_matches)]
-
 mod builder;
 mod enums;
 

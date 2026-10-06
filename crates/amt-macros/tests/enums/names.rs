@@ -14,9 +14,9 @@
  * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
+use std::{assert_matches, str::FromStr};
+
 use macros::EnumNames;
-use std::assert_matches::assert_matches;
-use std::str::FromStr;
 
 #[derive(Debug, EnumNames)]
 enum Test {

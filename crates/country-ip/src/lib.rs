@@ -14,7 +14,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#![feature(async_closure)]
 #![feature(unboxed_closures)]
 
 use crate::record::Record;

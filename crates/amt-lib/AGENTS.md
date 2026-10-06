@@ -42,4 +42,4 @@ handler!(pub Oneshot {
 
 ## NIGHTLY FEATURES USED
 
-Heavy use of nightly: `associated_type_defaults`, `async_closure`, `trait_alias`, `let_chains`, `negative_impls`. Expect breakage on toolchain updates.
+Heavy use of nightly: `associated_type_defaults`. Expect breakage on toolchain updates.

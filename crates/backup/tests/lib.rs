@@ -1,4 +1,3 @@
-#![feature(assert_matches)]
 /*
  * Copyright (C) 2023 James Draycott <me@racci.dev>
  *

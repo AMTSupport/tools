@@ -14,7 +14,6 @@
  * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
-#![feature(async_closure)]
 #![feature(lazy_cell)]
 
 use amt_lib::log;

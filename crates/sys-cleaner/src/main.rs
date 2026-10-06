@@ -14,11 +14,7 @@
  * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
-#![feature(async_closure)]
-#![feature(cfg_match)]
-#![feature(impl_trait_in_assoc_type)]
 #![allow(incomplete_features)]
-#![feature(inherent_associated_types)]
 
 use amt_lib::helper::require_elevated_privileges;
 use anyhow::Result;

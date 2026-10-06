@@ -14,8 +14,9 @@
  * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
-#![feature(lazy_type_alias)]
+#![allow(incomplete_features)]
 #![allow(async_fn_in_trait)]
+#![feature(checked_type_aliases)]
 
 use crate::buildable::Buildable;
 use crate::error::{BuildResult, FillResult};

@@ -19,7 +19,7 @@ use assert_fs::TempDir;
 use backup::config::rules::autoprune::Tag;
 use backup::config::rules::metadata::Metadata;
 use chrono::{Duration, Utc};
-use std::assert_matches::assert_matches;
+use std::assert_matches;
 
 // Helper function to create a temporary directory and return its path
 fn create_temp_dir() -> TempDir {
