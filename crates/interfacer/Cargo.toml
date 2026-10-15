@@ -48,19 +48,12 @@ thirtyfour.workspace = true
 
 # Logging & Errors
 tracing = { workspace = true }
-tracing-subscriber = { workspace = true, features = ["tracing-log"] }
 thiserror = { workspace = true }
 anyhow = { workspace = true }
 
 # Data
 csv.workspace = true
-serde_with.workspace = true
 
 # Testing
 [dev-dependencies]
-env_logger.workspace = true
 test-log.workspace = true
-tracing-subscriber = { workspace = true, default-features = false, features = [
-    "env-filter",
-    "fmt",
-] }

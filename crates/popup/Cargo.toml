@@ -12,7 +12,6 @@ default = ["ui-gui"]
 ui-gui = ["iced", "iced_aw", "iced_runtime"]
 
 [dependencies]
-amt-lib.workspace = true
 
 # Runtimes
 tokio = { workspace = true }

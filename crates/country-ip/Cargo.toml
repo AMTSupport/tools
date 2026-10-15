@@ -44,7 +44,6 @@ reqwest = { workspace = true, features = ["stream"] }
 
 # Logging & Errors
 tracing.workspace = true
-tracing-subscriber.workspace = true
 tracing-appender.workspace = true
 tracing-indicatif = { workspace = true, optional = true }
 thiserror.workspace = true
@@ -65,6 +64,4 @@ rayon.workspace = true
 
 # Testing
 [dev-dependencies]
-env_logger.workspace = true
 test-log.workspace = true
-tracing-subscriber.workspace = true

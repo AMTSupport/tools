@@ -35,9 +35,7 @@ chrono.workspace = true
 
 # Logging & Errors
 tracing.workspace = true
-tracing-subscriber.workspace = true
 tracing-appender.workspace = true
-thiserror.workspace = true
 anyhow.workspace = true
 
 uptime_lib.workspace = true
@@ -47,7 +45,3 @@ notify-rust.workspace = true
 [target.'cfg(windows)'.dependencies]
 planif.workspace = true
 registry.workspace = true
-
-[dev-dependencies]
-rand.workspace = true
-fake = { workspace = true, features = ["derive", "chrono", "maybe-non-empty-collections"] }

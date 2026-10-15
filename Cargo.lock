@@ -467,7 +467,6 @@ dependencies = [
  "chrono",
  "clap",
  "const_format",
- "env_logger",
  "fake",
  "filetime",
  "fs-err 3.0.0",
@@ -484,16 +483,13 @@ dependencies = [
  "regex",
  "reqwest",
  "serde",
- "serde-json-fmt",
  "serde_json",
- "tempfile",
  "test-log",
  "thiserror 2.0.6",
  "tokio",
  "tokio-stream",
  "tracing",
  "tracing-appender",
- "tracing-subscriber",
  "zip",
 ]
 
@@ -1134,7 +1130,6 @@ dependencies = [
  "chrono",
  "cidr",
  "clap",
- "env_logger",
  "futures",
  "iced",
  "iced_aw",
@@ -1150,7 +1145,6 @@ dependencies = [
  "tracing",
  "tracing-appender",
  "tracing-indicatif",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -1334,7 +1328,6 @@ dependencies = [
  "ident_case",
  "proc-macro2",
  "quote",
- "strsim",
  "syn 2.0.90",
 ]
 
@@ -1362,7 +1355,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b42b6fa04a440b495c8b04d0e71b707c585f83cb9cb28cf8cd0d976c315e31b4"
 dependencies = [
  "powerfmt",
- "serde",
 ]
 
 [[package]]
@@ -1629,7 +1621,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4f2c92ceda6ceec50f43169f9ee8424fe2db276791afde7b2cd8bc084cb376ab"
 dependencies = [
  "log",
- "regex",
 ]
 
 [[package]]
@@ -1641,7 +1632,6 @@ dependencies = [
  "anstream",
  "anstyle",
  "env_filter",
- "humantime",
  "log",
 ]
 
@@ -2380,12 +2370,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "humantime"
-version = "2.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
-
-[[package]]
 name = "hyper"
 version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2832,24 +2816,12 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "1.9.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bd070e393353796e801d209ad339e89596eb4c8d430d18ede6a1cced8fafbd99"
-dependencies = [
- "autocfg",
- "hashbrown 0.12.3",
- "serde",
-]
-
-[[package]]
-name = "indexmap"
 version = "2.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "62f822373a4fe84d4bb149bf54e584a7f4abec90e072ed49cda0edea5b95471f"
 dependencies = [
  "equivalent",
  "hashbrown 0.15.2",
- "serde",
 ]
 
 [[package]]
@@ -2905,7 +2877,6 @@ dependencies = [
  "chrono",
  "clap",
  "csv",
- "env_logger",
  "http-cache-reqwest",
  "indicatif",
  "inquire",
@@ -2913,13 +2884,11 @@ dependencies = [
  "reqwest",
  "reqwest-middleware",
  "serde",
- "serde_with",
  "test-log",
  "thirtyfour",
  "thiserror 2.0.6",
  "tokio",
  "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -3290,7 +3259,6 @@ dependencies = [
  "anyhow",
  "clap",
  "derivative",
- "env_logger",
  "rand",
  "regex",
  "rust-embed",
@@ -3301,7 +3269,6 @@ dependencies = [
  "tokio-stream",
  "tracing",
  "tracing-appender",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -3415,7 +3382,7 @@ dependencies = [
  "bitflags 2.6.0",
  "codespan-reporting",
  "hexf-parse",
- "indexmap 2.7.0",
+ "indexmap",
  "log",
  "num-traits",
  "rustc-hash 1.1.0",
@@ -4139,7 +4106,6 @@ dependencies = [
 name = "popup"
 version = "0.0.1"
 dependencies = [
- "amt-lib",
  "anyhow",
  "iced",
  "iced_aw",
@@ -4463,17 +4429,13 @@ dependencies = [
  "anyhow",
  "chrono",
  "clap",
- "fake",
  "notify-rust",
  "planif",
- "rand",
  "registry",
  "sysexits",
- "thiserror 2.0.6",
  "tokio",
  "tracing",
  "tracing-appender",
- "tracing-subscriber",
  "uptime_lib",
 ]
 
@@ -4939,17 +4901,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "serde-json-fmt"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4a33b7a5f52a26d520099339add40c48baf2e5ada194c8cc1b18cafa2b5e419"
-dependencies = [
- "serde",
- "serde_json",
- "smartstring",
-]
-
-[[package]]
 name = "serde_derive"
 version = "1.0.215"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4966,7 +4917,7 @@ version = "1.0.133"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c7fceb2473b9166b2294ef05efcb65a3db80803f0b03ef86a5fc88a2b85ee377"
 dependencies = [
- "indexmap 2.7.0",
+ "indexmap",
  "itoa 1.0.14",
  "memchr",
  "ryu",
@@ -4994,36 +4945,6 @@ dependencies = [
  "itoa 1.0.14",
  "ryu",
  "serde",
-]
-
-[[package]]
-name = "serde_with"
-version = "3.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e28bdad6db2b8340e449f7108f020b3b092e8583a9e3fb82713e1d4e71fe817"
-dependencies = [
- "base64 0.22.1",
- "chrono",
- "hex",
- "indexmap 1.9.3",
- "indexmap 2.7.0",
- "serde",
- "serde_derive",
- "serde_json",
- "serde_with_macros",
- "time",
-]
-
-[[package]]
-name = "serde_with_macros"
-version = "3.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d846214a9854ef724f3da161b426242d8de7c1fc7de2f89bb1efcb154dca79d"
-dependencies = [
- "darling",
- "proc-macro2",
- "quote",
- "syn 2.0.90",
 ]
 
 [[package]]
@@ -5149,17 +5070,6 @@ name = "smallvec"
 version = "1.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3c5e1a9a646d36c3599cd173a41282daf47c44583ad367b8e6837255952e5c67"
-
-[[package]]
-name = "smartstring"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3fb72c633efbaa2dd666986505016c32c3044395ceaf881518399d2f4127ee29"
-dependencies = [
- "autocfg",
- "static_assertions",
- "version_check",
-]
 
 [[package]]
 name = "smithay-client-toolkit"
@@ -5411,18 +5321,14 @@ dependencies = [
  "cfg-if",
  "chrono",
  "clap",
- "env_logger",
  "glob",
  "indicatif",
- "inquire",
- "paste",
  "rayon",
  "test-log",
  "thiserror 2.0.6",
  "tokio",
  "tokio-stream",
  "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -5521,7 +5427,7 @@ dependencies = [
  "const_format",
  "futures-util",
  "http",
- "indexmap 2.7.0",
+ "indexmap",
  "paste",
  "reqwest",
  "serde",
@@ -5774,7 +5680,7 @@ version = "0.22.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4ae48d6208a266e853d946088ed816055e556cc6028c5e8e2b84d9fa5dd7c7f5"
 dependencies = [
- "indexmap 2.7.0",
+ "indexmap",
  "toml_datetime",
  "winnow",
 ]
@@ -6403,7 +6309,7 @@ dependencies = [
  "bitflags 2.6.0",
  "cfg_aliases 0.1.1",
  "codespan-reporting",
- "indexmap 2.7.0",
+ "indexmap",
  "log",
  "naga",
  "once_cell",
@@ -7342,7 +7248,7 @@ dependencies = [
  "crossbeam-utils",
  "displaydoc",
  "flate2",
- "indexmap 2.7.0",
+ "indexmap",
  "memchr",
  "thiserror 2.0.6",
  "zopfli",

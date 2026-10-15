@@ -40,14 +40,11 @@ rust-embed = { workspace = true, features = ["debug-embed"] }
 
 # Logging & Errors
 tracing.workspace = true
-tracing-subscriber.workspace = true
 tracing-appender.workspace = true
 anyhow.workspace = true
 
 derivative.workspace = true
 
 [dev-dependencies]
-env_logger.workspace = true
 test-log.workspace = true
-tracing-subscriber = { workspace = true, features = ["env-filter", "fmt"] }
 regex.workspace = true

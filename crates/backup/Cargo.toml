@@ -38,7 +38,6 @@ inquire = { workspace = true, features = ["path"], optional = true }
 # Data / Serialization
 serde.workspace = true
 serde_json.workspace = true
-serde-json-fmt.workspace = true
 chrono = { workspace = true, features = ["serde", "clock"] }
 zip = { workspace = true, features = [
     # "zstd",
@@ -53,7 +52,6 @@ reqwest = { workspace = true, features = ["stream", "rustls-tls"] }
 
 # Logging & Errors
 tracing.workspace = true
-tracing-subscriber.workspace = true
 tracing-appender.workspace = true
 thiserror.workspace = true
 anyhow.workspace = true
@@ -76,17 +74,11 @@ rayon.workspace = true
 bytes = { workspace = true, optional = true }
 rand = { workspace = true, optional = true }
 const_format = { workspace = true, optional = true }
-tempfile.workspace = true
 regex.workspace = true
 
 [dev-dependencies]
 # Logging & Errors
-env_logger.workspace = true
 test-log = { workspace = true, features = ["trace"] }
-tracing-subscriber = { workspace = true, default-features = false, features = [
-    "env-filter",
-    "fmt",
-] }
 
 # Generating random data for tests
 fake = { workspace = true, features = [
@@ -98,5 +90,4 @@ fake = { workspace = true, features = [
 rand.workspace = true
 
 # Fs & IO
-tempfile.workspace = true
 assert_fs.workspace = true
