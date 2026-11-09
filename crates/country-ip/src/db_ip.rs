@@ -183,6 +183,10 @@ mod tests {
     use super::*;
     use keshvar::Alpha2::AU;
     use std::net::Ipv4Addr;
+    use std::sync::LazyLock;
+
+    static TEST_RT: LazyLock<tokio::runtime::Runtime> =
+        LazyLock::new(|| tokio::runtime::Runtime::new().expect("test runtime should build"));
 
     #[test_log::test]
     fn test_parse_csv_line_valid() -> Result<()> {
@@ -221,10 +225,7 @@ mod tests {
         let records = parse_fixture(&["101.160.0.0,101.191.255.255,AU", "1.0.0.0,1.0.0.255,US"]);
         let db = DB::from_records(records);
 
-        let rt = tokio::runtime::Runtime::new()
-            .ok()
-            .and_then(|r| Some(r.block_on(db.lookup(&IpAddr::V4(Ipv4Addr::new(101, 160, 0, 1))))));
-        assert_eq!(rt, Some(Some(AU)));
+        assert_eq!(block_lookup(&db, &IpAddr::V4(Ipv4Addr::new(101, 160, 0, 1))), Some(AU));
 
         assert_eq!(
             block_lookup(&db, &IpAddr::V4(Ipv4Addr::new(1, 0, 0, 10))),
@@ -250,13 +251,10 @@ mod tests {
     }
 
     fn block_lookup(db: &DB, ip: &IpAddr) -> Option<Alpha2> {
-        tokio::runtime::Runtime::new().ok().and_then(|rt| rt.block_on(db.lookup(ip)))
+        TEST_RT.block_on(db.lookup(ip))
     }
 
     fn block_filtered<'a>(db: &'a DB, alpha: &'a Alpha2) -> Vec<&'a Record> {
-        tokio::runtime::Runtime::new()
-            .ok()
-            .map(|rt| rt.block_on(db.filtered(alpha)))
-            .unwrap_or_default()
+        TEST_RT.block_on(db.filtered(alpha))
     }
 }
