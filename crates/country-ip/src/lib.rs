@@ -129,8 +129,15 @@ async fn lookup(addr: &IpAddr) -> Result<Country> {
                     return Ok(alpha.to_country());
                 }
             }
+            // A single registry failing to download must not hide a match in another one.
             Err(err) => warn!("Skipping registry that failed to load: {err}"),
         }
+    }
+
+    debug!("No RIR match found, falling back to DB-IP lookup");
+    let db_ip = db_ip::DB::instance().await?;
+    if let Some(alpha) = db_ip.lookup(addr).await {
+        return Ok(alpha.to_country());
     }
 
     Err(anyhow!("No country found for IP address"))
