@@ -120,9 +120,14 @@ async fn lookup(addr: &IpAddr) -> Result<Country> {
         .map(|reg| reg.get())
         .buffer_unordered(variants.len());
 
-    while let Some(Ok(db)) = stream.next().await {
-        if let Some(alpha) = db.lookup(addr).await {
-            return Ok(alpha.to_country());
+    while let Some(result) = stream.next().await {
+        match result {
+            Ok(db) => {
+                if let Some(alpha) = db.lookup(addr).await {
+                    return Ok(alpha.to_country());
+                }
+            }
+            Err(err) => warn!("Skipping registry that failed to load: {err}"),
         }
     }
 
