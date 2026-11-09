@@ -38,7 +38,7 @@ use tracing::{debug, error, instrument};
 /// Parse a single line from a RIR delegated-extended stats file into a RegistryRecord.
 /// Returns `None` if the line is a comment or malformed.
 fn parse_registry_line(line: &str, registry: Registry) -> Option<Record> {
-    if line.starts_with('#') {
+    if line.starts_with('#') || line.ends_with("|summary") {
         return None;
     }
 
@@ -351,6 +351,12 @@ mod test {
     #[test_log::test]
     fn test_parse_registry_line_comment() {
         let line = "# This is a comment";
+        assert!(parse_registry_line(line, Registry::Apnic).is_none());
+    }
+
+    #[test_log::test]
+    fn test_parse_registry_line_summary() {
+        let line = "apnic|*|ipv6|*|114553|summary";
         assert!(parse_registry_line(line, Registry::Apnic).is_none());
     }
 
