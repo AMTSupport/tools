@@ -118,18 +118,19 @@ impl DB {
     #[instrument(level = "TRACE", ret, err)]
     async fn new() -> Result<Self> {
         let cache_path = Self::cache_path();
-        let csv = match cache_path.as_deref().and_then(|path| cache::read(path, CACHE_MAX_AGE)) {
-            Some(csv) => {
-                debug!("Using cached DB-IP CSV");
-                csv
-            }
-            None => {
-                let csv = Self::download_csv().await?;
-                if let Some(path) = cache_path {
-                    cache::write(&path, &csv);
+        let csv = match cache_path.as_ref() {
+            Some(path) => match cache::read_async(path.clone(), CACHE_MAX_AGE).await {
+                Some(csv) => {
+                    debug!("Using cached DB-IP CSV");
+                    csv
                 }
-                csv
-            }
+                None => {
+                    let csv = Self::download_csv().await?;
+                    cache::write(path, &csv);
+                    csv
+                }
+            },
+            None => Self::download_csv().await?,
         };
 
         let mut records = vec![];

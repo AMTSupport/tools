@@ -59,6 +59,11 @@ pub fn read(path: &Path, max_age: Duration) -> Option<String> {
     fs_err::read_to_string(path).ok()
 }
 
+/// Reads cache off-thread so async callers do not block runtime worker threads.
+pub async fn read_async(path: PathBuf, max_age: Duration) -> Option<String> {
+    tokio::task::spawn_blocking(move || read(&path, max_age)).await.ok().flatten()
+}
+
 /// Writes a file atomically so an interrupted run cannot leave a truncated cache behind.
 pub fn write(path: &Path, contents: &str) {
     if let Some(parent) = path.parent() {

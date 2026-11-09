@@ -296,20 +296,20 @@ impl Registry {
     #[instrument(level = "TRACE", ret, err)]
     async fn download(&self) -> Result<()> {
         let cache_path = self.cache_path();
-        let data = match cache_path.as_deref().and_then(|path| cache::read(path, CACHE_MAX_AGE)) {
-            Some(data) => {
-                debug!("Using cached dump for {}", self.name());
-                data
-            }
-            None => {
-                let data = self.fetch().await?;
-
-                if let Some(path) = cache_path {
-                    cache::write(&path, &data);
+        let data = match cache_path.as_ref() {
+            Some(path) => match cache::read_async(path.clone(), CACHE_MAX_AGE).await {
+                Some(data) => {
+                    debug!("Using cached dump for {}", self.name());
+                    data
                 }
+                None => {
+                    let data = self.fetch().await?;
 
-                data
-            }
+                    cache::write(path, &data);
+                    data
+                }
+            },
+            None => self.fetch().await?,
         };
 
         let parsed_lines = data
