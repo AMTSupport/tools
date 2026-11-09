@@ -84,7 +84,9 @@ impl Record {
             return false;
         };
 
-        start <= *ip && *ip <= end
+        // `IpAddr` orders every IPv4 address before every IPv6 address, so mixed families must
+        // be rejected explicitly rather than relying on the bound comparison.
+        start.is_ipv4() == ip.is_ipv4() && start <= *ip && *ip <= end
     }
 
     pub fn random(&self) -> Option<IpAddr> {
@@ -187,5 +189,12 @@ mod tests {
             registry(IpAddr::V6(Ipv6Addr::new(0x2001, 0x200, 0, 0, 0, 0, 0, 0)), 129).bounds(),
             None
         );
+    }
+
+    #[test]
+    fn contains_rejects_the_other_family() {
+        let record = registry(IpAddr::V4(Ipv4Addr::new(101, 160, 0, 0)), 2);
+        assert!(record.contains(&IpAddr::V4(Ipv4Addr::new(101, 160, 0, 1))));
+        assert!(!record.contains(&IpAddr::V6(Ipv6Addr::LOCALHOST)));
     }
 }

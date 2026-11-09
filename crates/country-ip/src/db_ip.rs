@@ -105,14 +105,7 @@ impl DB {
 impl RecordDB for DB {
     #[instrument(level = "TRACE", ret)]
     async fn lookup(&self, ip: &IpAddr) -> Option<Alpha2> {
-        for record in &self.0 {
-            if let Some((start, end)) = record.bounds() {
-                if start <= *ip && *ip <= end {
-                    return Some(*record.alpha());
-                }
-            }
-        }
-        None
+        self.0.iter().find(|record| record.contains(ip)).map(|record| *record.alpha())
     }
 
     #[instrument(level = "TRACE", ret)]
