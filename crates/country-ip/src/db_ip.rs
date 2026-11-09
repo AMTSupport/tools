@@ -76,7 +76,7 @@ impl DB {
         let year = chrono::Utc::now().year();
         let month = chrono::Utc::now().month();
         format!(
-            "https://download.db-ip.com/free/dbip-country-lite-{}-{}.csv.gz",
+            "https://download.db-ip.com/free/dbip-country-lite-{}-{:02}.csv.gz",
             year, month
         )
     }
