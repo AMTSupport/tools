@@ -106,8 +106,10 @@ impl RecordDB for DB {
     #[instrument(level = "TRACE", ret)]
     async fn lookup(&self, ip: &IpAddr) -> Option<Alpha2> {
         for record in &self.0 {
-            if &record.start() <= ip && &record.end() >= ip {
-                return Some(*record.alpha());
+            if let Some((start, end)) = record.bounds() {
+                if start <= *ip && *ip <= end {
+                    return Some(*record.alpha());
+                }
             }
         }
         None
@@ -130,7 +132,7 @@ mod tests {
         let line = "101.160.0.0,101.191.255.255,AU";
         let record = parse_csv_line(line).ok_or(anyhow::anyhow!("should parse valid line"))?;
         assert_eq!(record.start(), IpAddr::V4(Ipv4Addr::new(101, 160, 0, 0)));
-        assert_eq!(record.end(), IpAddr::V4(Ipv4Addr::new(101, 191, 255, 255)));
+        assert_eq!(record.end(), Some(IpAddr::V4(Ipv4Addr::new(101, 191, 255, 255))));
         assert_eq!(*record.alpha(), AU);
         Ok(())
     }

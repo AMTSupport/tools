@@ -67,7 +67,7 @@ pub trait RecordDB: Send + Sync + Debug + Unpin {
             .into_iter()
             .filter(|record| record.start().is_ipv4())
             .choose(&mut thread_rng())
-            .map(|record| record.random())
+            .and_then(|record| record.random())
     }
 
     async fn random_ipv6(&self, alpha: &Alpha2) -> Option<IpAddr> {
@@ -76,7 +76,7 @@ pub trait RecordDB: Send + Sync + Debug + Unpin {
             .into_iter()
             .filter(|record| record.start().is_ipv6())
             .choose(&mut thread_rng())
-            .map(|record| record.random())
+            .and_then(|record| record.random())
     }
 }
 

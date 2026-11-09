@@ -135,7 +135,7 @@ impl RecordDB for RegistryRecords {
         self.inner
             .iter()
             .par_bridge()
-            .find_first(|record| record.range().contains(ip))
+            .find_first(|record| record.contains(ip))
             .map(|record| *record.alpha())
     }
 
