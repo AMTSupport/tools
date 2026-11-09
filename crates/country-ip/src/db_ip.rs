@@ -14,6 +14,7 @@
  * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
+use crate::cache;
 use crate::index::RangeIndex;
 use crate::record::Record;
 use crate::record::Record::DBRecord;
@@ -25,12 +26,14 @@ use futures::io::Error as FutureError;
 use futures::TryStreamExt;
 use keshvar::Alpha2;
 use std::net::IpAddr;
+use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Duration;
 
-use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::io::{AsyncReadExt, BufReader};
 use tokio::sync::OnceCell;
 use tokio_util::compat::FuturesAsyncReadCompatExt;
-use tracing::{error, instrument};
+use tracing::{debug, error, instrument};
 
 /// Parse a single CSV line into a DBRecord.
 /// Returns `None` if the line is malformed.
@@ -72,22 +75,32 @@ impl DB {
 
 static DB_INSTANCE: OnceCell<Arc<DB>> = OnceCell::const_new();
 
+/// DB-IP free dumps are published monthly; refresh local cache daily.
+const CACHE_MAX_AGE: Duration = Duration::from_secs(24 * 60 * 60);
+
 impl DB {
-    /// Get the URL to download the current csv file from.
-    fn get_dated_url() -> String {
+    fn dated_parts() -> (i32, u32) {
         use chrono::Datelike;
 
-        let year = chrono::Utc::now().year();
-        let month = chrono::Utc::now().month();
+        (chrono::Utc::now().year(), chrono::Utc::now().month())
+    }
+
+    /// Get the URL to download the current csv file from.
+    fn get_dated_url() -> String {
+        let (year, month) = Self::dated_parts();
         format!(
             "https://download.db-ip.com/free/dbip-country-lite-{}-{:02}.csv.gz",
             year, month
         )
     }
 
-    // TODO - Cache the csv file for reuse.
-    #[instrument(level = "TRACE", ret, err)]
-    async fn new() -> Result<Self> {
+    fn cache_path() -> Option<PathBuf> {
+        let (year, month) = Self::dated_parts();
+        let name = format!("dbip-country-lite-{}-{:02}.csv", year, month);
+        cache::dir().map(|dir| dir.join(name))
+    }
+
+    async fn download_csv() -> Result<String> {
         let response = reqwest::get(Self::get_dated_url()).await?.error_for_status()?;
         let stream = response
             .bytes_stream()
@@ -95,12 +108,33 @@ impl DB {
             .into_async_read()
             .compat();
         let decoder = GzipDecoder::new(stream);
-        let reader = BufReader::new(decoder);
-        let mut lines = reader.lines();
+        let mut reader = BufReader::new(decoder);
+
+        let mut csv = String::new();
+        reader.read_to_string(&mut csv).await?;
+        Ok(csv)
+    }
+
+    #[instrument(level = "TRACE", ret, err)]
+    async fn new() -> Result<Self> {
+        let cache_path = Self::cache_path();
+        let csv = match cache_path.as_deref().and_then(|path| cache::read(path, CACHE_MAX_AGE)) {
+            Some(csv) => {
+                debug!("Using cached DB-IP CSV");
+                csv
+            }
+            None => {
+                let csv = Self::download_csv().await?;
+                if let Some(path) = cache_path {
+                    cache::write(&path, &csv);
+                }
+                csv
+            }
+        };
 
         let mut records = vec![];
-        while let Some(line) = lines.next_line().await? {
-            if let Some(record) = parse_csv_line(&line) {
+        for line in csv.lines() {
+            if let Some(record) = parse_csv_line(line) {
                 records.push(record);
             }
         }
