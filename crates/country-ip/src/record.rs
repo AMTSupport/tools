@@ -20,7 +20,6 @@ use keshvar::Alpha2;
 use macros::CommonFields;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::ops::RangeInclusive;
-use tracing::instrument;
 
 #[derive(Debug, Clone, CommonFields)]
 pub enum Record {
@@ -47,7 +46,6 @@ pub enum Status {
 }
 
 impl Record {
-    #[instrument(level = "TRACE", ret)]
     pub fn start(&self) -> IpAddr {
         match self {
             Record::RegistryRecord { value, .. } => *value,
@@ -55,7 +53,6 @@ impl Record {
         }
     }
 
-    #[instrument(level = "TRACE", ret)]
     pub fn end(&self) -> IpAddr {
         match self {
             Record::DBRecord { end, .. } => *end,
@@ -73,12 +70,10 @@ impl Record {
         }
     }
 
-    #[instrument(level = "TRACE", ret)]
     pub fn range(&self) -> RangeInclusive<IpAddr> {
         self.start()..=self.end()
     }
 
-    #[instrument(level = "TRACE", ret)]
     pub fn u128_range(&self) -> RangeInclusive<u128> {
         let start = match self.start() {
             IpAddr::V4(addr) => addr.to_bits() as u128,
@@ -91,12 +86,10 @@ impl Record {
         start..=end
     }
 
-    #[instrument(level = "TRACE", ret)]
     pub fn contains(&self, ip: &IpAddr) -> bool {
         self.range().contains(ip)
     }
 
-    #[instrument(level = "TRACE", ret)]
     pub fn random(&self) -> IpAddr {
         use rand::prelude::{Rng, SeedableRng, SmallRng};
 

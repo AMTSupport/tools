@@ -96,7 +96,7 @@ where
                 .with_thread_names(verbosity > 2)
                 .with_thread_ids(verbosity > 2),
         )
-        .with(layer.with_filter(IndicatifFilter::new(!flags.quiet)))
+        .with(layer.with_filter(IndicatifFilter::new(false)))
 }
 
 #[cfg(not(feature = "ui-cli"))]

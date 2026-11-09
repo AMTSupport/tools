@@ -49,7 +49,8 @@ impl OneshotHandler for CountryIPCli {
     async fn handle(&mut self, command: Self::OneshotAction, flags: &CommonFlags) -> CliResult<()> {
         populate!(self, flags);
 
-        let span = info_span!("feedback");
+        // Only spans carrying `indicatif.pb_show` get a bar by default, so opt this one in.
+        let span = info_span!("feedback", "indicatif.pb_show" = true);
         span.pb_set_style(&amt_lib::ui::cli::progress::style_spinner());
         span.pb_start();
 
