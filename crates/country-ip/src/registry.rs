@@ -14,6 +14,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+use crate::index::RangeIndex;
 use crate::record::Record::RegistryRecord;
 use crate::record::{Record, Status};
 use crate::registry::RegistryErrors::RegistryFailed;
@@ -126,17 +127,21 @@ const DELEGATES: [Alpha2; 12] = [
 pub struct RegistryRecords {
     pub registry: Registry,
     pub inner: Vec<Record>,
+    index: RangeIndex,
+}
+
+impl RegistryRecords {
+    pub fn new(registry: Registry, inner: Vec<Record>) -> Self {
+        let index = RangeIndex::new(&inner);
+        Self { registry, inner, index }
+    }
 }
 
 #[async_trait]
 impl RecordDB for RegistryRecords {
     #[instrument(level = "TRACE", ret)]
     async fn lookup(&self, ip: &IpAddr) -> Option<Alpha2> {
-        self.inner
-            .iter()
-            .par_bridge()
-            .find_first(|record| record.contains(ip))
-            .map(|record| *record.alpha())
+        self.index.lookup(ip)
     }
 
     #[instrument(level = "TRACE", ret)]
@@ -282,10 +287,7 @@ impl Registry {
             .filter_map(|line| parse_registry_line(&line, *self))
             .collect::<Vec<_>>();
 
-        let record = RegistryRecords {
-            registry: *self,
-            inner: parsed_lines,
-        };
+        let record = RegistryRecords::new(*self, parsed_lines);
 
         let mut map = DOWNLOADED.lock().await;
         map.insert(*self, record);

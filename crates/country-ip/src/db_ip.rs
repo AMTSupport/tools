@@ -14,6 +14,7 @@
  * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
+use crate::index::RangeIndex;
 use crate::record::Record;
 use crate::record::Record::DBRecord;
 use crate::RecordDB;
@@ -53,7 +54,17 @@ fn parse_csv_line(line: &str) -> Option<Record> {
 }
 
 #[derive(Debug, Clone)]
-pub struct DB(Vec<Record>);
+pub struct DB {
+    records: Vec<Record>,
+    index: RangeIndex,
+}
+
+impl DB {
+    fn from_records(records: Vec<Record>) -> Self {
+        let index = RangeIndex::new(&records);
+        Self { records, index }
+    }
+}
 
 static DB_INSTANCE: OnceCell<DB> = OnceCell::const_new();
 
@@ -90,7 +101,7 @@ impl DB {
             }
         }
 
-        Ok(Self(records))
+        Ok(Self::from_records(records))
     }
 
     pub async fn instance() -> Result<Box<dyn RecordDB>> {
@@ -103,12 +114,15 @@ impl DB {
 impl RecordDB for DB {
     #[instrument(level = "TRACE", ret)]
     async fn lookup(&self, ip: &IpAddr) -> Option<Alpha2> {
-        self.0.iter().find(|record| record.contains(ip)).map(|record| *record.alpha())
+        self.index.lookup(ip)
     }
 
     #[instrument(level = "TRACE", ret)]
     async fn filtered(&self, alpha: &Alpha2) -> Vec<&Record> {
-        self.0.iter().filter(|record| record.alpha() == alpha).collect::<Vec<&Record>>()
+        self.records
+            .iter()
+            .filter(|record| record.alpha() == alpha)
+            .collect::<Vec<&Record>>()
     }
 }
 
@@ -153,7 +167,7 @@ mod tests {
     #[test_log::test]
     fn test_lookup_from_fixture() {
         let records = parse_fixture(&["101.160.0.0,101.191.255.255,AU", "1.0.0.0,1.0.0.255,US"]);
-        let db = DB(records);
+        let db = DB::from_records(records);
 
         let rt = tokio::runtime::Runtime::new()
             .ok()
@@ -171,7 +185,7 @@ mod tests {
     fn test_filtered_from_fixture() {
         let records =
             parse_fixture(&["101.160.0.0,101.191.255.255,AU", "1.0.0.0,1.0.0.255,US", "2.0.0.0,2.0.0.255,AU"]);
-        let db = DB(records);
+        let db = DB::from_records(records);
 
         let au_records = block_filtered(&db, &AU);
         assert_eq!(au_records.len(), 2);

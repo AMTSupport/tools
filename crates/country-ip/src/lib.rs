@@ -30,6 +30,7 @@ use thiserror::Error;
 use tracing::{debug, error, instrument, warn};
 
 pub mod db_ip;
+pub mod index;
 pub mod record;
 pub mod registry;
 pub mod ui;
