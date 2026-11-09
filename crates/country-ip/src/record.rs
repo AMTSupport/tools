@@ -28,7 +28,6 @@ pub enum Record {
         alpha: Alpha2,
         value: IpAddr,
         range: u32,
-        date: String,
         status: Status,
     },
     DBRecord {
@@ -131,7 +130,6 @@ mod tests {
             alpha: Alpha2::AU,
             value,
             range: size,
-            date: String::new(),
             status: Status::Allocated,
         }
     }

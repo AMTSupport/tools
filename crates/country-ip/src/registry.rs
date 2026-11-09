@@ -43,7 +43,7 @@ fn parse_registry_line(line: &str, registry: Registry) -> Option<Record> {
     }
 
     let mut fields = line.split('|');
-    let (Some(_source), Some(alpha), Some(_kind), Some(value), Some(range), Some(date), Some(status)) = (
+    let (Some(_source), Some(alpha), Some(_kind), Some(value), Some(range), Some(_date), Some(status)) = (
         fields.next(),
         fields.next(),
         fields.next(),
@@ -86,7 +86,6 @@ fn parse_registry_line(line: &str, registry: Registry) -> Option<Record> {
         alpha,
         value,
         range,
-        date: date.to_string(),
         status,
     })
 }
