@@ -25,7 +25,7 @@ use futures::io::Error as FutureError;
 use futures::TryStreamExt;
 use keshvar::Alpha2;
 use std::net::IpAddr;
-use std::str::FromStr;
+
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::sync::OnceCell;
 use tokio_util::compat::FuturesAsyncReadCompatExt;
@@ -34,20 +34,23 @@ use tracing::{error, instrument};
 /// Parse a single CSV line into a DBRecord.
 /// Returns `None` if the line is malformed.
 fn parse_csv_line(line: &str) -> Option<Record> {
-    let split = line.split(',').map(|s| s.into()).collect::<Vec<String>>();
-    if split.len() != 3 {
+    let mut fields = line.split(',');
+    let (Some(start), Some(end), Some(alpha), None) = (fields.next(), fields.next(), fields.next(), fields.next())
+    else {
         error!("Invalid line {line}; skipping");
         return None;
-    }
+    };
 
-    let start = IpAddr::from_str(&split[0])
-        .map_err(|e| error!("Failed to parse start {}; {e}", split[0]))
+    let start = start
+        .parse::<IpAddr>()
+        .map_err(|e| error!("Failed to parse start {start}; {e}"))
         .ok()?;
-    let end = IpAddr::from_str(&split[1])
-        .map_err(|e| error!("Failed to parse end {}; {e}", split[1]))
+    let end = end
+        .parse::<IpAddr>()
+        .map_err(|e| error!("Failed to parse end {end}; {e}"))
         .ok()?;
-    let alpha = Alpha2::try_from(&*split[2])
-        .map_err(|e| error!("Failed to parse country {}; {e}", split[2]))
+    let alpha = Alpha2::try_from(alpha)
+        .map_err(|e| error!("Failed to parse country {alpha}; {e}"))
         .ok()?;
 
     Some(DBRecord { alpha, start, end })

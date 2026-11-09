@@ -28,7 +28,7 @@ use rayon::prelude::{ParallelBridge, ParallelIterator};
 use std::collections::HashMap;
 use std::net::IpAddr;
 use std::path::PathBuf;
-use std::str::FromStr;
+
 use std::sync::LazyLock;
 use std::time::Duration;
 use thiserror::Error;
@@ -42,13 +42,21 @@ fn parse_registry_line(line: &str, registry: Registry) -> Option<Record> {
         return None;
     }
 
-    let split = line.split('|').map(|s| s.into()).collect::<Vec<String>>();
-    if split.len() <= 6 {
+    let mut fields = line.split('|');
+    let (Some(_source), Some(alpha), Some(_kind), Some(value), Some(range), Some(date), Some(status)) = (
+        fields.next(),
+        fields.next(),
+        fields.next(),
+        fields.next(),
+        fields.next(),
+        fields.next(),
+        fields.next(),
+    ) else {
         error!("Invalid line {line}; skipping");
         return None;
-    }
+    };
 
-    let alpha = match &*split[1] {
+    let alpha = match alpha {
         str if str.len() != 2 => return None,
         str => match Alpha2::try_from(str) {
             Ok(alpha) => alpha,
@@ -56,19 +64,17 @@ fn parse_registry_line(line: &str, registry: Registry) -> Option<Record> {
         },
     };
 
-    let value = match IpAddr::from_str(&split[3]) {
+    let value = match value.parse::<IpAddr>() {
         Ok(value) => value,
         Err(_) => return None,
     };
 
-    let range = match u32::from_str(&split[4]) {
+    let range = match range.parse::<u32>() {
         Ok(range) => range,
         Err(_) => return None,
     };
 
-    let date = split[5].to_string();
-
-    let status = match &*split[6] {
+    let status = match status {
         "assigned" => Status::Assigned,
         "allocated" => Status::Allocated,
         "reserved" => Status::Reserved,
@@ -80,7 +86,7 @@ fn parse_registry_line(line: &str, registry: Registry) -> Option<Record> {
         alpha,
         value,
         range,
-        date,
+        date: date.to_string(),
         status,
     })
 }
