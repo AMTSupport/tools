@@ -25,6 +25,7 @@ use futures::io::Error as FutureError;
 use futures::TryStreamExt;
 use keshvar::Alpha2;
 use std::net::IpAddr;
+use std::sync::Arc;
 
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::sync::OnceCell;
@@ -69,7 +70,7 @@ impl DB {
     }
 }
 
-static DB_INSTANCE: OnceCell<DB> = OnceCell::const_new();
+static DB_INSTANCE: OnceCell<Arc<DB>> = OnceCell::const_new();
 
 impl DB {
     /// Get the URL to download the current csv file from.
@@ -108,7 +109,7 @@ impl DB {
     }
 
     pub async fn instance() -> Result<Box<dyn RecordDB>> {
-        let db = DB_INSTANCE.get_or_try_init(DB::new).await?;
+        let db = DB_INSTANCE.get_or_try_init(|| async { DB::new().await.map(Arc::new) }).await?;
         Ok(Box::new(db.clone()))
     }
 }
@@ -126,6 +127,19 @@ impl RecordDB for DB {
             .iter()
             .filter(|record| record.alpha() == alpha)
             .collect::<Vec<&Record>>()
+    }
+}
+
+#[async_trait]
+impl RecordDB for Arc<DB> {
+    #[instrument(level = "TRACE", ret)]
+    async fn lookup(&self, ip: &IpAddr) -> Option<Alpha2> {
+        self.as_ref().lookup(ip).await
+    }
+
+    #[instrument(level = "TRACE", ret)]
+    async fn filtered(&self, alpha: &Alpha2) -> Vec<&Record> {
+        self.as_ref().filtered(alpha).await
     }
 }
 
