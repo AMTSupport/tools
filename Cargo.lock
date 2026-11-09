@@ -1130,6 +1130,7 @@ dependencies = [
  "chrono",
  "cidr",
  "clap",
+ "fs-err 3.0.0",
  "futures",
  "iced",
  "iced_aw",

@@ -14,6 +14,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+use crate::cache;
 use crate::index::RangeIndex;
 use crate::record::Record::RegistryRecord;
 use crate::record::{Record, Status};
@@ -25,13 +26,14 @@ use keshvar::{Alpha2, Country, Region, SubRegion};
 use macros::EnumVariants;
 use rayon::prelude::{ParallelBridge, ParallelIterator};
 use std::collections::HashMap;
-use std::io::BufRead;
 use std::net::IpAddr;
+use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::LazyLock;
+use std::time::Duration;
 use thiserror::Error;
 use tokio::sync::Mutex;
-use tracing::{error, instrument};
+use tracing::{debug, error, instrument};
 
 /// Parse a single line from a RIR delegated-extended stats file into a RegistryRecord.
 /// Returns `None` if the line is a comment or malformed.
@@ -160,6 +162,9 @@ impl RecordDB for RegistryRecords {
 
 static DOWNLOADED: LazyLock<Mutex<HashMap<Registry, RegistryRecords>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
 
+/// Dumps are refreshed daily, so a day-old cache is as good as a fresh download.
+const CACHE_MAX_AGE: Duration = Duration::from_secs(24 * 60 * 60);
+
 impl Registry {
     #[instrument(level = "TRACE", ret, err, fields(country = %country.iso_short_name()))]
     pub fn get_for(country: &Country) -> Result<Registry> {
@@ -271,20 +276,27 @@ impl Registry {
 
     #[instrument(level = "TRACE", ret, err)]
     async fn download(&self) -> Result<()> {
-        let url = &self.url();
-        let data = reqwest::get(url)
-            .await
-            .map_err(|e| RegistryErrors::DownloadFailed(*self, e.into()))?
-            .bytes()
-            .await
-            .map_err(|e| RegistryErrors::DownloadFailed(*self, e.into()))?
-            .to_vec();
+        let cache_path = self.cache_path();
+        let data = match cache_path.as_deref().and_then(|path| cache::read(path, CACHE_MAX_AGE)) {
+            Some(data) => {
+                debug!("Using cached dump for {}", self.name());
+                data
+            }
+            None => {
+                let data = self.fetch().await?;
+
+                if let Some(path) = cache_path {
+                    cache::write(&path, &data);
+                }
+
+                data
+            }
+        };
 
         let parsed_lines = data
             .lines()
             .par_bridge()
-            .flatten()
-            .filter_map(|line| parse_registry_line(&line, *self))
+            .filter_map(|line| parse_registry_line(line, *self))
             .collect::<Vec<_>>();
 
         let record = RegistryRecords::new(*self, parsed_lines);
@@ -293,6 +305,31 @@ impl Registry {
         map.insert(*self, record);
 
         Ok(())
+    }
+
+    /// Cache location of this registry's dump, if a cache directory is available.
+    fn cache_path(&self) -> Option<PathBuf> {
+        let name = format!("delegated-{}-{}.txt", self.target_name(), self.suffix());
+        cache::dir().map(|dir| dir.join(name))
+    }
+
+    #[instrument(level = "TRACE", err)]
+    async fn fetch(&self) -> Result<String> {
+        let url = self.url();
+        let response = reqwest::get(&url)
+            .await
+            .map_err(|e| RegistryErrors::DownloadFailed(*self, e.into()))?;
+        let response = response
+            .error_for_status()
+            .map_err(|e| RegistryErrors::DownloadFailed(*self, e.into()))?;
+        let bytes = response
+            .bytes()
+            .await
+            .map_err(|e| RegistryErrors::DownloadFailed(*self, e.into()))?;
+
+        let data = String::from_utf8(bytes.to_vec()).map_err(|e| RegistryErrors::ParseFailed(*self, e.into()))?;
+
+        Ok(data)
     }
 }
 

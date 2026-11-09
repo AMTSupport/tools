@@ -29,6 +29,7 @@ use std::net::IpAddr;
 use thiserror::Error;
 use tracing::{debug, error, instrument, warn};
 
+pub mod cache;
 pub mod db_ip;
 pub mod index;
 pub mod record;
