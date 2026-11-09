@@ -29,7 +29,7 @@ use std::collections::HashMap;
 use std::net::IpAddr;
 use std::path::PathBuf;
 
-use std::sync::LazyLock;
+use std::sync::{Arc, LazyLock};
 use std::time::Duration;
 use thiserror::Error;
 use tokio::sync::Mutex;
@@ -165,7 +165,21 @@ impl RecordDB for RegistryRecords {
     }
 }
 
-static DOWNLOADED: LazyLock<Mutex<HashMap<Registry, RegistryRecords>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
+#[async_trait]
+impl RecordDB for Arc<RegistryRecords> {
+    #[instrument(level = "TRACE", ret)]
+    async fn lookup(&self, ip: &IpAddr) -> Option<Alpha2> {
+        self.as_ref().lookup(ip).await
+    }
+
+    #[instrument(level = "TRACE", ret)]
+    async fn filtered(&self, country: &Alpha2) -> Vec<&Record> {
+        self.as_ref().filtered(country).await
+    }
+}
+
+static DOWNLOADED: LazyLock<Mutex<HashMap<Registry, Arc<RegistryRecords>>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
 
 /// Dumps are refreshed daily, so a day-old cache is as good as a fresh download.
 const CACHE_MAX_AGE: Duration = Duration::from_secs(24 * 60 * 60);
@@ -270,11 +284,11 @@ impl Registry {
             value => value,
         }?;
 
-        Ok(Box::new(records))
+        Ok(Box::new(records.clone()))
     }
 
     #[instrument(level = "TRACE", ret)]
-    async fn downloaded(&self) -> Result<RegistryRecords> {
+    async fn downloaded(&self) -> Result<Arc<RegistryRecords>> {
         let map = &(DOWNLOADED.lock().await);
         map.get(self).ok_or(anyhow::anyhow!("Data not downloaded")).cloned()
     }
@@ -307,7 +321,7 @@ impl Registry {
         let record = RegistryRecords::new(*self, parsed_lines);
 
         let mut map = DOWNLOADED.lock().await;
-        map.insert(*self, record);
+        map.insert(*self, Arc::new(record));
 
         Ok(())
     }
