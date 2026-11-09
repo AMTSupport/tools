@@ -25,8 +25,8 @@ use futures::TryStreamExt;
 use keshvar::Alpha2;
 use std::net::IpAddr;
 use std::str::FromStr;
-use std::sync::LazyLock;
 use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::sync::OnceCell;
 use tokio_util::compat::FuturesAsyncReadCompatExt;
 use tracing::{error, instrument};
 
@@ -55,10 +55,7 @@ fn parse_csv_line(line: &str) -> Option<Record> {
 #[derive(Debug, Clone)]
 pub struct DB(Vec<Record>);
 
-pub static DB_INSTANCE: LazyLock<DB> = LazyLock::new(|| {
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    rt.block_on(async { DB::new().await }).unwrap()
-});
+static DB_INSTANCE: OnceCell<DB> = OnceCell::const_new();
 
 impl DB {
     /// Get the URL to download the current csv file from.
@@ -96,8 +93,9 @@ impl DB {
         Ok(Self(records))
     }
 
-    pub fn instance() -> Box<dyn RecordDB> {
-        Box::new(DB_INSTANCE.clone())
+    pub async fn instance() -> Result<Box<dyn RecordDB>> {
+        let db = DB_INSTANCE.get_or_try_init(DB::new).await?;
+        Ok(Box::new(db.clone()))
     }
 }
 

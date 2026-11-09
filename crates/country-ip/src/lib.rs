@@ -50,7 +50,7 @@ pub async fn get_record_db(country: &Country) -> Result<Box<dyn RecordDB>> {
         Err(err) => {
             error!("{err}");
             debug!("Falling back to DB-IP for {}", country.iso_short_name());
-            Ok(db_ip::DB::instance())
+            db_ip::DB::instance().await
         }
     }
 }
