@@ -16,8 +16,21 @@
 
 use std::env;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, SystemTime};
 use tracing::warn;
+
+/// Set once from the CLI to ignore existing cache entries for the rest of the process.
+static BYPASS: AtomicBool = AtomicBool::new(false);
+
+/// Ignores the cache for the rest of this process; fresh downloads still refresh it.
+pub fn set_bypass(enabled: bool) {
+    BYPASS.store(enabled, Ordering::Relaxed);
+}
+
+pub fn bypassed() -> bool {
+    BYPASS.load(Ordering::Relaxed)
+}
 
 /// Returns this application's cache directory, creating it if missing.
 pub fn dir() -> Option<PathBuf> {
@@ -34,6 +47,10 @@ pub fn dir() -> Option<PathBuf> {
 
 /// Reads a cached file, treating unreadable and stale files as absent.
 pub fn read(path: &Path, max_age: Duration) -> Option<String> {
+    if bypassed() {
+        return None;
+    }
+
     let modified = fs_err::metadata(path).ok()?.modified().ok()?;
     if !is_fresh(modified, max_age) {
         return None;

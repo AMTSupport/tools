@@ -21,7 +21,7 @@ use amt_lib::ui::cli::flags::CommonFlags;
 use amt_lib::ui::cli::oneshot::OneshotHandler;
 use amt_lib::ui::cli::{CliResult, CliUi};
 use amt_lib::ui::Ui;
-use tracing::{error, info, info_span};
+use tracing::{debug, error, info, info_span};
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_indicatif::span_ext::IndicatifSpanExt;
 
@@ -49,13 +49,21 @@ impl OneshotHandler for CountryIPCli {
     async fn handle(&mut self, command: Self::OneshotAction, flags: &CommonFlags) -> CliResult<()> {
         populate!(self, flags);
 
+        let no_cache = match &command {
+            OneshotAction::Get { cache, .. } | OneshotAction::Lookup { cache, .. } => cache.no_cache,
+        };
+        crate::cache::set_bypass(no_cache);
+        if no_cache {
+            debug!("Ignoring cached registry dumps for this run");
+        }
+
         // Only spans carrying `indicatif.pb_show` get a bar by default, so opt this one in.
         let span = info_span!("feedback", "indicatif.pb_show" = true);
         span.pb_set_style(&amt_lib::ui::cli::progress::style_spinner());
         span.pb_start();
 
         match command {
-            OneshotAction::Get { country, ipv6 } => {
+            OneshotAction::Get { country, ipv6, .. } => {
                 span.pb_set_message("Fetching country data...");
                 let country = crate::get_country(&country).map_err(|err| CliError::Source(err.into()))?;
 

@@ -17,6 +17,13 @@
 use clap::Parser;
 use std::net::IpAddr;
 
+#[derive(Debug, clap::Args)]
+pub struct CacheOptions {
+    /// Ignore the cached registry dumps and download fresh data for this run.
+    #[arg(long)]
+    pub no_cache: bool,
+}
+
 #[derive(Debug, Parser)]
 pub enum OneshotAction {
     /// Get a random IP address for a country.
@@ -29,6 +36,9 @@ pub enum OneshotAction {
         /// Use IpV6 addresses instead of IpV4
         #[arg(long, short = '6', action = clap::ArgAction::SetTrue)]
         ipv6: bool,
+
+        #[command(flatten)]
+        cache: CacheOptions,
     },
 
     /// Lookup an IP address and get the country it belongs to.
@@ -37,5 +47,8 @@ pub enum OneshotAction {
         ///
         /// This can be either an IPv4 or IPv6 address.
         addr: IpAddr,
+
+        #[command(flatten)]
+        cache: CacheOptions,
     },
 }
