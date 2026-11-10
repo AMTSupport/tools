@@ -35,9 +35,7 @@ Core shared library for all AMT tools.
 
 ```rust
 // Generates: OneshotHandler trait + OneshotParser struct
-handler!(pub Oneshot {
-    async fn handle(&mut self, cmd: Self::OneshotAction, flags: &CommonFlags);
-});
+handler!(pub Oneshot);
 ```
 
 ## NIGHTLY FEATURES USED

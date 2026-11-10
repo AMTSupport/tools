@@ -4,14 +4,14 @@ Procedural derive macros for amt-lib.
 
 ## AVAILABLE DERIVES
 
-| Derive         | Purpose                               | Applies To               |
-| -------------- | ------------------------------------- | ------------------------ |
-| `EnumVariants` | Generate `VARIANTS` const array       | Enums                    |
-| `EnumNames`    | Generate `NAMES` const array          | Enums                    |
-| `EnumRegex`    | Generate regex pattern matching       | Enums                    |
-| `CommonFields` | Extract shared fields across variants | Enums                    |
-| `Delegation`   | Auto-delegate trait methods           | Enums with `#[delegate]` |
-| `Builder`      | Builder pattern generation            | Structs                  |
+| Derive         | Purpose                                       | Applies To               |
+| -------------- | --------------------------------------------- | ------------------------ |
+| `EnumVariants` | Generate `get_variants() -> Vec<Self>` method | Enums                    |
+| `EnumNames`    | Generate `NAMES` const array                  | Enums                    |
+| `EnumRegex`    | Generate regex pattern matching               | Enums                    |
+| `CommonFields` | Extract shared fields across variants         | Enums                    |
+| `Delegation`   | Auto-delegate trait methods                   | Enums with `#[delegate]` |
+| `Builder`      | Builder pattern generation                    | Structs                  |
 
 ## WHERE TO LOOK
 
@@ -31,7 +31,7 @@ Procedural derive macros for amt-lib.
 
 ```rust
 #[derive(Delegation)]
-#[delegate(trait = dyn MyTrait)]
+#[delegate(trait = MyTrait)]
 enum Sources {
     #[delegate(path = crate::sources::bitwarden::Bitwarden)]
     Bitwarden,

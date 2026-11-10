@@ -31,9 +31,9 @@ Located in `src/cleaners/impls/`:
 ## ADDING A CLEANER
 
 1. Create `src/cleaners/impls/{name}.rs`
-2. Implement `Cleaner` trait from `cleaner.rs`
+2. Implement `CleanerInternal` trait from `cleaner.rs`
 3. Register in `src/cleaners/impls/mod.rs`
-4. Add to CLI in `src/config/cli.rs`
+4. Add delegated variant to `Cleaner` enum in `src/cleaners/cleaner.rs` (enables CLI selection)
 
 ## RULES
 
@@ -44,6 +44,6 @@ Rules in `src/rule/` define cleanup conditions:
 
 ```rust
 // Get path from env var (with validation)
-env_path("XDG_CACHE_HOME")?;  // Returns PathBuf
-env_dir("XDG_CACHE_HOME")?;   // Validates is directory
+env_path("XDG_CACHE_HOME".to_owned())?;  // Returns PathBuf
+env_dir("XDG_CACHE_HOME".to_owned())?;   // Validates is directory
 ```
