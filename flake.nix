@@ -100,7 +100,6 @@
 
             packages = with pkgs; [
               libz
-              openssl
               pkg-config
 
               act
@@ -149,7 +148,6 @@
                     clippy = rustToolchain;
                   };
                   extraPackages = [
-                    pkgs.openssl
                     pkgs.pkg-config
                   ];
                 };
@@ -226,10 +224,7 @@
                         ++ lib.optionals target.pkgsCross.stdenv.targetPlatform.isWindows [ windows.mingw_w64_headers ]
                         ++ lib.optionals (
                           target.pkgsCross.stdenv.targetPlatform.isWindows && target.pkgsCross.stdenv.isx86_64
-                        ) [ windows.pthreads ]
-                        ++ lib.optionals (
-                          !(lib.hasSuffix "clang" env.CC && !target.pkgsCross.stdenv.targetPlatform.isx86_64)
-                        ) [ openssl ]; # openssl fails to build on aarch64 (https://github.com/NixOS/nixpkgs/issues/348791)
+                        ) [ windows.pthreads ];
 
                       nativeBuildInputs =
                         with pkgs;

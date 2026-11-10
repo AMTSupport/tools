@@ -52,7 +52,6 @@ rec {
   };
 
   env = rec {
-    # TODO Use clang for all linux builds - openssl fails to build on aarch64 (https://github.com/NixOS/nixpkgs/issues/348791)
     getCCForTarget =
       target:
       if target == targets.Linux-X86_64 || target.pkgsCross.stdenv.cc.isClang then
