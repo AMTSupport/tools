@@ -136,7 +136,7 @@
                 editorconfig-checker.enable = true;
                 end-of-file-fixer.enable = true;
                 nil.enable = true;
-                nixpkgs-fmt.enable = true;
+                nixfmt.enable = true;
                 statix.enable = true;
                 typos.enable = true;
 
