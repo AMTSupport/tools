@@ -223,7 +223,7 @@
                         ]
                         ++ lib.optionals target.pkgsCross.stdenv.targetPlatform.isWindows [ windows.mingw_w64_headers ]
                         ++ lib.optionals (
-                          target.pkgsCross.stdenv.targetPlatform.isWindows && target.pkgsCross.stdenv.isx86_64
+                          target.pkgsCross.stdenv.targetPlatform.isWindows && target.pkgsCross.stdenv.hostPlatform.isx86_64
                         ) [ windows.pthreads ];
 
                       nativeBuildInputs =
@@ -231,7 +231,7 @@
                         [ pkg-config ]
                         ++ lib.optionals (
                           !target.pkgsCross.stdenv.buildPlatform.canExecute target.pkgsCross.stdenv.hostPlatform
-                          && !target.pkgsCross.targetPlatform.isWindows
+                          && !target.pkgsCross.stdenv.targetPlatform.isWindows
                         ) [ pkgs.qemu ]
                         ++ lib.optionals target.pkgsCross.stdenv.targetPlatform.isWindows [
                           pkgs.wineWow64Packages.minimal

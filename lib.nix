@@ -108,12 +108,18 @@ rec {
 
     mkEnvironment =
       target:
-      rec {
-        CC = getCCForTarget target;
-        TARGET_CC = CC;
-        "CARGO_TARGET_${target.rust.cargoEnvVarTarget}_LINKER" = TARGET_CC;
-        "CARGO_TARGET_${target.rust.cargoEnvVarTarget}_RUSTFLAGS" = getRustFlagsForTarget target;
-        "CARGO_TARGET_${target.rust.cargoEnvVarTarget}_RUNNER" = getRunnerForTarget target;
+      let
+        cc = getCCForTarget target;
+        cargoEnvVarTarget = target.rust.cargoEnvVarTarget;
+      in
+      {
+        CC = cc;
+        TARGET_CC = cc;
+      }
+      // {
+        "CARGO_TARGET_${cargoEnvVarTarget}_LINKER" = cc;
+        "CARGO_TARGET_${cargoEnvVarTarget}_RUSTFLAGS" = getRustFlagsForTarget target;
+        "CARGO_TARGET_${cargoEnvVarTarget}_RUNNER" = getRunnerForTarget target;
       }
       // lib.optionalAttrs (builtins.hasAttr "extraEnv" target) target.extraEnv;
   };
