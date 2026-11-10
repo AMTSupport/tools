@@ -53,33 +53,45 @@ rec {
 
   env = rec {
     # TODO Use clang for all linux builds - openssl fails to build on aarch64 (https://github.com/NixOS/nixpkgs/issues/348791)
-    getCCForTarget = target:
-      if target == targets.Linux-X86_64 || target.pkgsCross.stdenv.cc.isClang
-      then "${target.pkgsCross.stdenv.cc.targetPrefix}clang"
-      else "${target.pkgsCross.stdenv.cc.targetPrefix}cc";
+    getCCForTarget =
+      target:
+      if target == targets.Linux-X86_64 || target.pkgsCross.stdenv.cc.isClang then
+        "${target.pkgsCross.stdenv.cc.targetPrefix}clang"
+      else
+        "${target.pkgsCross.stdenv.cc.targetPrefix}cc";
 
-    getRustFlagsForTarget = target:
+    getRustFlagsForTarget =
+      target:
       let
         baseFlags = null;
         platformSpecificFlags =
-          if target.pkgsCross.stdenv.targetPlatform.isLinux && target.pkgsCross.stdenv.targetPlatform.isx86_64
-          then "-C link-arg=-fuse-ld=${lib.getExe pkgs.mold}"
-          else null;
+          if
+            target.pkgsCross.stdenv.targetPlatform.isLinux && target.pkgsCross.stdenv.targetPlatform.isx86_64
+          then
+            "-C link-arg=-fuse-ld=${lib.getExe pkgs.mold}"
+          else
+            null;
       in
-      lib.trivial.pipe [ baseFlags platformSpecificFlags ] [
-        (builtins.filter (flag: flag != null))
-        (lib.concatStringsSep " ")
-      ];
+      lib.trivial.pipe
+        [ baseFlags platformSpecificFlags ]
+        [
+          (builtins.filter (flag: flag != null))
+          (lib.concatStringsSep " ")
+        ];
 
-    getRunnerForTarget = target:
-      if target.pkgsCross.stdenv.buildPlatform.canExecute target.pkgsCross.stdenv.hostPlatform
-      then null
-      else if pkgs.stdenv.targetPlatform.system == "aarch64-darwin" && target.pkgsCross.stdenv.targetPlatform.system == "x86_64-darwin"
-      then null # Rosetta can run x86_64 executables on Apple Silicon
-      else if target.pkgsCross.stdenv.targetPlatform.isWindows
+    getRunnerForTarget =
+      target:
+      if target.pkgsCross.stdenv.buildPlatform.canExecute target.pkgsCross.stdenv.hostPlatform then
+        null
+      else if
+        pkgs.stdenv.targetPlatform.system == "aarch64-darwin"
+        && target.pkgsCross.stdenv.targetPlatform.system == "x86_64-darwin"
       then
-      # Wine can only run programs from the same architecture
-        if target.pkgsCross.stdenv.targetPlatform.parsed.cpu.arch == pkgs.stdenv.targetPlatform.parsed.cpu.arch
+        null # Rosetta can run x86_64 executables on Apple Silicon
+      else if target.pkgsCross.stdenv.targetPlatform.isWindows then
+        # Wine can only run programs from the same architecture
+        if
+          target.pkgsCross.stdenv.targetPlatform.parsed.cpu.arch == pkgs.stdenv.targetPlatform.parsed.cpu.arch
         then
           pkgs.writeScript "wine-wrapper" ''
             #!${pkgs.stdenv.shell}
@@ -92,14 +104,18 @@ rec {
             echo "Cannot run Windows executables from a different architecture"
             exit 0 # Exit with success to avoid breaking the build
           ''
-      else lib.getExe' pkgs.qemu "qemu-${target.pkgsCross.stdenv.targetPlatform.qemuArch}";
+      else
+        lib.getExe' pkgs.qemu "qemu-${target.pkgsCross.stdenv.targetPlatform.qemuArch}";
 
-    mkEnvironment = target: rec {
-      CC = getCCForTarget target;
-      TARGET_CC = CC;
-      "CARGO_TARGET_${target.rust.cargoEnvVarTarget}_LINKER" = TARGET_CC;
-      "CARGO_TARGET_${target.rust.cargoEnvVarTarget}_RUSTFLAGS" = getRustFlagsForTarget target;
-      "CARGO_TARGET_${target.rust.cargoEnvVarTarget}_RUNNER" = getRunnerForTarget target;
-    } // lib.optionalAttrs (builtins.hasAttr "extraEnv" target) target.extraEnv;
+    mkEnvironment =
+      target:
+      rec {
+        CC = getCCForTarget target;
+        TARGET_CC = CC;
+        "CARGO_TARGET_${target.rust.cargoEnvVarTarget}_LINKER" = TARGET_CC;
+        "CARGO_TARGET_${target.rust.cargoEnvVarTarget}_RUSTFLAGS" = getRustFlagsForTarget target;
+        "CARGO_TARGET_${target.rust.cargoEnvVarTarget}_RUNNER" = getRunnerForTarget target;
+      }
+      // lib.optionalAttrs (builtins.hasAttr "extraEnv" target) target.extraEnv;
   };
 }
