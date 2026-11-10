@@ -3,9 +3,8 @@ name: Build Release Artifacts
 on:
   push:
     tags:
-      - '**-v[0-9]+.[0-9]+.[0-9]+'
+      - "**-v[0-9]+.[0-9]+.[0-9]+"
   workflow_dispatch:
-
 
 jobs:
   extract-info:
@@ -31,7 +30,6 @@ jobs:
           - aarch64-linux
           - x86_64-windows
           - aarch64-windows
-          - x86_64-darwin
           - aarch64-darwin
     runs-on: ${{ endsWith(matrix.system, 'darwin') && 'macos-latest' || 'ubuntu-latest' }}
     permissions:

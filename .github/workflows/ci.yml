@@ -2,7 +2,7 @@ name: Continuous Integration
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
 
 jobs:
   flake-health-check:
@@ -50,7 +50,7 @@ jobs:
             echo "rebuild_all=true" >> "$GITHUB_OUTPUT"
             echo "All Crates will be rebuilt due to changes in root build files."
           fi
-      
+
       - name: Generate Matrix
         id: generate-matrix
         run: |
@@ -70,14 +70,14 @@ jobs:
           cargo_metadata=$(cargo metadata --no-deps --format-version 1)
           readarray -t default_members < <(echo "$cargo_metadata" | jq -r '.workspace_default_members[] | split("#")[0]' | xargs -n1 basename)
           echo "available_binaries=$(echo "$cargo_metadata" | jq -r '.packages | map(select(.targets[].kind[] | contains("bin")) | .name) | join(",")')" >> "$GITHUB_OUTPUT"
-          
+
           # We only want to build the crates defined as default members.
           readarray -t crates < <(comm -12 <(printf "%s\n" "${crates[@]}" | sort) <(printf "%s\n" "${default_members[@]}" | sort))
 
           echo "Default Members: ${default_members[*]}"
           echo "Crates to Build: ${crates[*]}"
 
-          matrix='{"system": ["x86_64-linux","aarch64-linux","x86_64-windows","aarch64-windows","x86_64-darwin","aarch64-darwin"],"crate": ['
+          matrix='{"system": ["x86_64-linux","aarch64-linux","x86_64-windows","aarch64-windows","aarch64-darwin"],"crate": ['
           addedAtLeastOne=false
           for crate in "${crates[@]}"; do
             matrix+="\"$crate\","
@@ -92,7 +92,7 @@ jobs:
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
 
   build-artifacts:
-    needs: [ get-changes ]
+    needs: [get-changes]
     if: ${{ needs.get-changes.outputs.matrix != '{}' }}
     strategy:
       fail-fast: false
@@ -127,7 +127,7 @@ jobs:
           path: build-success-${{ matrix.crate }}-${{ matrix.system }}
 
   determine-tests:
-    needs: [ get-changes, build-artifacts ]
+    needs: [get-changes, build-artifacts]
     if: ${{ always() && needs.get-changes.outputs.matrix != '{}' && toJson(fromJson(needs.get-changes.outputs.matrix).crate) != '[]' }}
     runs-on: ubuntu-latest
     outputs:
@@ -165,7 +165,7 @@ jobs:
             exit 0
           fi
 
-          matrix='{"system": ["x86_64-linux","aarch64-linux","x86_64-windows","aarch64-windows","x86_64-darwin","aarch64-darwin"], "crate": ['
+          matrix='{"system": ["x86_64-linux","aarch64-linux","x86_64-windows","aarch64-windows","aarch64-darwin"], "crate": ['
           addedAtLeastOne=false
           for crate in "${!found_artifacts[@]}"; do
             systems=${found_artifacts["$crate"]}
@@ -177,10 +177,10 @@ jobs:
             matrix="${matrix::-1}"
           fi
           matrix="${matrix}]}"
-          
+
           echo "$matrix" | jq .
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
-      
+
       # We always want to cleanup the matrix artifacts.
       - uses: geekyeggo/delete-artifact@v5
         if: ${{ always() }}
@@ -188,7 +188,7 @@ jobs:
           name: build-success-*
 
   run-tests:
-    needs: [ determine-tests ]
+    needs: [determine-tests]
     if: ${{ needs.determine-tests.outputs.test-matrix != '{}' }}
     strategy:
       fail-fast: false
@@ -214,7 +214,7 @@ jobs:
           fi
 
           echo "run_tests=true" >> "$GITHUB_OUTPUT"
-          
+
       - name: Run Tests
         if: ${{ steps.should-run-tests.outputs.run_tests == 'true' }}
         run: nix develop --impure -c cargo nextest run --package ${{ matrix.crate.name }} --all-features

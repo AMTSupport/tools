@@ -14,12 +14,6 @@ rec {
       inherit (pkgsCross.stdenv.targetPlatform) rust;
     };
 
-    Apple-X86_64 = rec {
-      pkgsCross = pkgs.pkgsCross.x86_64-darwin;
-      canBuild = pkgs.stdenv.targetPlatform.isDarwin;
-      inherit (pkgsCross.stdenv.targetPlatform) rust;
-    };
-
     Windows-X86_64 = rec {
       pkgsCross = pkgs.pkgsCross.mingwW64;
       canBuild = true;
@@ -82,11 +76,6 @@ rec {
       target:
       if target.pkgsCross.stdenv.buildPlatform.canExecute target.pkgsCross.stdenv.hostPlatform then
         null
-      else if
-        pkgs.stdenv.targetPlatform.system == "aarch64-darwin"
-        && target.pkgsCross.stdenv.targetPlatform.system == "x86_64-darwin"
-      then
-        null # Rosetta can run x86_64 executables on Apple Silicon
       else if target.pkgsCross.stdenv.targetPlatform.isWindows then
         # Wine can only run programs from the same architecture
         if
